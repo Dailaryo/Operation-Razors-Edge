@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using static MissionData;
+using static SkillCheckPreviewUI;
 
 public class CombatManager : MonoBehaviour, ICombatInputHandler
 {
@@ -18,15 +18,21 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
 
     private TurnManager turnManager = new TurnManager();
 
+    private ExtractionMissionManager extractionManager;
+
+    private bool emergencyExtractionAvailable = false;
+    private bool emergencyExtractionCalled = false;
+
     public Unit CurrentUnit => currentUnit;  
 
     public bool IsPlayerTurn => turnManager.IsPlayerTurn();
 
     public System.Action<List<Unit>> OnCombatEnded;
 
-    private MissionData currentMission;
+    private EncounterData currentEncounter;
+    private MissionState missionState;
 
-    private bool lastCombatVictory;
+    private EscalationHandler escalationHandler;
 
     public List<Unit> GetAllUnits()
     {
@@ -48,6 +54,9 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
 
     public event System.Action<List<Unit>> OnTargetSelectionRequested;
     public event System.Action<Unit> OnActionBarRefreshRequested;
+    public event System.Action<Unit> OnCommandOverrideTriggered;
+    public event System.Action<SkillCheckPreviewUI.SkillCheckPreview> OnSkillCheckPreviewRequested;
+    public event System.Action<ObjectiveDefinition> OnSecondaryObjectiveRevealed;
 
     private Unit currentUnit;
 
@@ -56,6 +65,7 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        SkillCheckExecutor.OnPreviewRequested += HandleExecutorPreview;
         CombatLog.Add("Starting test combat...");
     }
 
@@ -74,7 +84,7 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
 
         foreach (Unit unit in enemyUnits)
         {
-            if (!unit.IsDead())
+            if (!unit.IsDead() && !unit.IsDying() && !unit.IsStabilized())
             {
                 currentUnit = unit;
 
@@ -116,65 +126,30 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
 
     void CheckCombatEnd()
     {
-        CombatLog.Add($"[Mission] Type: {currentMission.objectiveType}");
-
-        if (currentMission.objectiveType == MissionObjectiveType.Survival)
-        {
-            CombatLog.Add($"[Mission] Turn: {turnManager.turnCount}/{currentMission.turnLimit}");
-        }
-
-        if (currentMission.objectiveType == MissionObjectiveType.TargetElimination)
-        {
-            if (currentMission.targetUnit != null)
-            {
-                CombatLog.Add($"[Mission] Target Alive: {!currentMission.targetUnit.IsDead()}");
-            }
-        }
-
-        bool AreAllUnitsDead(List<Unit> units)
-        {
-            foreach (Unit unit in units)
-            {
-                if (!unit.IsDead())
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        if (AreAllUnitsDead(playerUnits))
-        {
-            CombatLog.Add("All player units defeated!");
-
-            CleanUpUnits();
-
-            OnCombatEnded?.Invoke(playerUnits);
-            lastCombatVictory = false;
-            gameFlowManager.EndCombat(false);
-            return;
-        }
-
-        bool missionSuccess = MissionObjectiveEvaluator.IsMissionSuccessful(
-            currentMission,
+        CombatContext context = new CombatContext(
             playerUnits,
             enemyUnits,
-            turnManager
+            turnManager.turnCount,
+            gridManager,
+            missionState
         );
 
-        if (missionSuccess)
+        CombatEndState endState = MissionObjectiveEvaluator.EvaluateAll(
+            currentEncounter,
+            missionState,
+            context,
+            extractionManager
+        );
+
+        if (endState == CombatEndState.InProgress)
         {
-            CombatLog.Add("Mission Objective Complete");
-
-            CleanUpUnits();
-
-            OnCombatEnded?.Invoke(playerUnits);
-            lastCombatVictory = true;
-            gameFlowManager.EndCombat(true);
+            StartPlayerTurn();
             return;
         }
 
-        StartPlayerTurn();
+        CleanUpUnits();
+        OnCombatEnded?.Invoke(playerUnits);
+        gameFlowManager.EndCombat(endState);
     }
 
     void StartPlayerTurn()
@@ -189,15 +164,37 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         PromptNextUnit();
     }
 
+    void StartSurpriseRound()
+    {
+        turnManager.SetState(TurnManager.CombatState.SurpriseRound);
+        turnManager.ResetTurn();
+        actionPlanner.Clear();
+
+        // Sort player units by initiative descending so the surprise round
+        // respects the same order that normal combat will use.
+        playerUnits.Sort((a, b) => b.initiativeRoll.CompareTo(a.initiativeRoll));
+
+        CombatLog.Add("=== SURPRISE ROUND ===");
+        CombatLog.Add("Hidden units act before initiative is rolled.");
+        AudioEventBus.Fire(AudioEventIds.Stealth.SurpriseRoundBegin);
+        PromptNextUnit();
+    }
+
     void PromptNextUnit()
     {
         if (isProcessingTurn) return;
-        
+
         //if all units have chosen actions
         if (turnManager.GetCurrentIndex() >= playerUnits.Count)
         {
-            //Restore grid visuals before enemy turn
             GridHighlighter.Instance.RefreshUnitHighlights(this);
+
+            if (turnManager.CurrentState == TurnManager.CombatState.SurpriseRound)
+            {
+                CombatLog.Add("=== SURPRISE ROUND ENDS ===");
+                StartPlayerTurn();
+                return;
+            }
 
             turnManager.SetState(TurnManager.CombatState.EnemyTurn);
             StartCoroutine(RunTurn());
@@ -207,14 +204,15 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         Unit unit = playerUnits[turnManager.GetCurrentIndex()];
         currentUnit = unit;
 
-        //skip dead units
-        if (unit.IsDead())
+        //skip dead, dying and stabilized units, they cannot act
+        if (unit.IsDead() || unit.IsDying() || unit.IsStabilized())
         {
             turnManager.AdvanceUnit();
             PromptNextUnit();
             return;
         }
 
+        //Debug Log: List of available actions
         string actions = "";
 
         foreach (ActionDefinition action in unit.GetAllActions())
@@ -259,19 +257,62 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
             unit.ReduceCooldowns();
         }
 
+        DetectionStateManager.TickAlertCountDowns();
+        FieldZoneManager.ProcessEndPhase(GetAllUnits());
+
+        // Apply unit aura effects to nearby allies
+        foreach (Unit unit in GetAllUnits())
+        {
+            foreach (var source in unit.effectSources)
+            {
+                foreach (var effect in source.GetEffects(unit))
+                {
+                    if (effect is TacticalUplinkEffect uplink)
+                    {
+                        uplink.ApplyToNearbyAllies(unit, GetAllUnits());
+                    }
+                }
+            }
+        }
+
+        //Escalation check
+        int liveEnemyCount = enemyUnits.FindAll(u => !u.IsDead()).Count;
+        EscalationHandler.EscalationResult escalationResult = escalationHandler.CheckEscalation(turnManager.turnCount, liveEnemyCount);
+        PlaceReinforcements(escalationResult);
+
+        // Check if emergency extraction should become available
+        if (!emergencyExtractionAvailable && extractionManager == null)
+            CheckEmergencyExtractionEligibility();
+
+        foreach (Unit unit in GetAllUnits())
+        {
+            if (unit.oaState != null)
+                unit.oaState.ResetRound();
+        }
+
         CombatLog.Add($"--- End Phase Complete ---");
         CombatLog.Add($"Turn {turnManager.turnCount} complete");
     }
 
-    public void StartCombat(MissionData mission, List<Unit> playerUnitsInput, List<Unit> enemyUnitsInput, int bonusAttack)
+    public void StartCombat(EncounterData encounter, List<Unit> playerUnitsInput, List<Unit> enemyUnitsInput, int bonusAttack, bool surpriseRound = false)
     {
         if (missionUI != null)
         {
-            missionUI.Initialize(mission, turnManager);
+            missionUI.Initialize(encounter, turnManager, this);
         }
         
-        currentMission = mission;
+        currentEncounter = encounter;
+        escalationHandler = new EscalationHandler(encounter);
+        extractionManager = encounter.extractionConfig != null
+            ? new ExtractionMissionManager(
+                encounter.extractionConfig.extractionZoneIds,
+                encounter.extractionConfig.extractionDeadline)
+            : null;
+
+        if (extractionManager != null)
+            CombatLog.Add($"[Extraction] Deadline set: turn {encounter.extractionConfig.extractionDeadline}.");
         turnManager.ResetTurnCount();
+        missionState = new MissionState();
 
         CombatLog.Add("Intializing Combat...");
         
@@ -288,10 +329,6 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         {
             unit.attackRating += bonusAttack;
         }
-
-        Unit targetUnit = null;
-
-        mission.targetUnit = targetUnit;
 
         GridManager grid = gridManager;
 
@@ -329,7 +366,62 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
             UnitViewManager.Instance.CreateView(unit);
         }
 
-        StartPlayerTurn();
+        // Refresh all positions now that GridVisualizer is fully initialized
+        UnitViewManager.Instance.RefreshAllPositions();
+
+        foreach (Unit unit in GetAllUnits())
+        {
+            unit.oaState = new OAState(1);
+            unit.oaState.reactWhileHidden = unit.isEnemy;
+
+            // Reset FullOnCombatStart resources
+            if (unit.resource != null &&
+                unit.resource.definition.regenMode ==
+                ClassDefinition.ResourceDefinition.RegenMode.FullOnCombatStart)
+            {
+                unit.resource.current = unit.resource.max;
+            }
+
+            // Reset once-per-combat cooldowns
+            List<ActionDefinition> keys = new List<ActionDefinition>(unit.cooldowns.Keys);
+            foreach (var action in keys)
+            {
+                if (unit.cooldowns[action] == Unit.CombatCooldown)
+                    unit.cooldowns.Remove(action);
+            }
+
+            // Reset per-combat effect flags
+            foreach (var effect in unit.activeEffects)
+            {
+                if (effect is KineticAbsorptionEffect ka) ka.ResetForCombat();
+                if (effect is ElectronicShroudEffect es) es.ResetForCombat();
+                if (effect is ResilienceEffect res) res.ResetForCombat();
+            }
+
+            // Re-apply Combat Reflexes if the unit has it, since oaState
+            // didn't exist when ApplyFeats() ran earlier
+            if (unit.sourceCharacterData != null &&
+                unit.sourceCharacterData.HasFeat(FeatIds.CombatReflexes))
+            {
+                int agilityMod = unit.GetModifier(StatType.Agility);
+                unit.oaState.maxPerRound = Mathf.Max(1, agilityMod);
+            }
+        }
+
+        ThreatZoneManager.Reset();
+
+        foreach (Unit unit in GetAllUnits())
+        {
+            ThreatZoneManager.RegisterUnit(unit);
+        }
+
+        DetectionStateManager.Initialize(GetAllUnits(), surpriseRound ? playerUnits : null);
+
+        if (surpriseRound)
+            StartSurpriseRound();
+        else
+            StartPlayerTurn();
+        AudioEventBus.Fire(AudioEventIds.GameFlow.CombatStart);
     }
 
     public void PlayerChooseAction(ActionDefinition action)
@@ -341,6 +433,21 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
 
         //Targeting actions
         var def = action;
+
+        switch (def.actionID)
+        {
+            case ActionIds.Feint:
+                SkillCheckExecutor.RequestPreview(SkillCheckIds.FeintOpposed, unit);
+                break;
+
+            case ActionIds.AcrobaticMovement:
+                SkillCheckExecutor.RequestPreview(SkillCheckIds.AcrobaticMovementDC, unit);
+                break;
+
+            case ActionIds.Demoralize:
+                SkillCheckExecutor.RequestPreview(SkillCheckIds.DemoralizeOpposed, unit);
+                break;
+        }
 
         //Clear old highlights
         GridHighlighter.Instance.ClearAll();
@@ -371,8 +478,6 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
             unit,
             null,
             action,
-            GetAllUnits(),
-            GetAllUnits(),
             this
         );
 
@@ -426,28 +531,23 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
             return;
         }
 
-        var unitActions = actionPlanner.GetActions(unit);
-
-        pendingAction = default;
-
-        //Check if unit is done
-        bool hasMove = false;
-        bool hasStandard = false;
-
-        foreach (var act in unitActions)
+        // Check for Command Override — interrupt to offer bonus action
+        foreach (Unit playerUnit in playerUnits)
         {
-            foreach (var cat in act.resolvedCategories)
+            if (playerUnit.pendingCommandOverride)
             {
-                if (cat == ActionDefinition.ActionCategory.Move) hasMove = true;
-
-                if (cat == ActionDefinition.ActionCategory.Standard) hasStandard = true;
+                playerUnit.pendingCommandOverride = false;
+                currentUnit = playerUnit;
+                OnCommandOverrideTriggered?.Invoke(playerUnit);
+                OnActionBarRefreshRequested?.Invoke(playerUnit);
+                CombatLog.Add($"{playerUnit.unitName}: Command Override — choose a bonus action.");
+                return;
             }
         }
 
-        if (hasMove && hasStandard)
-        {
-            turnManager.AdvanceUnit();
-        }
+        var unitActions = actionPlanner.GetActions(unit);
+
+        pendingAction = default;
 
         PromptNextUnit();
     }
@@ -577,22 +677,6 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         return actionPlanner.GetActions(unit);
     }
 
-    public enum IntentVisibilityLevel
-    {
-        None,
-        Partial,
-        Full,
-    }
-
-    public IntentVisibilityLevel GetIntentVisibility(Unit viewer, Unit target)
-    {
-        //TEMP: default behavior
-        if (target.isEnemy)
-            return IntentVisibilityLevel.None;
-
-        return IntentVisibilityLevel.Full;
-    }
-
     public void SelectAction(ActionDefinition action)
     {
         PlayerChooseAction(action);
@@ -629,8 +713,6 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
             unit,
             target,
             pendingAction,
-            GetAllUnits(),
-            GetAllUnits(),
             this
         );
 
@@ -681,8 +763,6 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
             unit,
             null,
             moveDef,
-            GetAllUnits(),
-            GetAllUnits(),
             this
         );
 
@@ -704,6 +784,10 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
             GridManager.Instance.RemoveUnit(unit);
             UnitViewManager.Instance.ClearAll();
         }
+
+        ThreatZoneManager.Reset();
+        FieldZoneManager.Reset();
+        DetectionStateManager.Reset();
     }
 
     void RollInitiative(List<Unit> units)
@@ -717,5 +801,136 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
 
             Debug.Log($"{unit.unitName} initiative set: {roll} + {stat} = {unit.initiativeRoll}");
         }
+    }
+
+    public void ConfirmTurn()
+    {
+        if (currentUnit == null || currentUnit.IsDead()) return;
+
+        var unitActions = actionPlanner.GetActions(currentUnit);
+
+        CombatLog.Add($"{currentUnit.unitName} confirmed turn.");
+
+        turnManager.AdvanceUnit();
+        PromptNextUnit();
+    }
+
+    public void RevealSecondaryObjective(ObjectiveDefinition objective)
+    {
+        if (objective == null || objective.visibleAtStart) return;
+
+        objective.visibleAtStart = true;
+        CombatLog.Add($"[Mission] New objective revealed: {objective.description}");
+        OnSecondaryObjectiveRevealed?.Invoke(objective);
+    }
+
+    private void HandleExecutorPreview(SkillCheckPreviewUI.SkillCheckPreview preview)
+    {
+        OnSkillCheckPreviewRequested?.Invoke(preview);
+    }
+
+    private void OnDestroy()
+    {
+        SkillCheckExecutor.OnPreviewRequested -= HandleExecutorPreview;
+    }
+
+    public MissionState GetMissionState()
+    {
+        return missionState;
+    }
+
+    void PlaceReinforcements(EscalationHandler.EscalationResult result)
+    {
+        if (!result.HasReinforcements) return;
+
+        for (int i = 0; i < result.units.Count; i++)
+        {
+            Unit unit = result.units[i];
+            Vector2Int pos = result.positions[i];
+
+            bool placed = gridManager.TryPlaceUnit(unit, pos);
+
+            if (!placed)
+            {
+                // Position was occupied by the time we placed — shouldn't happen in
+                // normal flow since positions are resolved against live grid state,
+                // but log it rather than silently dropping the unit.
+                Debug.LogWarning($"[Escalation] Could not place reinforcement '{unit.unitName}' at {pos} — tile occupied.");
+                continue;
+            }
+
+            UnitViewManager.Instance.CreateView(unit);
+            unit.oaState = new OAState(1);
+            ThreatZoneManager.RegisterUnit(unit);
+            enemyUnits.Add(unit);
+        }
+    }
+
+    void CheckEmergencyExtractionEligibility()
+    {
+        // Condition 1: 3 or more turns have passed
+        bool turnCondition = turnManager.turnCount >= 3;
+
+        // Condition 2: 3 or more player units are dead or dying
+        int casualties = 0;
+        foreach (Unit unit in playerUnits)
+        {
+            if (unit.IsDead() || unit.IsDying()) casualties++;
+        }
+        bool casualtyCondition = casualties >= 3;
+
+        if (turnCondition || casualtyCondition)
+        {
+            emergencyExtractionAvailable = true;
+            OnEmergencyExtractionAvailable?.Invoke();
+            CombatLog.Add("[Extraction] Emergency extraction now available.");
+        }
+    }
+
+    public event System.Action OnEmergencyExtractionAvailable;
+
+    public void CallEmergencyExtraction()
+    {
+        if (!emergencyExtractionAvailable || emergencyExtractionCalled) return;
+        if (extractionManager != null) return;  // Already a configured extraction mission
+
+        emergencyExtractionCalled = true;
+
+        // Build a deadline 3 turns from now, giving players time to reach the zone
+        int deadline = turnManager.turnCount + 3;
+
+        string zoneId = GridManager.EmergencyExtractionZoneId;
+
+        extractionManager = new ExtractionMissionManager(
+            new List<string> { zoneId },
+            deadline);
+
+        extractionManager.isEmergencyExtraction = true;
+
+        // Inject the extraction objective so the UI reflects it
+        ObjectiveDefinition extractionObjective = new ObjectiveDefinition(
+            "emergency_extraction",
+            $"Reach the extraction zone within {deadline} turns",
+            new ExtractionCondition(zoneId),
+            null,
+            visibleAtStart: true,
+            isPrimary: false
+        );
+
+        RevealSecondaryObjective(extractionObjective);
+
+        OnEmergencyExtractionCalled?.Invoke(deadline);
+        CombatLog.Add($"[Extraction] Emergency extraction called — deadline: turn {deadline}.");
+    }
+
+    public event System.Action<int> OnEmergencyExtractionCalled;
+
+    public void RefreshCurrentUnitHighlights()
+    {
+        if (currentUnit == null || currentUnit.IsDead()) return;
+        if (!IsPlayerTurn) return;
+
+        GridHighlighter.Instance.ClearAll();
+        GridHighlighter.Instance.HighlightValidMoves(currentUnit, this);
     }
 }

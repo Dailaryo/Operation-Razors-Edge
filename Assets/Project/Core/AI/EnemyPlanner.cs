@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using System.Numerics;
 using UnityEngine;
+using static UnityEngine.GraphicsBuffer;
 
 public class EnemyPlanner
 {
@@ -136,11 +136,21 @@ public class EnemyPlanner
             //Targeted actions
             if (def.requiresTarget)
             {
-                foreach (Unit target in enemies)
+                // Mindless enemies cannot target units they have no detection of.
+                // Intelligent enemies can target any unit including those at last known position
+                // (ActionValidator's CanTarget gate handles the final validity check).
+                bool isIntelligent = unit.sourceCharacterData == null ||
+                    !unit.sourceCharacterData.IsMindless;
+
+                List<Unit> visibleTargets = isIntelligent
+                    ? enemies
+                    : enemies.FindAll(e => DetectionStateManager.CanTarget(unit, e));
+
+                foreach (Unit target in visibleTargets)
                 {
                     if (target.IsDead()) continue;
 
-                    CombatAction actionInstance = new CombatAction(unit, target, def, manager.GetAllUnits(), manager.GetAllUnits(), manager);
+                    CombatAction actionInstance = new CombatAction(unit, target, def, manager);
 
                     bool valid = ActionValidator.IsValid(actionInstance, resolver);
 
@@ -150,13 +160,11 @@ public class EnemyPlanner
                     {
                         results.Add(actionInstance);
                     }
-
-                    if (ActionValidator.IsValid(actionInstance, resolver)) results.Add(actionInstance);
                 }
             }
             else
             {
-                CombatAction actionInstance = new CombatAction(unit, null, def, manager.GetAllUnits(), manager.GetAllUnits(), manager);
+                CombatAction actionInstance = new CombatAction(unit, null, def, manager);
 
                 if (ActionValidator.IsValid(actionInstance, resolver)) results.Add(actionInstance);
             }
@@ -175,28 +183,15 @@ public class EnemyPlanner
     {
         List<CombatAction> moves = new List<CombatAction>();
 
-        List<Vector2Int> directions = new List<Vector2Int>
+        var moveDef = ActionDatabase.Definitions[ActionIds.Move];
+
+        HashSet<Vector2Int> reachable = MovementResolver.GetReachableTiles(unit, resolver);
+
+        foreach (Vector2Int pos in reachable)
         {
-            Vector2Int.up,
-            Vector2Int.down,
-            Vector2Int.left,
-            Vector2Int.right
-        };
-
-        foreach (var dir in directions)
-        {
-            Vector2Int currentPos = resolver.GetPosition(unit);
-            Vector2Int pos = currentPos + dir;
-
-			var moveDef = ActionDatabase.Definitions[ActionIds.Move];
-
-			CombatAction move = new CombatAction(unit, null, moveDef, null, null, manager);
+            CombatAction move = new CombatAction(unit, null, moveDef, manager);
             move.SetMovePosition(pos);
-
-            if (ActionValidator.IsValid(move, resolver))
-            {
-                moves.Add(move);
-            }
+            moves.Add(move);
         }
 
         return moves;
@@ -205,6 +200,8 @@ public class EnemyPlanner
     float ScorePlan(ActionPlan plan, Unit unit, CombatManager manager)
     {
         CombatResolver simResolver = new CombatResolver(manager, true);
+
+        Dictionary<CombatAction, ActionContext> contextMap = new Dictionary<CombatAction, ActionContext>();
 
         // Simulate full plan
         foreach (var action in plan.actions)
@@ -235,6 +232,8 @@ public class EnemyPlanner
             {
                 simResolver.ApplyFinalResult(ctx);
             }
+
+            contextMap[action] = ctx;
         }
 
         float score = 0;
@@ -244,7 +243,7 @@ public class EnemyPlanner
         if (closestEnemy != null)
         {
             Vector2Int currentPos = simResolver.GetPosition(unit);
-            int dist = DistanceUtility.Manhattan(simResolver.GetPosition(unit), simResolver.GetPosition(closestEnemy));
+            int dist = DistanceUtility.Chebyshev(simResolver.GetPosition(unit), simResolver.GetPosition(closestEnemy));
 
             //Strong pressure to close distance
             score -= dist * 2f;
@@ -260,7 +259,9 @@ public class EnemyPlanner
             //Damage actions
             if (def.dealsDamage && action.target != null)
             {
-                int estimatedDamage = unit.attackRating;
+                contextMap.TryGetValue(action, out ActionContext simCtx);
+                
+                int estimatedDamage = simCtx.simulatedDamage > 0 ? simCtx.simulatedDamage : unit.attackRating;
 
                 score += estimatedDamage * 2f;
 
@@ -271,16 +272,78 @@ public class EnemyPlanner
             //Movement value (closer = better)
             if (action.definition.IsMove() && action.movePosition.HasValue)
             {
+                //For Intelligent enemies only
+                bool isIntelligent = unit.sourceCharacterData == null ||
+                    !unit.sourceCharacterData.IsMindless;
+
                 Unit closest = FindClosestEnemy(unit, simResolver, manager);
 
-                Vector2Int unitPos = simResolver.GetPosition(unit);
-                Vector2Int enemyPos = simResolver.GetPosition(closest);
+                //If no directly targetable enemy is found, intellignet enemies move toward
+                //the last known position of any target they have lost sight of.
+                Vector2Int? movementTarget = null;
 
-                int dist = DistanceUtility.Manhattan(unitPos, enemyPos);
+                if (closest != null)
+                {
+                    movementTarget = simResolver.GetPosition(closest);
+                }
+                else if (isIntelligent)
+                {
+                    foreach (Unit potentialTarget in manager.GetAllUnits())
+                    {
+                        if (potentialTarget.isEnemy == unit.isEnemy) continue;
+
+                        Vector2Int? lastKnown = DetectionStateManager.GetLastKnownPosition(unit, potentialTarget);
+
+                        if (lastKnown.HasValue)
+                        {
+                            movementTarget = lastKnown;
+                            break;
+                        }
+                    }
+                }
+
+                if (movementTarget == null) continue;
+
+                Vector2Int enemyPos = movementTarget.Value;
+                Vector2Int unitPos = simResolver.GetPosition(unit);
+
+                int dist = DistanceUtility.Chebyshev(unitPos, enemyPos);
+
+                if (dist <= action.definition.maxRange)
+                {
+                    score += 8f;
+                }
+                else
+                {
+                    score += (10f - dist);
+                }
+
+                if (isIntelligent)
+                {
+                    List<Vector2Int> path = MovementResolver.GetPath(unit, action.movePosition.Value, simResolver);
+
+                    foreach (Vector2Int tile in path)
+                    {
+                        List<Unit> threateners = ThreatZoneManager.GetThreateningUnits(tile, isEnemy: false);
+
+                        foreach (Unit threatener in threateners)
+                        {
+                            if (threatener.oaState == null) continue;
+                            if (!threatener.oaState.CanTakeOA()) continue;
+
+                            float hitChance = Mathf.Clamp01(
+                                (threatener.attackRating + 10f) / (unit.GetDefense() + 20f));
+
+                            float expectedDamage = threatener.attackRating * hitChance;
+
+                            score -= expectedDamage;
+                        }
+                    }
+                }
             }
             if (def.dealsDamage && action.target != null)
             {
-                int dist = DistanceUtility.Manhattan(
+                int dist = DistanceUtility.Chebyshev(
                     simResolver.GetPosition(unit),
                     simResolver.GetPosition(action.target)
                 );
@@ -299,7 +362,7 @@ public class EnemyPlanner
 
                 if (closest != null)
                 {
-                    int dist = DistanceUtility.Manhattan(simResolver.GetPosition(unit), simResolver.GetPosition(closest));
+                    int dist = DistanceUtility.Chebyshev(simResolver.GetPosition(unit), simResolver.GetPosition(closest));
 
                     if (dist <= 2) score += 4; //Good when threatened
                     else score -= 3; //Bad when idle
@@ -319,7 +382,7 @@ public class EnemyPlanner
         {
             if (u.isEnemy == unit.isEnemy || resolver.IsUnitDead(u)) continue;
 
-            int d = DistanceUtility.Manhattan(resolver.GetPosition(unit), resolver.GetPosition(u));
+            int d = DistanceUtility.Chebyshev(resolver.GetPosition(unit), resolver.GetPosition(u));
 
             if (d < bestDist)
             {

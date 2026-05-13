@@ -7,41 +7,41 @@ public class ResultUIController : MonoBehaviour
     public TMP_Text resultText;
     public TMP_Text rewardText;
 
-    GameFlowManager gameFlow;
-    
     void Start()
     {
-        gameFlow = FindAnyObjectByType<GameFlowManager>();
         ResultPanel.SetActive(false);
     }
 
-    public void ShowResult(bool victory, int reward)
+    public void ShowResult(CombatEndState endState, int reward)
     {
         ResultPanel.SetActive(true);
 
-        resultText.text = victory ? "MISSION SUCCESS" : "MISSION FAILED";
-
-        //if (victory)
-        //{
-        //    resultText.text = "VICTORY!";
-        //    rewardText.text = $"Gained {reward} XP";
-        //}
-        //else
-        //{
-        //    resultText.text = "DEFEAT...";
-        //    rewardText.text = "";
-        //}
+        switch (endState)
+        {
+            case CombatEndState.FullVictory:
+                resultText.text = "MISSION SUCCESS";
+                break;
+            case CombatEndState.PartialVictory:
+                resultText.text = "PARTIAL SUCCESS";
+                break;
+            case CombatEndState.Retreat:
+                resultText.text = "MISSION ABANDONED";
+                break;
+            case CombatEndState.Defeat:
+                resultText.text = "MISSION FAILED";
+                break;
+        }
     }
 
     public void OnReturnPressed()
     {
         ResultPanel.SetActive(false);
-        gameFlow.ReturnToHub();
+        GameFlowManager.Instance.ReturnToHub();
     }
 
     public void OnContinuePressed()
     {
         ResultPanel.SetActive(false);
-        gameFlow.StartCombat();
+        GameFlowManager.Instance.StartCombat();
     }
 }

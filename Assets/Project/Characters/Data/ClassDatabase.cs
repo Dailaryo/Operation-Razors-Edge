@@ -1,0 +1,19 @@
+using UnityEngine;
+using System.Collections.Generic;
+using static ClassDefinition;
+
+public static class ClassDatabase
+{
+    public static Dictionary<string, ClassDefinition> Definitions = new Dictionary<string, ClassDefinition>()
+    {
+        { ClassIds.Technosavant, TechnosavantClass.Create() },
+    };
+
+    public static ClassDefinition Get(string id)
+    {
+        if (Definitions.TryGetValue(id, out ClassDefinition classDef)) return classDef;
+
+        Debug.LogWarning($"[ClassNodeDatabase] Class not found: {id}");
+        return null;
+    }
+}

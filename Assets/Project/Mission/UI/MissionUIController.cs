@@ -6,16 +6,28 @@ public class MissionUIController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI objectiveText;
     [SerializeField] private TextMeshProUGUI progressText;
 
-    private MissionData mission;
+    private EncounterData mission;
     private TurnManager turnManager;
+    private CombatManager combatManager;
 
-    public void Initialize(MissionData missionData, TurnManager tm)
+    private int extractionDeadline = 0;
+
+    public void Initialize(EncounterData missionData, TurnManager tm, CombatManager cm)
     {
         mission = missionData;
         turnManager = tm;
+        combatManager = cm;
+
+        if (combatManager != null)
+            combatManager.OnSecondaryObjectiveRevealed += HandleObjectiveRevealed;
 
         UpdateObjectiveText();
         UpdateProgress();
+    }
+
+    public void SetExtractionDeadline(int deadline)
+    {
+        extractionDeadline = deadline;
     }
 
     void Update()
@@ -27,41 +39,34 @@ public class MissionUIController : MonoBehaviour
 
     void UpdateObjectiveText()
     {
-        switch (mission.objectiveType)
-        {
-            case MissionData.MissionObjectiveType.Elimination:
-                objectiveText.text = "Objective: Eliminate all enemies";
-                break;
-
-            case MissionData.MissionObjectiveType.Survival:
-                objectiveText.text = $"Objective: SUrvive {mission.turnLimit} turns";
-                break;
-
-            case MissionData.MissionObjectiveType.TargetElimination:
-                objectiveText.text = "Objective: Eliminate priority target";
-                break;
-        }
+        if (mission.primaryObjective != null)
+            objectiveText.text = $"Objective: {mission.primaryObjective.description}";
+        else
+            objectiveText.text = "Objective: Unknown";
     }
 
     void UpdateProgress()
     {
-        switch (mission.objectiveType)
+        string text = $"Turn: {turnManager.turnCount}";
+
+        if (extractionDeadline > 0)
         {
-            case MissionData.MissionObjectiveType.Elimination:
-                progressText.text = "";
-                break;
-
-            case MissionData.MissionObjectiveType.Survival:
-                progressText.text = $"Turn: {turnManager.turnCount}/{mission.turnLimit}";
-                break;
-
-            case MissionData.MissionObjectiveType.TargetElimination:
-                if (mission.targetUnit != null)
-                {
-                    bool alive = !mission.targetUnit.IsDead();
-                    progressText.text = alive ? "Target: Alive" : "Target Eliminated";
-                }
-                break;
+            int turnsRemaining = Mathf.Max(0, extractionDeadline - turnManager.turnCount);
+            text += $"\nExtraction: {turnsRemaining} turn(s)";
         }
+
+        progressText.text = text;
+    }
+
+    private void OnDestroy()
+    {
+        if (combatManager != null)
+            combatManager.OnSecondaryObjectiveRevealed -= HandleObjectiveRevealed;
+    }
+
+    void HandleObjectiveRevealed(ObjectiveDefinition objective)
+    {
+        CombatLog.Add($"[UI] Secondary objective now visible: {objective.description}");
+        UpdateObjectiveText();
     }
 }

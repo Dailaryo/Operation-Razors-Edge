@@ -4,11 +4,38 @@ public static class ActionValidator
 {
     public static bool IsValid(CombatAction action, CombatResolver resolver)
     {
-        resolver = BuildSimulationState(action, resolver);
-        
         if (action == null) return false;
 
         if (action.source == null) return false;
+
+        // Units that have lost their next action cannot take any actions
+        if (action.source.activeEffects.Exists(e => e is LoseNextActionEffect))
+            return false;
+
+        // Electronic Shroud blocks ranged attacks
+        if (action.definition.attackType == ActionDefinition.AttackType.Ranged &&
+            action.target != null)
+        {
+            var shroud = action.target.activeEffects
+                .Find(e => e is ElectronicShroudEffect) as ElectronicShroudEffect;
+            if (shroud != null && shroud.active)
+                return false;
+        }
+
+        int effectiveCost = action.source.GetEffectiveResourceCost(action.definition);
+        if (effectiveCost > 0)
+        {
+            if (!action.source.HasResource(effectiveCost)) return false;
+        }
+
+        // Power point validation for psionic powers
+        if (action.definition is PsionicPowerDefinition psionicDef)
+        {
+            if (action.source.powerPoints == null) return false;
+            if (!action.source.powerPoints.CanAfford(psionicDef.basePowerPointCost)) return false;
+        }
+
+        resolver = BuildSimulationState(action, resolver);
 
         if (action.definition.IsMove())
         {
@@ -33,15 +60,7 @@ public static class ActionValidator
             ////Debug.Log("WithinBounds: " + GridManager.Instance.IsWithinBounds(pos));
             ////Debug.Log("Occupied: " + GridManager.Instance.IsTileOccupied(pos));
 
-            Vector2Int origin = resolver.GetPosition(action.source);
-
-            int distance = DistanceUtility.Manhattan(origin, action.movePosition.Value);
-
-            ////Debug.Log("Distance: " + distance);
-
-            int maxMove = 3; //temp
-
-            return distance <= maxMove;
+            return MovementResolver.IsReachable(action.source, pos, resolver);
         }
 
         //For actions that require a target
@@ -73,16 +92,44 @@ public static class ActionValidator
                 break;
         }
 
+        // Detection gate: cannot directly target a unit you cannot detect.
+        // Area-of-effect tile-targeted actions bypass this check (requiresTarget is false for those).
+        if (!DetectionStateManager.CanTarget(action.source, action.target))
+            return false;
+
         // Range validation (ONLY ONCE)
         Vector2Int targetOrigin = resolver.GetPosition(action.source);
 
-        int targetDistance = DistanceUtility.Manhattan(
+        int targetDistance = DistanceUtility.MovementCostDistance(
             targetOrigin,
             resolver.GetPosition(action.target)
         );
 
-        if (targetDistance < def.minRange || targetDistance > def.maxRange)
+        int effectiveMaxRange = def.maxRange;
+
+        // Signal Scramble II extends SystemOverride range by 2 tiles
+        if (def.actionID == ActionIds.SystemOverride &&
+            action.source.sourceCharacterData != null &&
+            action.source.sourceCharacterData.unlockedPassiveIds.Contains(PassiveIds.SignalScramble2))
+        {
+            effectiveMaxRange += 2;
+        }
+
+        if (targetDistance < def.minRange || targetDistance > effectiveMaxRange)
             return false;
+
+        //LoS check
+        if (def.requiresLoS)
+        {
+            Vector2Int seerPos = resolver.GetPosition(action.source);
+            Vector2Int targetPos = resolver.GetPosition(action.target);
+
+            bool bypassLoS = action.source.HasBlindSight &&
+                DistanceUtility.MovementCostDistance(seerPos, targetPos) <= action.source.BlindSightRange;
+
+            if (!bypassLoS && !LoSResolver.HasLoS(seerPos, targetPos, GridManager.Instance))
+                return false;
+        }
 
         return true;
     }

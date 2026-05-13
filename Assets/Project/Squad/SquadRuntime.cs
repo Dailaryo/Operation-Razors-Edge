@@ -7,7 +7,11 @@ public class SquadRuntime
 
     public int currentHP;
 
-    public List<StatusEffect> persistenttEffects = new List<StatusEffect>();
+    public List<StatusEffect> persistentEffects = new List<StatusEffect>();
+
+    public bool isIncapacitated = false;
+
+    public CharacterSnapshot snapshot;
 
     public SquadRuntime(CharacterData source)
     {
@@ -25,6 +29,6 @@ public class SquadRuntime
     public void HealToFull()
     {
         currentHP = source.baseMaxHP;
-        persistenttEffects.Clear();
+        persistentEffects.Clear();
     }
 }

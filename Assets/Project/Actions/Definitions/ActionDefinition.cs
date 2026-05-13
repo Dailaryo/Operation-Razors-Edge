@@ -11,6 +11,10 @@ public class ActionDefinition
     public int minRange;
     public int maxRange;
     public int cooldown;
+    public int resourceCost = 0;
+
+    public bool requiresLoS;
+    public bool provokesOA = false;
 
     public enum TargetingMode
     {
@@ -34,7 +38,7 @@ public class ActionDefinition
     }
 
     public TargetingMode targetingMode;
-
+    public StealthBreakProfile stealthBreakProfile = null;
     public ActionCategory category;
 
     public List<ActionCategory> consumesCategories;
@@ -63,7 +67,9 @@ public class ActionDefinition
         List<IActionEffect> effects = null,
         AttackType attackType = AttackType.None,
         StatType scalingStat = StatType.Power,
-        float scalingMultiplier = 1f
+        float scalingMultiplier = 1f,
+        int resourceCost = 0,
+        bool requiresLoS = true
     )
     {
         this.actionID = actionID;
@@ -80,5 +86,7 @@ public class ActionDefinition
         this.attackType = attackType;
         this.scalingStat = scalingStat;
         this.scalingMultiplier = scalingMultiplier;
+        this.resourceCost = resourceCost;
+        this.requiresLoS = requiresLoS;
     }
 }

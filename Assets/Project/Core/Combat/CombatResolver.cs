@@ -83,7 +83,7 @@ public class CombatResolver
 
         int total = baseInitiative + actionPriority;
 
-        Debug.Log($"{action.source.unitName} initiative: {baseInitiative} + {actionPriority} + {total}");
+        Debug.Log($"{action.source.unitName} initiative: {baseInitiative} + {actionPriority} = {total}");
 
         return total;
     }
@@ -138,11 +138,33 @@ public class CombatResolver
     {
         foreach (CombatAction action in actions)
         {
-            if (!action.source.IsDead())
+            // Run passive detection sweep once per unit at the start of their turn,
+            // so detection state reflects current positions before the action validates.
+            if (!isSimulation && action.sequenceIndex == 0)
+            {
+                List<Unit> allUnits = manager.GetAllUnits();
+                List<Unit> playerUnits = allUnits.FindAll(u => !u.isEnemy);
+                List<Unit> enemyUnits = allUnits.FindAll(u => u.isEnemy);
+
+                if (action.source.isEnemy)
+                    DetectionStateManager.RunPassiveSweep(enemyUnits, playerUnits);
+                else
+                    DetectionStateManager.RunPassiveSweep(playerUnits, enemyUnits);
+
+                DetectionStateManager.ResetExposed(action.source);
+            }
+
+            if (!action.source.IsDead() && !action.source.IsDying() && !action.source.IsStabilized())
             {
                 //Debug.Log("Executing action from: " + action.source.unitName);
                     
                 manager.SetCurrentUnit(action.source);
+
+                //Regen resource on first actionof this unit's turn
+                if (action.sequenceIndex == 0)
+                {
+                    action.source.RegenResource();
+                }
     
                 ExecuteAction(action);
 
@@ -171,6 +193,25 @@ public class CombatResolver
 
         //Execute action (behavior only)
         baseAction.Execute(ctx, this);
+        if (ctx.definition.resourceCost > 0)
+            AudioEventBus.Fire(AudioEventIds.Combat.AbilityActivate);
+
+        // Check if this action provokes OAs (ranged attacks, psionic actions)
+        // Skip in simulation mode — OA logic does not run during AI planning
+        if (!isSimulation)
+        {
+            CheckActionProvocation(ctx);
+
+            // If the actor was killed by the OA, abort without executing the action
+            if (ctx.attacker.IsDead()) return;
+        }
+
+        //Spend resource cost
+        int effectiveCost = ctx.attacker.GetEffectiveResourceCost(ctx.definition);
+        if (effectiveCost > 0)
+        {
+            ctx.attacker.SpendResource(effectiveCost);
+        }
 
         //Post -process (centralized effects)
         ApplyPostActionEffects(ctx);
@@ -192,6 +233,12 @@ public class CombatResolver
             ApplyPreActionEffects(ctx);
 
             ApplyFinalResult(ctx);
+
+            DetectionStateManager.EvaluateBreak(ctx.attacker, ctx.definition);
+        }
+        else if (ctx.isWindowBreak)
+        {
+            ResolveWindowBreak(ctx);
         }
 
         action.OnResolved();
@@ -204,10 +251,68 @@ public class CombatResolver
 
     void HandleUnitDeath(Unit unit)
     {
+        if (!unit.isEnemy)
+        {
+            //Player unit: handoff to SquadManager for incapacitation and snapshot logic
+            SquadManager.Instance.SetIncapacitated(unit);
+        }
+        else
+        {
+            //Enemy unit: collect equipped item drops and loot table drops into a queue
+            //The loot UI prompt is deferred; for now drops are staged in CombatManager
+            List<ItemInstance> lootQueue = new List<ItemInstance>();
+
+            //Equipped items always drop
+            if (unit.sourceCharacterData != null)
+            {
+                foreach (var kvp in unit.sourceCharacterData.equippedItemIds)
+                {
+                    lootQueue.Add(kvp.Value);
+                }
+            }
+
+            //Loot table drops, if the enemy has one
+            if (unit.sourceCharacterData != null &&
+                !string.IsNullOrEmpty(unit.sourceCharacterData.lootTableId))
+            {
+                List<ItemInstance> tableDrops = LootResolver.ResolveLoot(unit.sourceCharacterData.lootTableId);
+                lootQueue.AddRange(tableDrops);
+            }
+
+            //Stage drops for post-combat loot screen
+            LootQueue.Enqueue(lootQueue);
+
+            if (lootQueue.Count > 0)
+                CombatLog.Add($"[Loot] {unit.unitName} dropped {lootQueue.Count} item(s)");
+        }
+
+        ThreatZoneManager.UnregisterUnit(unit);
+        
         //Remove from grid
         GridManager.Instance.RemoveUnit(unit);
 
         CombatLog.Add($"{unit.unitName} has been defeated");
+        AudioEventBus.Fire(AudioEventIds.Combat.UnitDeath);
+    }
+
+    void HandleUnitDying(Unit unit)
+    {
+        //OnlyApply DyingState once, a second hit on an already dying unit just deals HP loss
+        if (!unit.IsDying()) return;
+
+        if (!unit.activeEffects.Exists(e => e is DyingState))
+        {
+            unit.RemoveEffect<DisabledState>();
+            unit.AddEffect(new DyingState());
+        }
+    }
+
+    void HandleUnitDisabled(Unit unit)
+    {
+        if (!unit.activeEffects.Exists(e => e is DisabledState))
+        {
+            unit.AddEffect(new DisabledState());
+        }
     }
 
     public void ResolveMove(ActionContext ctx)
@@ -242,8 +347,7 @@ public class CombatResolver
             return;
         }
 
-        GridManager.Instance.MoveUnit(ctx.action.source, newPos);
-
+        MovementResolver.ExecuteMovePath(ctx.action.source, newPos, this);
         CombatLog.Add(ctx.action.source.unitName + " moved to " + newPos);
     }
 
@@ -297,9 +401,9 @@ public class CombatResolver
 
             int prevHP = simTarget.currentHP;
             simTarget.currentHP -= damage;
-            if (simTarget.currentHP < 0) simTarget.currentHP = 0;
 
-            ctx.willKillTarget = prevHP > 0 && simTarget.currentHP <= 0;
+            int deathThreshold = ctx.finalTarget.GetDeathThreshold();
+            ctx.willKillTarget = prevHP > deathThreshold && simTarget.currentHP <= deathThreshold;
             return;
         }
 
@@ -316,6 +420,14 @@ public class CombatResolver
         if (target.IsDead())
         {
             HandleUnitDeath(target);
+        }
+        else if (target.IsDying())
+        {
+            HandleUnitDying(target);
+        }
+        else if (target.IsDisabled())
+        {
+            HandleUnitDisabled(target);
         }
     }
 
@@ -379,29 +491,205 @@ public class CombatResolver
                 return false;
         }
 
+        if (ctx.attacker.sourceCharacterData != null &&
+            ctx.attacker.sourceCharacterData.HasItemEquipped(EquipmentSlot.MainHand))
+        {
+            ItemInstance weaponInstance = ctx.attacker.sourceCharacterData.GetEquippedItem(EquipmentSlot.MainHand);
+
+            var weapon = weaponInstance != null ? ItemDatabase.Get(weaponInstance.definitionId) : null;
+            if (weapon != null)
+            {
+                var classDef = ClassDatabase.Get(ctx.attacker.sourceCharacterData.classId);
+                if (classDef != null)
+                {
+                    if (!classDef.IsProficientWith(weapon.weaponTag))
+                    {
+                        accuracy -= 4;
+                        CombatLog.Add($"{ctx.attacker.unitName} is not proficient with {weapon.displayName} (-4 accuracy)");
+                    }
+                }
+            }
+        }
+
         int attackRating = ctx.attacker.attackRating;
 
-        int attackTotal = roll + accuracy + attackRating;
+        int attackTotal = roll + accuracy + attackRating + ctx.attackRollModifier;
 
-        int defense = 10 + ctx.finalTarget.GetDefense();
+        int defense = ctx.finalTarget.GetDefense();
 
         Debug.Log($"Attack Roll: {roll} + {accuracy} = {attackTotal} vs {defense}");
 
-        return attackTotal >= defense;
+        bool hit = attackTotal >= defense;
+
+        if (hit)
+        {
+            if (attackType == ActionDefinition.AttackType.Melee)
+                AudioEventBus.Fire(AudioEventIds.Combat.MeleeHit);
+            else if (attackType == ActionDefinition.AttackType.Ranged)
+                AudioEventBus.Fire(AudioEventIds.Combat.RangedHit);
+        }
+        else
+        {
+            if (attackType == ActionDefinition.AttackType.Melee)
+                AudioEventBus.Fire(AudioEventIds.Combat.MeleeMiss);
+            else if (attackType == ActionDefinition.AttackType.Ranged)
+                AudioEventBus.Fire(AudioEventIds.Combat.RangedMiss);
+        }
+
+        return hit;
     }
 
     void InitializeDamage(ActionContext ctx)
     {
-        var attackType = ctx.definition.attackType;
-
-        int baseDamage = RollBaseDamage();
+       int baseDamage = RollBaseDamage(ctx);
 
         ctx.baseDamage = baseDamage;
         ctx.modifiedDamage = baseDamage;
     }
 
-    int RollBaseDamage()
+    int RollBaseDamage(ActionContext ctx)
     {
-        return Random.Range(1, 7); //TEMP: d6
+        //Try to read damage from equipped weapon
+        if (ctx.attacker.sourceCharacterData != null &&
+            ctx.attacker.sourceCharacterData.HasItemEquipped(EquipmentSlot.MainHand))
+        {
+            ItemInstance weaponInstance = ctx.attacker.sourceCharacterData.GetEquippedItem(EquipmentSlot.MainHand);
+
+            var weapon = weaponInstance != null ? ItemDatabase.Get(weaponInstance.definitionId) : null;
+            if (weapon != null)
+            {
+                int total = 0;
+                for (int i = 0; i < weapon.damageDiceCount; i++)
+                    total += Random.Range(1, weapon.damageDiceSides + 1);
+
+                total += weapon.damageBonus;
+
+                CombatLog.Add($"{ctx.attacker.unitName} rolls {weapon.displayName}: {total}");
+                return total;
+            }
+        }
+
+        //Fallback: unarmed d4
+        return Random.Range(1, 5);
+    }
+
+    public Unit GetUnitAt(Vector2Int pos)
+    {
+        if (isSimulation)
+        {
+            foreach (var kvp in simUnits)
+            {
+                if (kvp.Value.isDead) continue;
+                if (kvp.Value.position == pos) return kvp.Key;
+            }
+            return null;
+        }
+
+        return GridManager.Instance.GetUnitAt(pos);
+    }
+
+    void ResolveWindowBreak(ActionContext ctx)
+    {
+        if (!ctx.action.movePosition.HasValue) return;
+
+        Vector2Int attackerPos = ctx.attacker.position;
+        Vector2Int targetPos = ctx.action.movePosition.Value;
+
+        //Must be adjacent
+        if (!DistanceUtility.IsAdjacent(attackerPos, targetPos)) return;
+
+        Vector2Int diff = targetPos - attackerPos;
+
+        // Determine edge ownership and which edge to break
+        // North edge: owned by the southern tile
+        // East edge: owned by the western tile
+        if (diff == Vector2Int.up)
+        {
+            GridManager.Instance.SetWindowBroken(attackerPos, true);
+        }
+        else if (diff == Vector2Int.down)
+        {
+            GridManager.Instance.SetWindowBroken(targetPos, true);
+        }
+        else if (diff == Vector2Int.right)
+        {
+            GridManager.Instance.SetWindowBroken(attackerPos, false);
+        }
+        else if (diff == Vector2Int.left)
+        {
+            GridManager.Instance.SetWindowBroken(targetPos, false);
+        }
+
+        CombatLog.Add($"{ctx.attacker.unitName} breaks the window at {targetPos}");
+    }
+
+    public void ResolveInterruptOAs(List<OARecord> queue)
+    {
+        //Sort by initiative descending: highest acts first
+        queue.Sort((a, b) => b.priority.CompareTo(a.priority));
+
+        foreach (OARecord record in queue)
+        {
+            //Re-check conditions, earlier OAs in this queue may have changed state
+            if (record.attacker.IsDead()) continue;
+            if (!record.attacker.oaState.CanTakeOA()) continue;
+            if (record.target.IsDead()) continue;
+
+            //Find the attacker's default melee action
+            ActionDefinition meleeAction = record.attacker.GetAllActions()
+                .Find(a => a.attackType == ActionDefinition.AttackType.Melee);
+
+            if (meleeAction == null) continue;
+
+            record.attacker.oaState.RecordOA();
+
+            CombatAction oaAction = new CombatAction(
+                record.attacker,
+                record.target,
+                meleeAction,
+                manager
+            );
+
+            CombatLog.Add($"{record.attacker.unitName} takes an opportunity attack against {record.target.unitName}!");
+            AudioEventBus.Fire(AudioEventIds.Combat.OATriggered);
+            ExecuteAction(oaAction);
+        }
+    }
+
+    private void CheckActionProvocation(ActionContext ctx)
+    {
+        var def = ctx.definition;
+
+        bool isRanged = def.attackType == ActionDefinition.AttackType.Ranged;
+        bool provokes = def.provokesOA;
+        if (ctx.definition is PsionicPowerDefinition)
+            AudioEventBus.Fire(AudioEventIds.Combat.PsionicManifest);
+        if (!isRanged && !provokes) return;
+
+        //Collect all enemy units threatening the actor's current tile(s)
+        List<Unit> threateners = ThreatZoneManager.GetThreateningUnits(
+            ctx.attacker.position, isEnemy: !ctx.attacker.isEnemy);
+
+        if (threateners.Count == 0) return;
+
+        List<OARecord> oaQueue = new List<OARecord>();
+
+        foreach (Unit threatener in threateners)
+        {
+            //A threatener that cannot detect the mover cannot take an OA against them.
+            if (!DetectionStateManager.CanTarget(threatener, ctx.attacker)) continue;
+            
+            //Skip if the threatener is hidden from the target and has not opted
+            //in to taking OAs while hidden
+            if (DetectionStateManager.Get(ctx.attacker, threatener) == DetectionState.Hidden
+                && !threatener.oaState.reactWhileHidden)
+                continue;
+            
+            if (threatener.oaState.CanTakeOA())
+                oaQueue.Add(new OARecord(threatener, ctx.attacker, ctx.attacker.position));
+        }
+
+        if (oaQueue.Count > 0)
+            ResolveInterruptOAs(oaQueue);
     }
 }

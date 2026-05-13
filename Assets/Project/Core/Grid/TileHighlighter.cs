@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using static Tile;
 
 public class TileHighlighter : MonoBehaviour
 {
@@ -7,6 +8,8 @@ public class TileHighlighter : MonoBehaviour
     [SerializeField] private CombatManager combat;
 
     private ICombatInputHandler inputHandler;
+
+    private Tile.TileHighlightType savedOverlay = Tile.TileHighlightType.None;
 
     void Update()
     {
@@ -36,18 +39,23 @@ public class TileHighlighter : MonoBehaviour
 
             if (tile != currentTile)
             {
-                //Clear previous hover
-                if(currentTile != null)
+                // Restore previous tile's saved overlay before leaving it
+                if (currentTile != null)
                 {
-                    currentTile.SetOverlayHighlight(Tile.TileHighlightType.None);
+                    currentTile.SetOverlayHighlight(savedOverlay);
                 }
 
                 currentTile = tile;
 
-                //Apply new hover
+                // Save the new tile's current overlay before applying hover
                 if (currentTile != null)
                 {
+                    savedOverlay = currentTile.GetOverlayHighlight();
                     currentTile.SetOverlayHighlight(Tile.TileHighlightType.Hover);
+                }
+                else
+                {
+                    savedOverlay = Tile.TileHighlightType.None;
                 }
             }
         }
@@ -61,7 +69,8 @@ public class TileHighlighter : MonoBehaviour
     {
         if (currentTile != null)
         {
-            currentTile.SetOverlayHighlight(Tile.TileHighlightType.None);
+            currentTile.SetOverlayHighlight(savedOverlay);
+            savedOverlay = Tile.TileHighlightType.None;
             currentTile = null;
         }
     }
@@ -102,20 +111,15 @@ public class TileHighlighter : MonoBehaviour
 
     void CancelTargeting()
     {
-        CombatManager manager = FindAnyObjectByType<CombatManager>();
+        if (combat == null) return;
 
-        if (manager == null) return;
+        combat.ClearPendingAction();
 
-        //Clear pending action
-        manager.ClearPendingAction();
-
-        //Reset Highlights
         GridHighlighter.Instance.ClearAll();
 
-        //Restore movement highlights
-        if (manager.CurrentUnit != null && !manager.CurrentUnit.IsDead())
+        if (combat.CurrentUnit != null && !combat.CurrentUnit.IsDead())
         {
-            GridHighlighter.Instance.HighlightValidMoves(manager.CurrentUnit, manager);
+            GridHighlighter.Instance.HighlightValidMoves(combat.CurrentUnit, combat);
         }
     }
 

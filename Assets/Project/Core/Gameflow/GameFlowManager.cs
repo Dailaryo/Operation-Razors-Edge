@@ -1,46 +1,51 @@
 using System.Collections.Generic;
-using System.Reflection;
 using TMPro;
 using UnityEngine;
 
 public class GameFlowManager : MonoBehaviour
 {
+    public static GameFlowManager Instance;
+    
     int playerBonusAttack =0;
     
     //Controls high-level game flow between hub, missions and combat
     public enum GameState
     {
         Hub,
-        MissionStart,
+        SystemMap,
+        MissionBrief,
+        PlanetSide,
         Combat,
-        MissionResult
+        MissionResult,
+        Ending
     }
 
     public GameState currentState;
 
-    public GameObject missionPanel;
-    public GameObject combatPanel;
-    public GameObject resultPanel;
-    public GameObject objectivePanel;
+    PlanetData selectedPlanet;
+    public PlanetData SelectedPlanet => selectedPlanet;
 
-    List<MissionData> availableMissions = new List<MissionData>();
-    MissionData selectedMission;
-    private MissionData lastMission;
+    // Tracks whether the current combat originated from a zone event (true)
+    // or was launched directly as a standalone encounter (false).
+    // Controls post-combat routing in EndCombat().
+    private bool isZoneEncounter;
 
-    private bool lastVictory;
+    EncounterData selectedEncounter;
+    private EncounterData lastEncounter;
+    public EncounterData SelectedEncounter => selectedEncounter;
+
+    private CombatEndState lastCombatEndState;
+    public CombatEndState LastCombatEndState => lastCombatEndState;
+
+    private ZoneEventDefinition activeZoneEvent;
 
     [SerializeField] GameObject gridRoot;
     [SerializeField] private CombatManager combatManager;
-    [SerializeField] private Transform missionButtonContainer;
-    [SerializeField] private GameObject missionButtonPrefab;
-    [SerializeField] private GameObject briefingPanel;
-    [SerializeField] private TextMeshProUGUI briefingObjectiveText;
-    [SerializeField] private TextMeshProUGUI briefingDetailsText;
+    [SerializeField] private CampaignManager campaignManager;
+    [SerializeField] private CharacterCreationManager characterCreationManager;
 
     void Start()
     {
-        SetupMissions();
-
         HideAllPanels();
 
         gridRoot.SetActive(false);
@@ -54,146 +59,147 @@ public class GameFlowManager : MonoBehaviour
             Debug.LogError("CombatManager not assigned in GameFlowManager");
         }
 
-            EnterHub();
-    }
-
-    void Update()
-    {
-        if (currentState == GameState.Hub)
-        {
-            if (Input.GetKeyDown(KeyCode.Alpha1))
-            {
-               SelectMission(0);
-            }
-            else if (Input.GetKeyDown(KeyCode.Alpha2))
-            {
-                SelectMission(1);
-            }
-        }
-    }
-
-    void SetupMissions()
-    {
-        //Elimination (default)
-        var m1 = new MissionData("Scout Encounter", 2, "Eliminate all enemies", 2);
-        m1.objectiveType = MissionData.MissionObjectiveType.Elimination;
-
-        //Survival
-        var m2 = new MissionData("Hold Position", 3, "Survive 3 turns", 2);
-        m2.objectiveType = MissionData.MissionObjectiveType.Survival;
-        m2.turnLimit = 3;
-
-        //Target Elimination
-        var m3 = new MissionData("Assassination", 4, "Eliminate priority targer", 3);
-        m3.objectiveType = MissionData.MissionObjectiveType.TargetElimination;
-
-        availableMissions.Add(m1);
-        availableMissions.Add(m2);
-        availableMissions.Add(m3);
+        EnterHub();
     }
 
     void HideAllPanels()
     {
-        missionPanel.SetActive(false);
-        combatPanel.SetActive(false);
-        resultPanel.SetActive(false);
-        objectivePanel.SetActive(false);
-        briefingPanel.SetActive(false);
-    }
-
-     public void SelectMission(int index)
-    {
-        if (index >= availableMissions.Count) return;
-
-        selectedMission = availableMissions[index];
-
-        CombatLog.Add("Selected Mission: " + selectedMission.missionName);
-
-        ShowMissionBriefing();
+        
     }
 
     public void EnterHub()
     {
+        // Temp: auto-populate squad if empty (no new game flow yet)
+        if (SquadManager.Instance.GetSquad().Count == 0)
+            CharacterCreationManager.Instance.StartNewGame();
+
         currentState = GameState.Hub;
 
-        HideAllPanels();
-        missionPanel.SetActive(true);
-
-        PopulateMissionButtons();
+        if (HubUIController.Instance != null)
+            HubUIController.Instance.Show();
 
         gridRoot.SetActive(false);
 
         CombatLog.Add("=== HUB ===");
-        CombatLog.Add("Select Mission");
 
-        for (int i = 0; i < availableMissions.Count; i++)
-        {
-            CombatLog.Add((i + 1) + ": "
-                + availableMissions[i].missionName
-                + " - "
-                + availableMissions[i].description);
-        }
-
+        SquadManager.Instance.RestoreIncapacitatedCharacters();
         SquadManager.Instance.ResetSquadToFull();
+
+        if (HubEntryController.Instance != null)
+            HubEntryController.Instance.RunHubEntryComparison();
+
+        CheckLevelUpPending();
+        OnStateChanged?.Invoke(currentState);
+        AudioEventBus.Fire(AudioEventIds.GameFlow.HubEntered);
     }
 
-    public void StartMission()
-    {
-        currentState=GameState.MissionStart;
-
-        missionPanel.SetActive(false);
-
-        CombatLog.Add("Mission Started");
-
-        SquadManager.Instance.CreateRuntimeSquad();
-
-        StartCombat();
-    }
-
-    public void StartCombat()
+    public void StartCombat(bool surpriseRound = false)
     {
         currentState = GameState.Combat;
-        
-        HideAllPanels();
-        combatPanel.SetActive(true);
 
         gridRoot.SetActive(true);
+
+        // Load map for this encounter
+        var mapDef = MapDatabase.Get(selectedEncounter.mapId);
+        if (mapDef != null)
+            GridManager.Instance.LoadMap(mapDef);
+        else
+            GridManager.Instance.LoadMap();
+
+        // Register the emergency extraction zone based on the map's entry edge.
+        // This zone is always generated so emergency extraction is available on any map.
+        GridManager.Instance.GenerateExtractionZone(
+            mapDef != null ? mapDef.squadEntryZone : MapDefinition.EntryZone.West);
+
+        if (GridVisualizer.Instance != null)
+            GridVisualizer.Instance.RefreshTerrainColors();
 
         CombatLog.Add("Combat Started");
 
         if (combatManager != null)
         {
             var playerUnits = SquadManager.Instance.CreateCombatUnits();
-            var enemyUnits = EnemyFactory.CreateBasicEnemies(selectedMission.enemyCount);
+            int planetTier = campaignManager.GetPlanetTierForEncounter(selectedEncounter);
+            var enemyUnits = new List<Unit>();
 
-            combatManager.StartCombat(selectedMission, playerUnits, enemyUnits, playerBonusAttack);
+            if (activeZoneEvent != null && activeZoneEvent.enemySpawnEntries.Count > 0)
+            {
+                foreach (var entry in activeZoneEvent.enemySpawnEntries)
+                {
+                    var spawned = EnemyFactory.CreateGroup(entry.enemyId, entry.count, entry.spawnLevel, planetTier);
+                    enemyUnits.AddRange(spawned);
+                }
+            }
+            else
+            {
+                //Fallback: hub path or zone event without authored spawn entries
+                enemyUnits = EnemyFactory.CreateGroup(EnemyIds.BasicDrone, selectedEncounter.enemyCount, 1, planetTier);
+            }
+
+            combatManager.StartCombat(selectedEncounter, playerUnits, enemyUnits, playerBonusAttack, surpriseRound);
         }
         else
         {
             CombatLog.Add("CombatManager not found");
         }
 
-        lastMission = selectedMission;
+        lastEncounter = selectedEncounter;
+        OnStateChanged?.Invoke(currentState);
     }
 
-    public void EndCombat(bool victory)
+    public void EndCombat(CombatEndState endState)
     {
-        lastVictory = victory;
+        lastCombatEndState = endState;
 
         currentState = GameState.MissionResult;
 
-        HideAllPanels();
+        campaignManager.RecordEncounterOutcome(lastEncounter, endState);
 
         gridRoot.SetActive(false);
 
-        ResultUIController resultUI = FindAnyObjectByType<ResultUIController>();
-
-        if (resultUI != null)
+        // Handle post-combat loot
+        if (endState == CombatEndState.Retreat)
         {
-            int reward = CalculateReward(lastVictory, lastMission);
-
-            resultUI.ShowResult(victory, reward);
+            // Squad is extracting — no time to loot
+            LootQueue.Clear();
         }
+        // Otherwise loot screen will be shown by UI pass (Milestone 26 deferred)
+        // LootQueue.HasLoot can be checked here to gate the screen when it exists
+
+        // Route to ending screen if this was the final mission and player won
+        if (endState == CombatEndState.FullVictory && lastEncounter.isFinalEncounter)
+        {
+            currentState = GameState.Ending;
+
+            EndingData ending = campaignManager.GetEnding();
+
+            activeZoneEvent = null;
+            OnStateChanged?.Invoke(currentState);
+            return;
+        }
+        
+        // Route back to PlanetSide if this was a zone encounter
+        if (isZoneEncounter)
+        {
+            isZoneEncounter = false;
+
+            bool success = endState != CombatEndState.Defeat;
+
+            if (ExplorationController.Instance != null)
+                ExplorationController.Instance.CompleteEncounter(activeEncounterId, success);
+
+            ReturnToPlanetSide();
+            OnStateChanged?.Invoke(currentState);
+            return;
+        }
+
+        CheckLevelUpPending();
+
+        if (endState == CombatEndState.Defeat)
+            AudioEventBus.Fire(AudioEventIds.GameFlow.CombatDefeat);
+        else
+            AudioEventBus.Fire(AudioEventIds.GameFlow.CombatVictory);
+        OnStateChanged?.Invoke(currentState);
     }
 
     public void ReturnToHub()
@@ -205,83 +211,205 @@ public class GameFlowManager : MonoBehaviour
     {
         SquadManager.Instance.ApplyCombatResults(playerUnits);
 
-        int xpReward = 100; //TEMP for testing
+        int baseXP = lastEncounter.xpReward > 0 ? lastEncounter.xpReward : 100;
+        int encounterLevel = lastEncounter.encounterLevel > 0 ? lastEncounter.encounterLevel : 1;
 
-        SquadManager.Instance.GrantXPToSquad(xpReward);
-    }
+        Dictionary<string, int> scaledXP = EncounterXPCalculator.CalculateForSquad(
+            baseXP,
+            encounterLevel,
+            SquadManager.Instance.GetSquad());
 
-     int CalculateReward(bool victory, MissionData mission)
-    {
-        int totalReward = 0;
+        SquadManager.Instance.GrantXPToSquadScaled(scaledXP);
 
-        //Base: enemy reward (TEMP)
-        int enemyReward = mission.enemyCount * 20;
+        if (lastCombatEndState == CombatEndState.Defeat) return;
 
-        totalReward += enemyReward;
+        MissionState missionState = combatManager.GetMissionState();
+        if (missionState == null) return;
 
-        //Mission success bonus
-        if (victory)
+        // Resolve primary objective reward if completed
+        if (lastEncounter.primaryObjective != null &&
+            missionState.objectiveCompleted.ContainsKey(lastEncounter.primaryObjective.objectiveId))
         {
-            totalReward += mission.missionReward;
-            CombatLog.Add("[Reward] Mission Success Bonus Granted");
-        }
-        else
-        {
-            CombatLog.Add("[Reward] Partial reward (failure)");
+            CombatLog.Add($"[Reward] Primary complete: {lastEncounter.primaryObjective.description}");
+            ResolveMissionReward(lastEncounter.primaryObjective.reward);
         }
 
-        CombatLog.Add($"[Reward] Total: {totalReward}");
-
-        return totalReward;
-    }
-
-    void PopulateMissionButtons()
-    {
-        //Clear existing
-        foreach (Transform child in missionButtonContainer)
+        // Resolve completed secondary objective rewards
+        if (lastEncounter.secondaryObjectives != null)
         {
-            Destroy(child.gameObject);
-        }
-
-        //Create new buttons
-        for (int i = 0; i < availableMissions.Count; i++)
-        {
-            var mission = availableMissions[i];
-
-            GameObject obj = Instantiate(missionButtonPrefab, missionButtonContainer);
-
-            var ui = obj.GetComponent<MissionButtonUI>();
-
-            ui.Initialize(mission, i, this);
+            foreach (var objective in lastEncounter.secondaryObjectives)
+            {
+                if (missionState.objectiveCompleted.ContainsKey(objective.objectiveId))
+                {
+                    CombatLog.Add($"[Reward] Secondary complete: {objective.description}");
+                    ResolveMissionReward(objective.reward);
+                }
+            }
         }
     }
 
-    void ShowMissionBriefing()
+    void ResolveMissionReward(MissionReward reward)
     {
-        currentState = GameState.MissionStart;
+        if (reward == null || reward.IsEmpty()) return;
+
+        //Flat credit grant
+        if (reward.credits > 0)
+            SquadManager.Instance.AddCredits(reward.credits);
+
+        //Specific item grants: deposited in squad inventory
+        foreach (string itemId in reward.itemRewards)
+        {
+            if (!ItemDatabase.Definitions.ContainsKey(itemId))
+            {
+                Debug.LogWarning($"[Reward] Item definition not found: {itemId}. Skipping.");
+                continue;
+            }
+
+            ItemInstance item = ItemInstanceFactory.CreateInstance(itemId);
+            SquadManager.Instance.squadInventory.AddItem(item);
+            CombatLog.Add($"[Reward] Item granted: {itemId}");
+        }
+
+        //Loot table roll: deposited in squad inventory
+        if (!string.IsNullOrEmpty(reward.lootTableId))
+        {
+            List<ItemInstance> lootItems = LootResolver.ResolveLoot(reward.lootTableId);
+            foreach (var item in lootItems)
+            {
+                SquadManager.Instance.squadInventory.AddItem(item);
+            }
+
+            if (lootItems.Count >0)
+                CombatLog.Add($"[Reward] {lootItems.Count} item(s) from loot table deposited in inventory");
+        }
+    }
+
+    void Awake()
+    {
+        Instance = this;
+    }
+
+    public void NewGame()
+    {
+        NarrativeFlagManager.ClearAll();
+        NarrativeJournal.ClearAll();
+        SaveManager.DeleteSave();
+        DifficultySettings.Current = DifficultySettings.DifficultyLevel.Normal;
+        ShipInventory.Clear();
+        SquadManager.Instance.squadInventory = new Inventory(0f);
+        SquadManager.Instance.creditBalance = new CreditBalance();
+
+        CombatLog.Add("[Gameflow] New Game started");
+
+        CharacterCreationManager.Instance.StartNewGame();
+
+        EnterHub();
+    }
+
+    public void CheckLevelUpPending()
+    {
+        foreach (var character in SquadManager.Instance.GetSquad())
+        {
+            if (character.levelUpPending)
+            {
+                OnLevelUpPending?.Invoke(character);
+                return; //Handle one at a time, the UI will re-trigger for each pending level.
+            }
+        }
+    }
+
+    public static event System.Action<CharacterData> OnLevelUpPending;
+    public static event System.Action<GameState> OnStateChanged;
+
+    public void EnterSystemMap()
+    {
+        currentState = GameState.SystemMap;
 
         HideAllPanels();
-        briefingPanel.SetActive(true);
+        //SystemMap UI panel hookup deferred
 
-        //Objective text
-        switch (selectedMission.objectiveType)
-        {
-            case MissionData.MissionObjectiveType.Elimination:
-                briefingObjectiveText.text = "Eliminate all enemies";
-                break;
+        if (HubUIController.Instance != null)
+            HubUIController.Instance.Hide();
 
-            case MissionData.MissionObjectiveType.Survival:
-                briefingObjectiveText.text = $"Survive {selectedMission.turnLimit} turns";
-                break;
+        CombatLog.Add("=== SYSTEM MAP ===");
+        CombatLog.Add("Select a destination.");
+        OnStateChanged?.Invoke(currentState);
+    }
 
-            case MissionData.MissionObjectiveType.TargetElimination:
-                briefingObjectiveText.text = "Eliminate the priority target";
-                break;
-        }
+    public void SelectPlanet(PlanetData planet)
+    {
+        selectedPlanet = planet;
+        CombatLog.Add($"[GameFlow] Planet selected: {planet.planetName}");
+        EnterPlanetSide();
+    }
 
-        //Details
-        briefingDetailsText.text =
-        $"Enemies: {selectedMission.enemyCount}\n" +
-        $"Reward: {selectedMission.missionReward}";
+    void ShowPlanetBriefing()
+    {
+        currentState = GameState.MissionBrief;
+
+        HideAllPanels();
+        //Briefing panel hookup deferred
+
+        CombatLog.Add("=== MISSION BRIEF ===");
+        CombatLog.Add($"Planet: {selectedPlanet.planetName}");
+        CombatLog.Add("Confirm deployment to enter planet-side.");
+        OnStateChanged?.Invoke(currentState);
+    }
+
+    public void EnterPlanetSide()
+    {
+        currentState = GameState.PlanetSide;
+
+        HideAllPanels();
+        // PlanetSide zone navigation panel hookup deferred
+
+        CombatLog.Add("=== PLANET SIDE ===");
+        CombatLog.Add($"Arrived at {selectedPlanet.planetName}. Select a zone.");
+
+        if (ExplorationController.Instance != null)
+            ExplorationController.Instance.EnterPlanet(selectedPlanet);
+        else
+            Debug.LogWarning("[GameFlow] ExplorationController not found on EnterPlanetSide");
+        OnStateChanged?.Invoke(currentState);
+    }
+
+    public void ReturnToPlanetSide()
+    {
+        currentState= GameState.PlanetSide;
+
+        HideAllPanels() ;
+        gridRoot.SetActive(false);
+        // PlanetSide zone navigation panel hookup deferred
+
+        CombatLog.Add("=== PLANET SIDE ===");
+        CombatLog.Add($"Returned to {selectedPlanet?.planetName}. Select a zone.");
+        OnStateChanged?.Invoke(currentState);
+    }
+
+    // Called by ExplorationController before launching zone combat.
+    // Stores the active encounter id so EndCombat() can pass it back.
+    private string activeEncounterId;
+
+    public void SetZoneEncounter(bool isZone, string encounterId)
+    {
+        isZoneEncounter = isZone;
+        activeEncounterId = encounterId;
+    }
+
+    // Launches combat from a zone event using an authored EncounterData.
+    // Mirrors StartEncounter() but does not create a new runtime squad —
+    // the squad is already active from entering PlanetSide.
+    public void LaunchZoneCombat(ZoneEventDefinition zoneEvent, bool surpriseRound = false)
+    {
+        activeZoneEvent = zoneEvent;
+        selectedEncounter = EncounterDatabase.Get(zoneEvent.combatEncounterId);
+
+        if (selectedEncounter == null)
+            Debug.LogError($"[GameFlow] EncounterDatabase returned null for id: {zoneEvent.combatEncounterId}");
+
+        CombatLog.Add($"[GameFlow] Zone combat launched: {selectedEncounter.encounterName}");
+
+        SquadManager.Instance.CreateRuntimeSquad();
+        StartCombat(surpriseRound);
     }
 }

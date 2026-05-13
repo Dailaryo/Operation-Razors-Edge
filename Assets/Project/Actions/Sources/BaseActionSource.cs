@@ -16,7 +16,8 @@ public class BaseActionSource : IActionSource
 
         foreach (var id in actionIds)
         {
-            if (ActionDatabase.Definitions.TryGetValue(id, out var def))
+            var def = ActionDatabase.Get(id);
+            if (def != null)
             {
                 result.Add(def);
             }

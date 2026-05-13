@@ -20,8 +20,12 @@ public class Tile : MonoBehaviour
         Ally, 
         Enemy,
         ValidTarget,
-        InRange
+        InRange,
+        LoSBlocked,
+        Threatened
     }
+
+    private Color terrainColor;
 
     public bool IsSelectable()
     {
@@ -33,6 +37,7 @@ public class Tile : MonoBehaviour
     {
         rend = GetComponent<Renderer>();
         baseColor = rend.material.color;
+        terrainColor = baseColor;
     }
 
     public void SetHighlight(TileHighlightType type)
@@ -63,7 +68,7 @@ public class Tile : MonoBehaviour
         switch (finalType)
         {
             case TileHighlightType.None:
-                rend.material.color = baseColor;
+                rend.material.color = terrainColor;
                 break;
 
             case TileHighlightType.MoveValid:
@@ -89,8 +94,52 @@ public class Tile : MonoBehaviour
             case TileHighlightType.InRange:
                 rend.material.color = Color.blue;
                 break;
+
+            case TileHighlightType.LoSBlocked:
+                rend.material.color = Color.black;
+                break;
+
+            case TileHighlightType.Threatened:
+                rend.material.color = Color.orangeRed;
+                break;
         }
 
         ////Debug.Log($"Tile {gridPosition} | Base: {baseHighlight} | Overlay: {overlayHighlight}");
+    }
+
+    public void SetTerrainColor(TileData.TerrainType terrain)
+    {
+        switch (terrain)
+        {
+            case TileData.TerrainType.Open:
+                terrainColor = Color.tan;
+                break;
+            case TileData.TerrainType.Difficult:
+                terrainColor = Color.darkGreen;
+                break;
+            case TileData.TerrainType.HighGround:
+                terrainColor = Color.brown;
+                break;
+            case TileData.TerrainType.Impassable:
+                terrainColor = Color.grey;
+                break;
+            default:
+                terrainColor = baseColor;
+                break;
+        }
+
+        //Only apply immediately if no highlight is active
+        if (baseHighlight == TileHighlightType.None && overlayHighlight == TileHighlightType.None)
+            rend.material.color = terrainColor;
+    }
+
+    public TileHighlightType GetBaseHighlight()
+    {
+        return baseHighlight;
+    }
+
+    public TileHighlightType GetOverlayHighlight()
+    {
+        return overlayHighlight;
     }
 }

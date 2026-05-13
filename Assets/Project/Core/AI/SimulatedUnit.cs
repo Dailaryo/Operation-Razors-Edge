@@ -8,7 +8,7 @@ public class SimulatedUnit
 
     public Vector2Int position;
 
-    public bool isDead => currentHP <= 0;
+    public bool isDead => currentHP <= 0; //Any log message referencing a simulated unit will need to refer back to the source
 
     public SimulatedUnit(Unit unit)
     {

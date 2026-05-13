@@ -6,4 +6,5 @@ public interface ICombatInputHandler
     void SelectTarget(Unit target);
     void SelectTile(Vector2Int position);
     void Cancel();
+    void ConfirmTurn();
 }

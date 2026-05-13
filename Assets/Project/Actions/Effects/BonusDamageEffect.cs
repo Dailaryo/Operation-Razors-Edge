@@ -8,16 +8,22 @@ public class BonusDamageEffect : StatusEffect
     {
         bonus = amount;
         Priority = 5;
+
+        Conditions = new[]
+        {
+            ConditionType.AttackerIsTarget,
+            ConditionType.ActionDealsDamage
+        };
     }
 
     public override void OnBeforeAction(ActionContext ctx)
     {
-        //Only affect the attacker using this action
-        if (ctx.attacker == Target)
-        {
-            ctx.modifiedDamage += bonus;
+        if (!ConditionsMet(ctx)) return;
 
-            CombatLog.Add($"{Target.unitName} gains +{bonus} bonus damage");
-        }
+        //Additional runtime check: effect owner must be the attacker
+        if (ctx.attacker != Target) return;
+
+        ctx.modifiedDamage += bonus;
+        CombatLog.Add($"{Target.unitName} gains +{bonus} bonus damage");
     }
 }

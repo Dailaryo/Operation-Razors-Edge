@@ -4,6 +4,8 @@ public class TurnManager
 {
     public enum CombatState
     {
+        SurpriseRound,
+        InitiativeRoll,
         PlayerTurn,
         EnemyTurn,
         Resolving,

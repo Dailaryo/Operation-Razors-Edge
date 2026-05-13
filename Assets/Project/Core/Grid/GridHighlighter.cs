@@ -97,8 +97,6 @@ public class GridHighlighter : MonoBehaviour
                 unit,
                 null,
                 moveDef,
-                manager.GetAllUnits(),
-                manager.GetAllUnits(),
                 manager
             );
 
@@ -113,6 +111,21 @@ public class GridHighlighter : MonoBehaviour
             {
                 tile.SetBaseHighlight(Tile.TileHighlightType.None);
             }
+        }
+
+        // Overlay threatened tiles so the player can see OA risk during movement planning
+        foreach (var kvp in GridVisualizer.Instance.GetAllTiles())
+        {
+            Vector2Int pos = kvp.Key;
+            Tile tile = kvp.Value;
+
+            // Only warn about tiles the player could actually move to
+            if (tile.GetBaseHighlight() != Tile.TileHighlightType.MoveValid) continue;
+
+            List<Unit> threateners = ThreatZoneManager.GetThreateningUnits(pos, isEnemy: true);
+
+            if (threateners.Count > 0)
+                tile.SetOverlayHighlight(Tile.TileHighlightType.Threatened);
         }
 
         //Debug.Log("Highlighting valid tiles...");
@@ -141,7 +154,8 @@ public class GridHighlighter : MonoBehaviour
             Vector2Int pos = kvp.Key;
             Tile tile = kvp.Value;
 
-            int distance = DistanceUtility.Manhattan(plannedOrigin, pos);
+            if (DistanceUtility.Chebyshev(plannedOrigin, pos) > def.maxRange) continue;
+            int distance = DistanceUtility.MovementCostDistance(plannedOrigin, pos);
 
             //Check if tile is within range
             bool inRange = distance >= def.minRange && distance <= def.maxRange;
@@ -201,8 +215,6 @@ public class GridHighlighter : MonoBehaviour
                 unit,
                 targetUnit,
                 def,
-                manager.GetAllUnits(),
-                manager.GetAllUnits(),
                 manager
             );
 

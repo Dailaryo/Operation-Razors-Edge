@@ -6,14 +6,6 @@ public class ActionPlanner
     private Dictionary<Unit, List<CombatAction>> plannedActions =
         new Dictionary<Unit, List<CombatAction>>();
 
-    private Dictionary<ActionDefinition.ActionCategory, int> actionLimits =
-        new Dictionary<ActionDefinition.ActionCategory, int>()
-        {
-            {ActionDefinition.ActionCategory.Move, 1},
-            {ActionDefinition.ActionCategory.Standard, 1},
-            {ActionDefinition.ActionCategory.Swift, 1},
-            {ActionDefinition.ActionCategory.Free, int.MaxValue}
-        };
     public void Clear()
     {
         plannedActions.Clear();
@@ -36,7 +28,8 @@ public class ActionPlanner
 
         var actions = plannedActions[unit];
 
-        bool success = ActionEconomyResolver.TryAssignCategories(unit, actions, action, actionLimits);
+        bool success = ActionEconomyResolver.TryAssignCategories(
+            unit, actions, action, ActionEconomyResolver.GetLimitsForUnit(unit));
 
         if (!success) return false;
 

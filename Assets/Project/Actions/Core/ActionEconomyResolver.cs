@@ -1,6 +1,5 @@
 using UnityEngine;
 using System.Collections.Generic;
-using System.Threading;
 
 public static class ActionEconomyResolver
 {
@@ -80,7 +79,7 @@ public static class ActionEconomyResolver
                 {
                     ActionDefinition.ActionCategory.Swift,
                     ActionDefinition.ActionCategory.Move,
-                    ActionDefinition.ActionCategory.Swift
+                    ActionDefinition.ActionCategory.Standard
                 };
 
             case ActionDefinition.ActionCategory.Free:
@@ -100,5 +99,14 @@ public static class ActionEconomyResolver
             { ActionDefinition.ActionCategory.Swift, 1 },
             { ActionDefinition.ActionCategory.Free, int.MaxValue }
         };
+    }
+    public static Dictionary<ActionDefinition.ActionCategory, int> GetLimitsForUnit(Unit unit)
+    {
+        var limits = GetDefaultLimits();
+
+        if (unit.activeEffects.Exists(e => e is OverdriveEffect))
+            limits[ActionDefinition.ActionCategory.Standard] = 2;
+
+        return limits;
     }
 }

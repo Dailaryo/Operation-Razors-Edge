@@ -17,8 +17,32 @@ public enum StatType
     Fortitude,
     Willpower,
     Initiative,
+    BaseAttackBonus,
+    MoveSpeed,
+    PsionicSaveDC,
+    PresenceModifier,
+
+    //Skills
+    SkillAthletics,
+    SkillAcrobatics,
+    SkillStealth,
+    SkillPerception,
+    SkillComputerUse,
+    SkillDemolitions,
+    SkillDisableDevice,
+    SkillRepair,
+    SkillNavigate,
+    SkillKnowledge,
+    SkillInvestigate,
+    SkillXenology,
+    SkillTreatInjury,
+    SkillSurvival,
+    SkillSenseMotive,
+    SkillBluff,
+    SkillDiplomacy,
+    SkillIntimidate,
+    SkillZeroGOperations,
 
     //LEGACY (TEMP)
-    Attack,
     MaxHP
 }

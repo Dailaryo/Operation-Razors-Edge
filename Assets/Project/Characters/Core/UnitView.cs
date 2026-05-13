@@ -51,6 +51,7 @@ public class UnitView :MonoBehaviour
 
     Vector3 GridToWorld(Vector2Int pos)
     {
+        if (GridVisualizer.Instance == null) return Vector3.zero;
         float size = GridVisualizer.Instance.tileSize;
         return new Vector3(pos.x * size, 0, pos.y * size);
     }

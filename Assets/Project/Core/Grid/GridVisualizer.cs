@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class GridVisualizer : MonoBehaviour
@@ -15,7 +14,6 @@ public class GridVisualizer : MonoBehaviour
     private void Start()
     {
         DrawGrid();
-        Instance = this;
     }
 
     void DrawGrid()
@@ -36,6 +34,11 @@ public class GridVisualizer : MonoBehaviour
                 tileComponent.gridPosition = new Vector2Int(x, y);
 
                 tiles[tileComponent.gridPosition] = tileComponent;
+                
+                //Apply terrain color
+                TileData tileData = GridManager.Instance.GetTileData(tileComponent.gridPosition);
+                if (tileData != null) tileComponent.SetTerrainColor(tileData.terrain);
+
                 tile.name = $"Tile_{x}_{y}";
                 tile.transform.SetParent(transform, true);
 
@@ -61,5 +64,20 @@ public class GridVisualizer : MonoBehaviour
     public Dictionary<Vector2Int, Tile> GetAllTiles()
     {
         return tiles;
+    }
+
+    public void RefreshTerrainColors()
+    {
+        foreach (var kvp in tiles)
+        {
+            TileData tileData = GridManager.Instance.GetTileData(kvp.Key);
+            if (tileData != null)
+                kvp.Value.SetTerrainColor(tileData.terrain);
+        }
+    }
+
+    void Awake()
+    {
+        Instance = this;
     }
 }

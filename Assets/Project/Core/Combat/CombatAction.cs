@@ -13,23 +13,16 @@ public class CombatAction
     public List<StatusEffect> temporaryEffects = new List<StatusEffect>();
     public List<ActionDefinition.ActionCategory> resolvedCategories = new List<ActionDefinition.ActionCategory>();
 
-    public Vector2Int targetPosition;
-
     public Vector2Int? movePosition;
 
     public ActionDefinition definition;
 
-    public CombatAction(Unit sourceUnit, Unit targetUnit, ActionDefinition definition, List<Unit> allyList, List<Unit> enemyList, CombatManager managerRef)
+    public CombatAction(Unit sourceUnit, Unit targetUnit, ActionDefinition definition, CombatManager managerRef)
     {
         source = sourceUnit;
         target = targetUnit;
         this.definition = definition;
         manager = managerRef;
-    }
-
-    public void Execute(CombatResolver resolver)
-    {        
-        ApplyCooldown();
     }
 
     public void SetMovePosition(Vector2Int pos)

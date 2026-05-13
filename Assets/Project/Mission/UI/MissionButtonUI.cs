@@ -9,37 +9,19 @@ public class MissionButtonUI : MonoBehaviour
 
     private int missionIndex;
 
-    public void Initialize(MissionData mission, int index, GameFlowManager manager)
+    public void Initialize(EncounterData mission, int index, GameFlowManager manager)
     {
         missionIndex = index;
 
-        string objectiveText = "";
-
-        switch (mission.objectiveType)
-        {
-            case MissionData.MissionObjectiveType.Elimination:
-                objectiveText = "Eliminate All";
-                break;
-
-            case MissionData.MissionObjectiveType.Survival:
-                objectiveText = $"Survive {mission.turnLimit} Turns";
-                break;
-
-            case MissionData.MissionObjectiveType.TargetElimination:
-                objectiveText = "Eliminate Target";
-                break;
-        }
-
         label.text =
-            $"{mission.missionName}\n" +
-            $"{objectiveText}\n" +
-            $"Reward: {mission.missionReward}";
+            $"{mission.encounterName}\n" +
+            $"{mission.primaryObjective?.description ?? "No objective"}\n" +
+            $"Reward: {mission.primaryObjective?.reward?.credits ?? 0} credits";
 
         button.onClick.RemoveAllListeners();
-
         button.onClick.AddListener(() =>
         {
-            manager.SelectMission(missionIndex);
+            //manager.SelectEncounter(missionIndex);
         });
     }
 }
