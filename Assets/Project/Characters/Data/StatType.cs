@@ -21,6 +21,8 @@ public enum StatType
     MoveSpeed,
     PsionicSaveDC,
     PresenceModifier,
+    FastHealing,
+    NaturalArmor,
 
     //Skills
     SkillAthletics,

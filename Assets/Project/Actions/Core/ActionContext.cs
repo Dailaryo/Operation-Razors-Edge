@@ -28,4 +28,9 @@ public class ActionContext
     public List<StatusEffect> temporaryEffects = new List<StatusEffect>();
 
     public CombatAction action;
+
+    // Forced movement — populated by ForcedMovementActionEffect
+    public bool isForcedMovement = false;
+    public Unit forcedMoveTarget;
+    public Vector2Int forcedMoveDelta;
 }

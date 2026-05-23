@@ -7,6 +7,7 @@ public static class PregenDatabase
         new Dictionary<string, CharacterData>()
         {
             { PregenIds.AlexandraIvanova, AlexandraIvanova.Build() },
+            { PregenIds.RogDarrel, RogDarrel.Build() },
         };
 
     public static CharacterData Get(string id)

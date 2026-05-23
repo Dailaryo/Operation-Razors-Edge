@@ -176,7 +176,8 @@ public class ClassDefinition
             None, //No passive regen
             PerTurn, //regens flat amount each turn
             PerAction, //regens on specific action types
-            FullOnCombatStart //starts full, no regen during combat
+            FullOnCombatStart, //starts full, no regen during combat
+            Permanent //MP is spent permanently at level-up; never refreshes
         }
 
         public RegenMode regenMode;
@@ -195,6 +196,14 @@ public class ClassDefinition
             this.regenMode = regenMode;
             this.baseMax = baseMax;
             this.regenAmount = regenAmount;
+        }
+
+        // Returns the maximum resource pool for a given character level.
+        // Override in subclasses or via virtual dispatch if needed.
+        // Default: returns baseMax for all non-scaling resources.
+        public virtual int GetMaxAtLevel(int level)
+        {
+            return baseMax;
         }
     }
 

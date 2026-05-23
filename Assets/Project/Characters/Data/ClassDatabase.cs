@@ -7,6 +7,7 @@ public static class ClassDatabase
     public static Dictionary<string, ClassDefinition> Definitions = new Dictionary<string, ClassDefinition>()
     {
         { ClassIds.Technosavant, TechnosavantClass.Create() },
+        { ClassIds.HelixWarrior, HelixWarriorClass.Create() },
     };
 
     public static ClassDefinition Get(string id)

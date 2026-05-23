@@ -277,6 +277,227 @@ public static class PassiveDatabase
                     new ApotheosisEffect("VanguardApotheosis")
                 })
             )},
+            // --- Helix Warrior Core Mutations ---
+            { PassiveIds.HelixAdaptivePhysiology, new PassiveDefinition(
+                passive: PassiveIds.HelixAdaptivePhysiology,
+                name:    "Adaptive Physiology",
+                desc:    "The Helix Warrior's altered biology repairs damage continuously. Fast healing 1 while above 0 HP.",
+                effect:  new SimpleEffectSource(new List<StatusEffect>
+                {
+                    new StatBonusEffect(StatType.FastHealing, 1, PassiveIds.HelixAdaptivePhysiology, StatModifier.BonusType.Untyped)
+                })
+            )},
+            { PassiveIds.HelixRapidHealing, new PassiveDefinition(
+                passive: PassiveIds.HelixRapidHealing,
+                name:    "Rapid Healing",
+                desc:    "Mutation: Regenerate 1 HP per round while above 0 HP.",
+                effect:  new SimpleEffectSource(new List<StatusEffect>
+                {
+                    new StatBonusEffect(StatType.FastHealing, 1, PassiveIds.HelixRapidHealing, StatModifier.BonusType.Untyped)
+                })
+            )},
+            { PassiveIds.HelixRapidHealingEnhanced, new PassiveDefinition(
+                passive: PassiveIds.HelixRapidHealingEnhanced,
+                name:    "Rapid Healing (Enhanced)",
+                desc:    "Mutation upgraded: Fast healing increases to 2.",
+                effect:  new SimpleEffectSource(new List<StatusEffect>
+                {
+                    new StatBonusEffect(StatType.FastHealing, 2, PassiveIds.HelixRapidHealingEnhanced, StatModifier.BonusType.Untyped)
+                })
+            )},
+            { PassiveIds.HelixRapidHealingGreater, new PassiveDefinition(
+                passive: PassiveIds.HelixRapidHealingGreater,
+                name:    "Rapid Healing (Greater)",
+                desc:    "Mutation upgraded: Fast healing 3. Automatically stabilize at 0 HP.",
+                effect:  new SimpleEffectSource(new List<StatusEffect>
+                {
+                    new StatBonusEffect(StatType.FastHealing, 3, PassiveIds.HelixRapidHealingGreater, StatModifier.BonusType.Untyped)
+                })
+            )},
+            { PassiveIds.HelixEnhancedMusculature, new PassiveDefinition(
+                passive: PassiveIds.HelixEnhancedMusculature,
+                name:    "Enhanced Musculature",
+                desc:    "Mutation: +2 species bonus on melee damage rolls and Power checks.",
+                effect:  new SimpleEffectSource(new List<StatusEffect>
+                {
+                    new StatBonusEffect(StatType.MeleePower, 2, PassiveIds.HelixEnhancedMusculature, StatModifier.BonusType.Racial)
+                })
+            )},
+            { PassiveIds.HelixEnhancedMusculatureImproved, new PassiveDefinition(
+                passive: PassiveIds.HelixEnhancedMusculatureImproved,
+                name:    "Enhanced Musculature (Improved)",
+                desc:    "Mutation upgraded: +4 bonus on melee damage rolls and Power checks.",
+                effect:  new SimpleEffectSource(new List<StatusEffect>
+                {
+                    new StatBonusEffect(StatType.MeleePower, 4, PassiveIds.HelixEnhancedMusculatureImproved, StatModifier.BonusType.Racial)
+                })
+            )},
+            { PassiveIds.HelixAdrenalineSurge, new PassiveDefinition(
+                passive: PassiveIds.HelixAdrenalineSurge,
+                name:    "Adrenaline Surge",
+                desc:    "Mutation (active): Once per combat, gain +4 Power for 3 rounds as a free action.",
+                effect:  null // Delivered as an action — see ActionIds.HelixAdrenalineSurge
+            )},
+            { PassiveIds.HelixPredatoryReflexes, new PassiveDefinition(
+                passive: PassiveIds.HelixPredatoryReflexes,
+                name:    "Predatory Reflexes",
+                desc:    "Mutation: +2 species bonus to Initiative.",
+                effect:  new SimpleEffectSource(new List<StatusEffect>
+                {
+                    new StatBonusEffect(StatType.Initiative, 2, PassiveIds.HelixPredatoryReflexes, StatModifier.BonusType.Racial)
+                })
+            )},
+            { PassiveIds.HelixBoneDensity, new PassiveDefinition(
+                passive: PassiveIds.HelixBoneDensity,
+                name:    "Bone Density",
+                desc:    "Mutation: +1 natural armor bonus to Defense.",
+                effect:  new SimpleEffectSource(new List<StatusEffect>
+                {
+                    new StatBonusEffect(StatType.NaturalArmor, 1, PassiveIds.HelixBoneDensity, StatModifier.BonusType.Racial)
+                })
+            )},
+            { PassiveIds.HelixAdrenalFrenzy, new PassiveDefinition(
+                passive: PassiveIds.HelixAdrenalFrenzy,
+                name:    "Adrenal Frenzy",
+                desc:    "Mutation upgraded (active): +6 Power and +1 attack roll for 4 rounds, 1/combat. Replaces Adrenaline Surge.",
+                effect:  null // Delivered as an action — see ActionIds.HelixAdrenalFrenzy
+            )},
+            // --- Helix Warrior Core Class Features ---
+            { PassiveIds.HelixPowerfulBuild, new PassiveDefinition(
+                passive: PassiveIds.HelixPowerfulBuild,
+                name:    "Powerful Build",
+                desc:    "Counts as one size category larger for grapple, bull rush, overrun, and weapon sizing. Does not change actual size.",
+                effect:  null // Flag checked by grapple and forced movement resolvers — no stat effect
+            )},
+            { PassiveIds.HelixBrutalStrike, new PassiveDefinition(
+                passive: PassiveIds.HelixBrutalStrike,
+                name:    "Brutal Strike",
+                desc:    "Once per round, one melee attack deals +1d6 bonus damage if you moved at least 10 feet before attacking.",
+                effect:  null // Hooks into pre-damage phase — scoped during Berserker path authoring
+            )},
+            // --- Helix Warrior Berserker Path ---
+            { PassiveIds.HelixRampage, new PassiveDefinition(
+                passive: PassiveIds.HelixRampage,
+                name:    "Rampage",
+                desc:    "On any melee kill, gain a bonus melee attack against an adjacent enemy.",
+                effect:  null // Hooks into post-kill resolution — scoped during Berserker action authoring
+            )},
+            { PassiveIds.HelixBloodlust, new PassiveDefinition(
+                passive: PassiveIds.HelixBloodlust,
+                name:    "Bloodlust",
+                desc:    "While below 50% HP, gain bonus melee damage.",
+                effect:  null // Conditional — scoped during Berserker action authoring
+            )},
+            { PassiveIds.HelixSavageMomentum, new PassiveDefinition(
+                passive: PassiveIds.HelixSavageMomentum,
+                name:    "Savage Momentum",
+                desc:    "Each consecutive melee kill this combat increases your attack bonus by 1, stacking up to 3.",
+                effect:  null // State-tracking — scoped during Berserker action authoring
+            )},
+            { PassiveIds.HelixKillingBlow, new PassiveDefinition(
+                passive: PassiveIds.HelixKillingBlow,
+                name:    "Killing Blow",
+                desc:    "Melee attacks against targets at 25% HP or below automatically deal maximum damage.",
+                effect:  null // Hooks into pre-damage phase — scoped during Berserker action authoring
+            )},
+            { PassiveIds.HelixDevastatingCleave, new PassiveDefinition(
+                passive: PassiveIds.HelixDevastatingCleave,
+                name:    "Devastating Cleave",
+                desc:    "Cleave attacks deal an additional die of damage.",
+                effect:  null // Hooks into Cleave resolution — scoped during Berserker action authoring
+            )},
+            // --- Helix Warrior Apex Predator Path ---
+            { PassiveIds.HelixHuntingInstinct, new PassiveDefinition(
+                passive: PassiveIds.HelixHuntingInstinct,
+                name:    "Hunting Instinct",
+                desc:    "Bonus melee damage against targets not currently in melee with any ally.",
+                effect:  null // Conditional — scoped during Apex Predator action authoring
+            )},
+            { PassiveIds.HelixLethalTempo, new PassiveDefinition(
+                passive: PassiveIds.HelixLethalTempo,
+                name:    "Lethal Tempo",
+                desc:    "Each consecutive attack against the same target this turn gains +1 to attack and damage, stacking up to 3.",
+                effect:  null // State-tracking — scoped during Apex Predator action authoring
+            )},
+            { PassiveIds.HelixExposedWeakness, new PassiveDefinition(
+                passive: PassiveIds.HelixExposedWeakness,
+                name:    "Exposed Weakness",
+                desc:    "Marked Prey targets take increased damage from all sources.",
+                effect:  null // Applied via Mark Prey action — scoped during Apex Predator action authoring
+            )},
+            { PassiveIds.HelixAmbushStriker, new PassiveDefinition(
+                passive: PassiveIds.HelixAmbushStriker,
+                name:    "Ambush Striker",
+                desc:    "Deal bonus damage on the opening strike of each combat.",
+                effect:  null // Conditional on combat-start state — scoped during Apex Predator action authoring
+            )},
+            { PassiveIds.HelixApexSpeed, new PassiveDefinition(
+                passive: PassiveIds.HelixApexSpeed,
+                name:    "Apex Speed",
+                desc:    "Move speed increases by 10 feet.",
+                effect:  new SimpleEffectSource(new List<StatusEffect>
+                {
+                    new StatBonusEffect(StatType.MoveSpeed, 2, PassiveIds.HelixApexSpeed, StatModifier.BonusType.Racial)
+                })
+            )},
+            // --- Helix Warrior Iron Flesh Path ---
+            { PassiveIds.HelixHardenedHide, new PassiveDefinition(
+                passive: PassiveIds.HelixHardenedHide,
+                name:    "Hardened Hide",
+                desc:    "Your skin hardens into a natural armored surface. DR 2/—.",
+                effect:  new SimpleEffectSource(new List<StatusEffect>
+                {
+                    new DamageReductionEffect(2)
+                })
+            )},
+            { PassiveIds.HelixReactivePlating, new PassiveDefinition(
+                passive: PassiveIds.HelixReactivePlating,
+                name:    "Reactive Plating",
+                desc:    "Enemies that hit you with a melee attack take minor damage.",
+                effect:  null // Hooks into post-hit resolution — scoped during Iron Flesh action authoring
+            )},
+            { PassiveIds.HelixWoundSuppression, new PassiveDefinition(
+                passive: PassiveIds.HelixWoundSuppression,
+                name:    "Wound Suppression",
+                desc:    "Ignore the first penalty die from wound effects each round.",
+                effect:  null // Hooks into wound/debuff resolution — scoped during Iron Flesh action authoring
+            )},
+            { PassiveIds.HelixFortressBody, new PassiveDefinition(
+                passive: PassiveIds.HelixFortressBody,
+                name:    "Fortress Body",
+                desc:    "Natural armor increases by 2 and critical threat range against you is reduced by 1.",
+                effect:  new SimpleEffectSource(new List<StatusEffect>
+                {
+                    new StatBonusEffect(StatType.NaturalArmor, 2, PassiveIds.HelixFortressBody, StatModifier.BonusType.Racial)
+                })
+            )},
+            { PassiveIds.HelixUnbreakable, new PassiveDefinition(
+                passive: PassiveIds.HelixUnbreakable,
+                name:    "Unbreakable",
+                desc:    "Once per encounter, cannot be reduced below 1 HP.",
+                effect:  null // Same pattern as ResilienceEffect — scoped during Iron Flesh action authoring
+            )},
+            { PassiveIds.HelixLivingWall, new PassiveDefinition(
+                passive: PassiveIds.HelixLivingWall,
+                name:    "Living Wall",
+                desc:    "Adjacent allies gain DR 1/— and +1 to Fortitude saves while you are above 0 HP.",
+                effect:  null // Aura — scoped during Iron Flesh action authoring
+            )},
+            { PassiveIds.JuggernautPassive, new PassiveDefinition(
+                passive: PassiveIds.JuggernautPassive,
+                name:    "Juggernaut",
+                desc:    "Cannot be moved involuntarily by bull rush, knockback, or forced displacement unless the source is Large or larger. Ignores the first 5 feet of any forced movement that does bypass the immunity.",
+                effect:  new SimpleEffectSource(new List<StatusEffect>
+                {
+                    new JuggernautEffect()
+                })
+            )},
+            { PassiveIds.LowLightVision, new PassiveDefinition(
+                passive: PassiveIds.LowLightVision,
+                name:    "Low-Light Vision",
+                desc:    "Sees twice as far as baseline human in dim light. Retains color and detail.",
+                effect:  null // Visual/detection flag — no stat effect currently implemented
+            )},
         };
 
     public static PassiveDefinition Get(string passiveId)

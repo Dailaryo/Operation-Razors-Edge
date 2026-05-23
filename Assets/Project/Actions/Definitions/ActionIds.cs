@@ -56,4 +56,24 @@ public static class ActionIds
     public const string HighCommand = "HighCommand";
 
     public const string SensorLinkShare = "SensorLinkShare";
+
+    // Helix Warrior — Active Mutations
+    public const string HelixAdrenalineSurge = "HelixAdrenalineSurge";
+    public const string HelixAdrenalFrenzy = "HelixAdrenalFrenzy";
+
+    // Helix Warrior — Berserker Path
+    public const string HelixFrenziedStrike = "HelixFrenziedStrike";
+    public const string HelixBerserkApotheosis = "HelixBerserkApotheosis";
+    public const string HelixApexMutationBerserker = "HelixApexMutationBerserker";
+
+    // Helix Warrior — Apex Predator Path
+    public const string HelixPredatoryLeap = "HelixPredatoryLeap";
+    public const string HelixMarkPrey = "HelixMarkPrey";
+    public const string HelixShadowstep = "HelixShadowstep";
+    public const string HelixPredatorApotheosis = "HelixPredatorApotheosis";
+    public const string HelixApexMutationApex = "HelixApexMutationApex";
+
+    // Helix Warrior — Iron Flesh Path
+    public const string HelixIronApotheosis = "HelixIronApotheosis";
+    public const string HelixApexMutationIron = "HelixApexMutationIron";
 }

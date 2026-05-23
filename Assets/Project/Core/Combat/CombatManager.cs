@@ -386,7 +386,7 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
             List<ActionDefinition> keys = new List<ActionDefinition>(unit.cooldowns.Keys);
             foreach (var action in keys)
             {
-                if (unit.cooldowns[action] == Unit.CombatCooldown)
+                if (unit.cooldowns[action] == Unit.-1)
                     unit.cooldowns.Remove(action);
             }
 

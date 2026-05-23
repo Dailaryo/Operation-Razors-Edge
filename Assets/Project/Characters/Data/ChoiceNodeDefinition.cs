@@ -28,6 +28,8 @@ public class ChoiceNodeDefinition
 
         //What this option grants
         public List<string> actionUnlockIds;
+        public List<string> passiveUnlockIds;
+        public List<string> passiveRemoveIds;
 
         //Passive effect support
         public IEffectSource effectSource;
@@ -38,13 +40,17 @@ public class ChoiceNodeDefinition
             string description,
             string prerequisiteOptionId = null,
             List<string> actionUnlockIds = null,
+            List<string> passiveUnlockIds = null,
+            List<string> passiveRemoveIds = null,
             IEffectSource effectSource= null)
         {
             this.optionId = optionId;
             this.displayName = displayName;
             this.description = description;
             this.prerequisiteOptionId = prerequisiteOptionId;
-            this.actionUnlockIds = actionUnlockIds;
+            this.actionUnlockIds = actionUnlockIds ?? new List<string>();
+            this.passiveUnlockIds = passiveUnlockIds ?? new List<string>();
+            this.passiveRemoveIds = passiveRemoveIds ?? new List<string>();
             this.effectSource = effectSource;
         }
     }

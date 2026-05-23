@@ -197,6 +197,155 @@ public static class FeatDatabase
                     }
                 )
             )},
+
+            // --- Unarmed Combat Chain ---
+
+            { FeatIds.Brawl, new FeatDefinition(
+                featId:      FeatIds.Brawl,
+                displayName: "Brawl",
+                description: "Training in unarmed combat upgrades your unarmed strike from 1d3 to 1d6 damage.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
+                requiredLevel: 1
+            )},
+
+            { FeatIds.ImprovedBrawl, new FeatDefinition(
+                featId:      FeatIds.ImprovedBrawl,
+                displayName: "Improved Brawl",
+                description: "Your unarmed strikes deal 1d8 damage.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
+                requiredLevel: 1,
+                requiredFeatIds: new List<string> { FeatIds.Brawl }
+            )},
+
+            { FeatIds.CombatMartialArts, new FeatDefinition(
+                featId:      FeatIds.CombatMartialArts,
+                displayName: "Combat Martial Arts",
+                description: "Your unarmed strikes add your Power modifier to damage.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
+                requiredLevel: 1,
+                requiredFeatIds: new List<string> { FeatIds.Brawl }
+            )},
+
+            { FeatIds.ImprovedCombatMartialArts, new FeatDefinition(
+                featId:      FeatIds.ImprovedCombatMartialArts,
+                displayName: "Improved Combat Martial Arts",
+                description: "Your unarmed attacks gain a bonus to attack rolls.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
+                requiredLevel: 1,
+                requiredFeatIds: new List<string> { FeatIds.CombatMartialArts },
+                effectSource: new FeatEffectSource(
+                    FeatIds.ImprovedCombatMartialArts,
+                    new List<StatusEffect>
+                    {
+                        new StatBonusEffect(StatType.Accuracy, 1, FeatIds.ImprovedCombatMartialArts, StatModifier.BonusType.Competence)
+                    }
+                )
+            )},
+
+            { FeatIds.AdvancedCombatMartialArts, new FeatDefinition(
+                featId:      FeatIds.AdvancedCombatMartialArts,
+                displayName: "Advanced Combat Martial Arts",
+                description: "Capstone of the unarmed chain. Your unarmed strikes gain a further +1 to attack rolls and deal maximum damage on a critical hit.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
+                requiredLevel: 1,
+                requiredFeatIds: new List<string> { FeatIds.ImprovedCombatMartialArts },
+                effectSource: new FeatEffectSource(
+                    FeatIds.AdvancedCombatMartialArts,
+                    new List<StatusEffect>
+                    {
+                        new StatBonusEffect(StatType.Accuracy, 1, FeatIds.AdvancedCombatMartialArts, StatModifier.BonusType.Competence)
+                    }
+                )
+            )},
+
+            { FeatIds.KnockoutPunch, new FeatDefinition(
+                featId:      FeatIds.KnockoutPunch,
+                displayName: "Knockout Punch",
+                description: "A precise unarmed strike can stun or knock out the target.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
+                requiredLevel: 1,
+                requiredFeatIds: new List<string> { FeatIds.Brawl }
+            )},
+
+            { FeatIds.ImprovedKnockoutPunch, new FeatDefinition(
+                featId:      FeatIds.ImprovedKnockoutPunch,
+                displayName: "Improved Knockout Punch",
+                description: "Improves the DC and duration of your Knockout Punch.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
+                requiredLevel: 1,
+                requiredFeatIds: new List<string> { FeatIds.KnockoutPunch, FeatIds.ImprovedBrawl }
+            )},
+
+            { FeatIds.ImprovedGrapple, new FeatDefinition(
+                featId:      FeatIds.ImprovedGrapple,
+                displayName: "Improved Grapple",
+                description: "Your grapple checks use your Power modifier and gain a +4 bonus.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
+                requiredLevel: 1,
+                requiredFeatIds: new List<string> { FeatIds.ImprovedBrawl },
+                effectSource: new FeatEffectSource(
+                    FeatIds.ImprovedGrapple,
+                    new List<StatusEffect>
+                    {
+                        new StatBonusEffect(StatType.MeleePower, 4, FeatIds.ImprovedGrapple, StatModifier.BonusType.Competence)
+                    }
+                )
+            )},
+
+            { FeatIds.Streetfighting, new FeatDefinition(
+                featId:      FeatIds.Streetfighting,
+                displayName: "Streetfighting",
+                description: "You deal bonus damage against flanked or surprised targets.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
+                requiredLevel: 1,
+                requiredFeatIds: new List<string> { FeatIds.Brawl }
+            )},
+
+            // --- Cleave Chain ---
+
+            { FeatIds.Cleave, new FeatDefinition(
+                featId:      FeatIds.Cleave,
+                displayName: "Cleave",
+                description: "When you drop a target with a melee attack, you may immediately make a bonus melee attack against an adjacent enemy.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
+                requiredLevel: 1,
+                requiredFeatIds: new List<string> { FeatIds.PowerAttack }
+            )},
+
+            { FeatIds.GreatCleave, new FeatDefinition(
+                featId:      FeatIds.GreatCleave,
+                displayName: "Great Cleave",
+                description: "You may Cleave any number of times per round with no limit.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
+                requiredLevel: 1,
+                requiredFeatIds: new List<string> { FeatIds.Cleave }
+            )},
+            { FeatIds.SimpleWeaponsProficiency, new FeatDefinition(
+                featId:      FeatIds.SimpleWeaponsProficiency,
+                displayName: "Simple Weapons Proficiency",
+                description: "Proficient with all simple weapons. No non-proficiency penalty on attack rolls.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                requiredLevel: 1
+            )},
+            { FeatIds.BlindFight, new FeatDefinition(
+                featId:      FeatIds.BlindFight,
+                displayName: "Blind-Fight",
+                description: "Reroll miss chances from concealment once. Invisible attackers gain no advantage on melee attacks against you.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
+                requiredLevel: 1
+            )},
         };
 
     public static FeatDefinition Get(string id)

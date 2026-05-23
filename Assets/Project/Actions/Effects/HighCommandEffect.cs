@@ -7,7 +7,7 @@ public class HighCommandEffect : IActionEffect
     {
         if (resolver.IsSimulation) return;
 
-        ctx.attacker.SetCooldown(ctx.definition, Unit.CombatCooldown);
+        ctx.attacker.SetCooldown(ctx.definition, Unit.-1);
         ctx.attacker.AddEffect(new HighCommandActiveEffect());
 
         // Trigger NeuralSync for free

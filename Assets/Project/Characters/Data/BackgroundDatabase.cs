@@ -19,6 +19,23 @@ public static class BackgroundDatabase
                     SkillType.Knowledge
                 }
             )},
+            { BackgroundIds.Gladiator, new BackgroundDefinition(
+                backgroundId: BackgroundIds.Gladiator,
+                displayName:  "Gladiator",
+                description:  "Implanted memory construct encoding the skills, reflexes, and psychological conditioning of an " +
+                              "arena fighter. The implant provides muscle memory and confidence; the reality-check comes from " +
+                              "first contact.",
+                bonusFeatIds: new List<string>
+                {
+                    FeatIds.Brawl
+                },
+                bonusClassSkills: new List<SkillType>
+                {
+                    SkillType.Intimidate,
+                    SkillType.Athletics,
+                    SkillType.SenseMotive
+                }
+            )},
         };
 
     public static BackgroundDefinition Get(string id)

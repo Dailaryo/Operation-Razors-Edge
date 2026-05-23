@@ -560,38 +560,6 @@ public static class ActionDatabase
                 resourceCost:   4
             )},
 
-            { ActionIds.CommandOverrideAction, new ActionDefinition(
-                actionID:       ActionIds.CommandOverrideAction,
-                targetType:     TargetType.Ally,
-                requiresTarget: true,
-                minRange:       1,
-                maxRange:       6,
-                category:       ActionDefinition.ActionCategory.Free,
-                targetingMode:  ActionDefinition.TargetingMode.Tile,
-                effects: new List<IActionEffect>
-                {
-                    new CommandOverrideActionEffect()
-                },
-                attackType:     ActionDefinition.AttackType.None,
-                requiresLoS:    false
-            )},
-
-            { ActionIds.DiagnoseWeakness, new ActionDefinition(
-                actionID:       ActionIds.DiagnoseWeakness,
-                targetType:     TargetType.Enemy,
-                requiresTarget: true,
-                minRange:       1,
-                maxRange:       8,
-                category:       ActionDefinition.ActionCategory.Standard,
-                targetingMode:  ActionDefinition.TargetingMode.Tile,
-                effects: new List<IActionEffect>
-                {
-                    new DiagnoseWeaknessEffect()
-                },
-                attackType:     ActionDefinition.AttackType.None,
-                requiresLoS:    true
-            )},
-
             { ActionIds.ActivateElectronicShroud, new ActionDefinition(
                 actionID:       ActionIds.ActivateElectronicShroud,
                 targetType:     TargetType.None,
@@ -621,6 +589,248 @@ public static class ActionDatabase
                 attackType:     ActionDefinition.AttackType.None,
                 requiresLoS:    false,
                 cooldown:       0
+            )},
+
+            // ── HELIX WARRIOR — ACTIVE MUTATIONS ──────────────────────────────────────
+
+            { ActionIds.HelixAdrenalineSurge, new ActionDefinition(
+                actionID:       ActionIds.HelixAdrenalineSurge,
+                targetType:     TargetType.Self,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       0,
+                category:       ActionDefinition.ActionCategory.Free,
+                cooldown:       -1,
+                effects: new List<IActionEffect>
+                {
+                    new ApplySelfStatusEffectEffect(unit =>
+                        new StatBonusEffect(StatType.Power, 4, "AdrenalineSurge", StatModifier.BonusType.Racial))
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
+
+            { ActionIds.HelixAdrenalFrenzy, new ActionDefinition(
+                actionID:       ActionIds.HelixAdrenalFrenzy,
+                targetType:     TargetType.Self,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       0,
+                category:       ActionDefinition.ActionCategory.Free,
+                cooldown:       -1,
+                effects: new List<IActionEffect>
+                {
+                    new ApplySelfStatusEffectEffect(unit =>
+                        new StatBonusEffect(StatType.Power, 6, "AdrenalFrenzy_Power", StatModifier.BonusType.Racial)),
+                    new ApplySelfStatusEffectEffect(unit =>
+                        new StatBonusEffect(StatType.Accuracy, 1, "AdrenalFrenzy_Attack", StatModifier.BonusType.Racial))
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
+
+            // ── HELIX WARRIOR — BERSERKER PATH ────────────────────────────────────────
+
+            { ActionIds.HelixFrenziedStrike, new ActionDefinition(
+                actionID:       ActionIds.HelixFrenziedStrike,
+                targetType:     TargetType.None,
+                requiresTarget: false,
+                minRange:       1,
+                maxRange:       1,
+                dealsDamage:    true,
+                category:       ActionDefinition.ActionCategory.Standard,
+                consumesCategories: new List<ActionDefinition.ActionCategory>
+                {
+                    ActionDefinition.ActionCategory.Standard,
+                    ActionDefinition.ActionCategory.Move
+                },
+                targetingMode:  ActionDefinition.TargetingMode.None,
+                effects: new List<IActionEffect>
+                {
+                    new ApplyStatusEffectToEnemiesEffect(
+                        (attacker, target) =>
+                        {
+                            if (DistanceUtility.IsAdjacent(attacker.position, target.position))
+                                return new StatBonusEffect(StatType.Evasion, -2, "FrenziedStrike", StatModifier.BonusType.Untyped);
+                            return null;
+                        })
+                },
+                attackType:     ActionDefinition.AttackType.Melee,
+                requiresLoS:    false
+            )},
+
+            { ActionIds.HelixBerserkApotheosis, new ActionDefinition(
+                actionID:       ActionIds.HelixBerserkApotheosis,
+                targetType:     TargetType.Self,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       0,
+                category:       ActionDefinition.ActionCategory.Free,
+                cooldown:       -1,
+                effects: new List<IActionEffect>
+                {
+                    new ApplySelfStatusEffectEffect(unit =>
+                        new StatBonusEffect(StatType.MeleePower, 4, "BerserkApotheosis_Damage", StatModifier.BonusType.Morale)),
+                    new ApplySelfStatusEffectEffect(unit =>
+                        new StatBonusEffect(StatType.Accuracy, 2, "BerserkApotheosis_Attack", StatModifier.BonusType.Morale))
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
+
+            { ActionIds.HelixApexMutationBerserker, new ActionDefinition(
+                actionID:       ActionIds.HelixApexMutationBerserker,
+                targetType:     TargetType.Self,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       0,
+                category:       ActionDefinition.ActionCategory.Free,
+                cooldown:       -1,
+                effects: new List<IActionEffect>
+                {
+                    new ApplySelfStatusEffectEffect(unit =>
+                        new StatBonusEffect(StatType.MeleePower, 6, "ApexMutation_Berserker", StatModifier.BonusType.Morale)),
+                    new ApplySelfStatusEffectEffect(unit =>
+                        new StatBonusEffect(StatType.Accuracy, 3, "ApexMutation_BerserkerAcc", StatModifier.BonusType.Morale))
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
+
+            // ── HELIX WARRIOR — APEX PREDATOR PATH ───────────────────────────────────
+
+            { ActionIds.HelixPredatoryLeap, new ActionDefinition(
+                actionID:       ActionIds.HelixPredatoryLeap,
+                targetType:     TargetType.Enemy,
+                requiresTarget: true,
+                minRange:       2,
+                maxRange:       6,
+                dealsDamage:    true,
+                category:       ActionDefinition.ActionCategory.Standard,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                effects: new List<IActionEffect>
+                {
+                    new DamageEffect(),
+                    new ScalingDamageEffect()
+                },
+                attackType:     ActionDefinition.AttackType.Melee,
+                scalingStat:    StatType.MeleePower,
+                scalingMultiplier: 1f,
+                requiresLoS:    true
+            )},
+
+            { ActionIds.HelixMarkPrey, new ActionDefinition(
+                actionID:       ActionIds.HelixMarkPrey,
+                targetType:     TargetType.Enemy,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       8,
+                dealsDamage:    false,
+                category:       ActionDefinition.ActionCategory.Swift,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                effects: new List<IActionEffect>
+                {
+                    new ApplyStatusEffectActionEffect(target =>
+                        new DiagnosedEffect())
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    true
+            )},
+
+            { ActionIds.HelixShadowstep, new ActionDefinition(
+                actionID:       ActionIds.HelixShadowstep,
+                targetType:     TargetType.None,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       4,
+                dealsDamage:    false,
+                category:       ActionDefinition.ActionCategory.Move,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                effects: new List<IActionEffect>
+                {
+                    new MoveEffect()
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false,
+                cooldown:       2
+            )},
+
+            { ActionIds.HelixPredatorApotheosis, new ActionDefinition(
+                actionID:       ActionIds.HelixPredatorApotheosis,
+                targetType:     TargetType.Self,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       0,
+                category:       ActionDefinition.ActionCategory.Free,
+                cooldown:       -1,
+                effects: new List<IActionEffect>
+                {
+                    new ApplySelfStatusEffectEffect(unit =>
+                        new StatBonusEffect(StatType.Accuracy, 4, "PredatorApotheosis_Attack", StatModifier.BonusType.Morale)),
+                    new ApplySelfStatusEffectEffect(unit =>
+                        new StatBonusEffect(StatType.MeleePower, 4, "PredatorApotheosis_Damage", StatModifier.BonusType.Morale))
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
+
+            { ActionIds.HelixApexMutationApex, new ActionDefinition(
+                actionID:       ActionIds.HelixApexMutationApex,
+                targetType:     TargetType.Self,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       0,
+                category:       ActionDefinition.ActionCategory.Free,
+                cooldown:       -1,
+                effects: new List<IActionEffect>
+                {
+                    new ApplySelfStatusEffectEffect(unit =>
+                        new StatBonusEffect(StatType.Accuracy, 5, "ApexMutation_Apex", StatModifier.BonusType.Morale)),
+                    new ApplySelfStatusEffectEffect(unit =>
+                        new StatBonusEffect(StatType.MoveSpeed, 2, "ApexMutation_ApexSpeed", StatModifier.BonusType.Morale))
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
+
+            // ── HELIX WARRIOR — IRON FLESH PATH ──────────────────────────────────────
+
+            { ActionIds.HelixIronApotheosis, new ActionDefinition(
+                actionID:       ActionIds.HelixIronApotheosis,
+                targetType:     TargetType.Self,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       0,
+                category:       ActionDefinition.ActionCategory.Free,
+                cooldown:       -1,
+                effects: new List<IActionEffect>
+                {
+                    new ApplySelfStatusEffectEffect(unit =>
+                        new DamageReductionEffect(6)),
+                    new ApplySelfStatusEffectEffect(unit =>
+                        new StatBonusEffect(StatType.NaturalArmor, 3, "IronApotheosis_Armor", StatModifier.BonusType.Morale))
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
+
+            { ActionIds.HelixApexMutationIron, new ActionDefinition(
+                actionID:       ActionIds.HelixApexMutationIron,
+                targetType:     TargetType.Self,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       0,
+                category:       ActionDefinition.ActionCategory.Free,
+                cooldown:       -1,
+                effects: new List<IActionEffect>
+                {
+                    new ApplySelfStatusEffectEffect(unit =>
+                        new DamageReductionEffect(8)),
+                    new ApplySelfStatusEffectEffect(unit =>
+                        new StatBonusEffect(StatType.NaturalArmor, 4, "ApexMutation_Iron", StatModifier.BonusType.Morale))
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
             )},
         };
 

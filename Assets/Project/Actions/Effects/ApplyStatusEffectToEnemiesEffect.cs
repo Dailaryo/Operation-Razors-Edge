@@ -27,6 +27,8 @@ public class ApplyStatusEffectToEnemiesEffect :IActionEffect
 
             var effect = effectFactory(source, unit);
 
+            if (effect == null) continue;
+
             effect.OnApply(unit);
 
             if (!resolver.IsSimulation)

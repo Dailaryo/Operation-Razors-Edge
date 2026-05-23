@@ -6,10 +6,26 @@ public static class FeatIds
     public const string PowerAttack = "PowerAttack";
     public const string PreciseShot = "PreciseShot";
     public const string CombatReflexes = "CombatReflexes";
+    // Unarmed Combat Chain
+    public const string Brawl = "Brawl";
+    public const string ImprovedBrawl = "ImprovedBrawl";
+    public const string CombatMartialArts = "CombatMartialArts";
+    public const string ImprovedCombatMartialArts = "ImprovedCombatMartialArts";
+    public const string AdvancedCombatMartialArts = "AdvancedCombatMartialArts";
+    public const string KnockoutPunch = "KnockoutPunch";
+    public const string ImprovedKnockoutPunch = "ImprovedKnockoutPunch";
+    public const string ImprovedGrapple = "ImprovedGrapple";
+    public const string Streetfighting = "Streetfighting";
+    // Cleave Chain
+    public const string Cleave = "Cleave";
+    public const string GreatCleave = "GreatCleave";
+    // Proficiency Feats
+    public const string SimpleWeaponsProficiency = "SimpleWeaponsProficiency";
 
     //Tactical Feats
     public const string FlankingExpert = "FlankingExpert";
     public const string CoverSpecialist = "CoverSpecialist";
+    public const string BlindFight = "BlindFight";
 
     //Passive Feats
     public const string IronWill = "IronWill";

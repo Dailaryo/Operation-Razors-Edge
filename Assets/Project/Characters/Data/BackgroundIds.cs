@@ -6,4 +6,5 @@ public static class BackgroundIds
     // public const string Military = "military";
     public const string Academic = "academic";
     // public const string Criminal = "criminal";
+    public const string Gladiator = "gladiator";
 }

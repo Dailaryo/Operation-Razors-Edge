@@ -241,6 +241,16 @@ public class CombatResolver
             ResolveWindowBreak(ctx);
         }
 
+        if (ctx.isForcedMovement && ctx.forcedMoveTarget != null)
+        {
+            Vector2Int dir = ctx.forcedMoveDelta;
+            int mag = Mathf.Max(Mathf.Abs(dir.x), Mathf.Abs(dir.y));
+            Vector2Int normalized = mag > 0
+                ? new Vector2Int(dir.x / mag, dir.y / mag)
+                : Vector2Int.zero;
+            ResolveForcedMove(ctx.forcedMoveTarget, normalized, mag);
+        }
+
         action.OnResolved();
     }
 
@@ -691,5 +701,57 @@ public class CombatResolver
 
         if (oaQueue.Count > 0)
             ResolveInterruptOAs(oaQueue);
+    }
+
+    public void ResolveForcedMove(Unit target, Vector2Int direction, int magnitude)
+    {
+        if (target == null || target.IsDead()) return;
+
+        // Juggernaut check: reduce displacement if target has JuggernautEffect
+        // and the source is not Large or larger (source is the attacker in context)
+        foreach (var effect in target.activeEffects)
+        {
+            if (effect is JuggernautEffect)
+            {
+                magnitude -= 1; //1 tile = 5 feet per Juggernaut rank
+                break;
+            }
+        }
+
+        if (magnitude <= 0)
+        {
+            CombatLog.Add($"{target.unitName} resists forced movement (Juggernaut)");
+            return;
+        }
+
+        Vector2Int destination = target.position + direction * magnitude;
+
+        //Walk back along the displacement path until we find a valid tile
+        while (magnitude > 0)
+        {
+            destination = target.position + direction * magnitude;
+
+            if (GridManager.Instance.IsWithinBounds(destination) &&
+                !IsTileOccupied(destination, target))
+                break;
+
+            magnitude--;
+        }
+
+        if (magnitude <=0)
+        {
+            CombatLog.Add($"{target.unitName} forced movement blocked");
+            return;
+        }
+
+        if (isSimulation)
+        {
+            simUnits[target].position = destination;
+            return;
+        }
+
+        GridManager.Instance.MoveUnit(target, destination);
+        ThreatZoneManager.UpdateUnit(target);
+        CombatLog.Add($"{target.unitName} is forced back to {destination}");
     }
 }

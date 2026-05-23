@@ -211,7 +211,7 @@ public class Unit
 
         foreach (var action in keys)
         {
-            if (cooldowns[action] == CombatCooldown) continue; // Don't decrement combat cooldowns
+            if (cooldowns[action] == -1) continue; // Don't decrement combat cooldowns
             cooldowns[action] = Mathf.Max(0, cooldowns[action] - 1);
         }
     }
@@ -430,6 +430,8 @@ public class Unit
         int avoidance = GetDerivedStat(StatType.Evasion);
 
         int protection = GetProtection();
+        
+        int naturalArmor = GetStat(StatType.NaturalArmor);
 
         float multiplier = 1f;
 
@@ -441,7 +443,7 @@ public class Unit
             }
         }
 
-        int total = Mathf.RoundToInt((baseValue + avoidance + protection) * multiplier);
+        int total = Mathf.RoundToInt((baseValue + avoidance + protection + naturalArmor) * multiplier);
 
         return total;
     }
@@ -509,6 +511,9 @@ public class Unit
             var feat = FeatDatabase.Get(featId);
             if (feat == null) continue;
 
+            if (!feat.MeetsPrerequisites(sourceCharacterData))
+                Debug.LogWarning($"{unitName}: Feat '{feat.displayName}' prerequisites not met — check authoring order.");
+
             if (feat.actionSource != null)
                 actionSources.Add(feat.actionSource);
 
@@ -563,7 +568,7 @@ public class Unit
         //Initialize resource state from class definition
         if (classDef.resource != null)
         {
-            resource = new ResourceState(classDef.resource);
+            resource = new ResourceState(classDef.resource, sourceCharacterData.level);
         }
 
         //Apply BAB as a StatModifier
@@ -605,6 +610,27 @@ public class Unit
                 StatModifier.BonusType.Untyped)
         }));
 
+        // Apply effects from taken choice options
+        foreach (var node in ChoiceNodeDatabase.Definitions.Values)
+        {
+            foreach (var option in node.options)
+            {
+                if (!sourceCharacterData.takenChoiceOptionIds.Contains(option.optionId)) continue;
+
+                // Remove passives that this upgrade replaces
+                foreach (string removeId in option.passiveRemoveIds)
+                    sourceCharacterData.unlockedPassiveIds.Remove(removeId);
+
+                // Add replacement passives
+                foreach (string addId in option.passiveUnlockIds)
+                    if (!sourceCharacterData.unlockedPassiveIds.Contains(addId))
+                        sourceCharacterData.unlockedPassiveIds.Add(addId);
+
+                if (option.effectSource != null)
+                    effectSources.Add(option.effectSource);
+            }
+        }
+
         // Apply passive unlocks from class level table
         foreach (string passiveId in sourceCharacterData.unlockedPassiveIds)
         {
@@ -615,18 +641,6 @@ public class Unit
                 effectSources.Add(passive.effectSource);
 
             Debug.Log($"{unitName}: Applied passive '{passive.displayName}'");
-        }
-
-        // Apply effects from taken choice options
-        foreach (var node in ChoiceNodeDatabase.Definitions.Values)
-        {
-            foreach (var option in node.options)
-            {
-                if (!sourceCharacterData.takenChoiceOptionIds.Contains(option.optionId)) continue;
-
-                if (option.effectSource != null)
-                    effectSources.Add(option.effectSource);
-            }
         }
 
         Debug.Log($"{unitName}: Applied class '{classDef.displayName}' at level {sourceCharacterData.level}");
@@ -693,11 +707,12 @@ public class Unit
         public int current;
         public int max;
 
-        public ResourceState(ClassDefinition.ResourceDefinition def)
+        public ResourceState(ClassDefinition.ResourceDefinition def, int level)
         {
             this.definition = def;
-            this.max = def.baseMax;
-            this.current = def.baseMax;
+            int levelMax = def.GetMaxAtLevel(level);
+            this.max = levelMax;
+            this.current = levelMax;
         }
 
         public bool CanAfford(int cost) => current >= cost;
