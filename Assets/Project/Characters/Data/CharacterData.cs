@@ -10,6 +10,10 @@ public class CharacterData
     public string speciesId;
     public string lootTableId;
 
+    // Background choice selections — set by pregen builders / character creation UI
+    public string backgroundFeatChoice = "";
+    public List<SkillType> backgroundSkillChoices = new List<SkillType>();
+
     public int baseMaxHP;
     public int baseAttack;
     public int baseInitiative;
@@ -24,6 +28,7 @@ public class CharacterData
     public int psionicResistance = 0;
     public int respecCount = 0;
     public int cyberneticCapacityBonus = 0;
+    public int deathRound = -1; // Set when unit dies; -1 means alive. Used by miracle actions.
 
     public int power;
     public int agility;
@@ -116,6 +121,10 @@ public class CharacterData
             baseMaxHP += 10;
             CombatLog.Add($"{name} leveled up to {level} [no class]");
         }
+
+        var speciesDef = SpeciesDatabase.Get(speciesId);
+        if (speciesDef != null)
+            speciesDef.ApplyLevelUp(this);
 
         //Ability unlock hook
         //Future: ClassDefinition.GetUnlocksAtLevel(level) populates this

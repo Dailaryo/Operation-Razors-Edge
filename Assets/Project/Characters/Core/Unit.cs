@@ -119,6 +119,21 @@ public class Unit
             }
         }
 
+        // Bastion Last Stand — once per combat, holds at 1 HP
+        foreach (var effect in activeEffects)
+        {
+            if (effect is BastionLastStandEffect lastStand)
+            {
+                if (lastStand.TryTrigger(this, finalDamage))
+                {
+                    currentHP = 1;
+                    OnHealthChanged?.Invoke(this);
+                    return;
+                }
+                break;
+            }
+        }
+
         currentHP -= finalDamage;
         OnHealthChanged?.Invoke(this);
         if (IsDead()) OnDeath?.Invoke(this);
@@ -149,6 +164,28 @@ public class Unit
 
     public void AddEffect(StatusEffect newEffect)
     {
+        // Fearless: unconditionally block all fear effects
+        foreach (var active in activeEffects)
+        {
+            if (active is DreadnoughtFearlessEffect fearless)
+            {
+                if (fearless.BlocksFearEffect(newEffect))
+                    return;
+                break;
+            }
+        }
+
+        // Aggression Aura: block fear effects from lesser sources
+        foreach (var active in activeEffects)
+        {
+            if (active is AggressionAuraEffect aura)
+            {
+                if (aura.BlocksFearEffect(newEffect, sourceCharacterData?.level ?? 0))
+                    return;
+                break;
+            }
+        }
+
         //Check for existing effect of the same type
         for (int i = 0; i < activeEffects.Count; i++)
         {
@@ -459,15 +496,60 @@ public class Unit
         var armor = ItemDatabase.Get(armorInstance.definitionId);
         if (armor == null) return 0;
 
-        int protection = 0;
-
+        int fullProtection = 0;
         foreach (var mod in armor.statModifiers)
         {
             if (mod.stat == StatType.Evasion)
-                protection += mod.flatBonus;
+                fullProtection += mod.flatBonus;
         }
 
-        return protection;
+        // Check proficiency — unproficient units receive a capped bonus
+        bool proficient = IsArmorProficient(armor.armorWeightClass);
+        if (proficient) return fullProtection;
+
+        int cap = armor.armorWeightClass switch
+        {
+            ItemDefinition.ArmorWeightClass.Light   => 1,
+            ItemDefinition.ArmorWeightClass.Medium  => 2,
+            ItemDefinition.ArmorWeightClass.Heavy   => 3,
+            ItemDefinition.ArmorWeightClass.Powered => 3,
+            _                                       => fullProtection
+        };
+
+        return Mathf.Min(fullProtection, cap);
+    }
+
+    private bool IsArmorProficient(ItemDefinition.ArmorWeightClass weightClass)
+    {
+        if (weightClass == ItemDefinition.ArmorWeightClass.None) return true;
+
+        var feats = sourceCharacterData?.equippedFeatIds;
+        if (feats == null) return false;
+
+        return weightClass switch
+        {
+            ItemDefinition.ArmorWeightClass.Light   => feats.Contains(FeatIds.ArmorProficiencyLight),
+            ItemDefinition.ArmorWeightClass.Medium  => feats.Contains(FeatIds.ArmorProficiencyMedium),
+            ItemDefinition.ArmorWeightClass.Heavy   => feats.Contains(FeatIds.ArmorProficiencyHeavy),
+            ItemDefinition.ArmorWeightClass.Powered => feats.Contains(FeatIds.ArmorProficiencyHeavy), // powered uses heavy prof
+            _                                       => true
+        };
+    }
+
+    public int GetMassiveDamageThreshold()
+    {
+        int endScore = sourceCharacterData != null
+            ? sourceCharacterData.GetAttributeScore(StatType.Endurance)
+            : 10;
+
+        int level = sourceCharacterData?.level ?? 1;
+
+        int baseMDT = endScore + (level * 2);
+
+        // Additive bonuses from feats and passives (e.g. ImprovedDamageThreshold)
+        baseMDT += GetStat(StatType.MassiveDamageThreshold);
+
+        return baseMDT;
     }
 
     public int GetSaveValue(SaveType type)
@@ -895,7 +977,12 @@ public class Unit
 
     public int GetMoveSpeed()
     {
-        return GetStat(StatType.MoveSpeed);
+        int speed = GetStat(StatType.MoveSpeed);
+
+        if (activeEffects.Exists(e => e is SlowedEffect))
+            speed = Mathf.Max(1, speed / 2);
+
+        return speed;
     }
 
     public int GetSkillModifierBonus(StatType stat)

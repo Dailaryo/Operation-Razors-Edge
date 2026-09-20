@@ -24,19 +24,14 @@ public static class FeatDatabase
             )},
 
             {FeatIds.PreciseShot, new FeatDefinition(
-                featId: FeatIds.PreciseShot,
+                featId:      FeatIds.PreciseShot,
                 displayName: "Precise Shot",
-                description: "Careful aim improves your ranged accuracy.  Gain +2 Accuracy",
-                category: FeatDefinition.FeatCategory.Combat,
-                tags: new List<FeatDefinition.FeatTag> {FeatDefinition.FeatTag.Ranged},
+                description: "You have learned to shoot into melee without risk of hitting allies. " +
+                             "Removes the −4 penalty on ranged attacks when a target is engaged in melee.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Ranged },
                 requiredLevel: 1,
-                effectSource: new FeatEffectSource(
-                    FeatIds.PreciseShot,
-                    new List<StatusEffect>
-                    {
-                        new StatBonusEffect(StatType.Accuracy, 2, FeatIds.PreciseShot, StatModifier.BonusType.Competence)
-                    }
-                )
+                requiredFeatIds: new List<string> { FeatIds.PointBlankShot }
             )},
 
             //Passive Feats
@@ -345,6 +340,318 @@ public static class FeatDatabase
                 category:    FeatDefinition.FeatCategory.Combat,
                 tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
                 requiredLevel: 1
+            )},
+
+            // --- Ranged Combat Chain ---
+
+            { FeatIds.PersonalFirearmsProficiency, new FeatDefinition(
+                featId:      FeatIds.PersonalFirearmsProficiency,
+                displayName: "Personal Firearms Proficiency",
+                description: "You are proficient with all personal firearms. No non-proficiency penalty on attack rolls with pistols, rifles, and similar personal ranged weapons.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Ranged },
+                requiredLevel: 1
+            )},
+
+            { FeatIds.AdvancedFirearmsProficiency, new FeatDefinition(
+                featId:      FeatIds.AdvancedFirearmsProficiency,
+                displayName: "Advanced Firearms Proficiency",
+                description: "Extended training with high-powered ranged weapons. Unlocks precision rifles and scoped weapon categories. No non-proficiency penalty on advanced ranged weapons.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Ranged },
+                requiredLevel: 1,
+                requiredFeatIds: new List<string> { FeatIds.PersonalFirearmsProficiency }
+            )},
+
+            { FeatIds.PointBlankShot, new FeatDefinition(
+                featId:      FeatIds.PointBlankShot,
+                displayName: "Point Blank Shot",
+                description: "You are accurate at close range. Gain +1 to attack and damage rolls against targets within 30 feet.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Ranged },
+                requiredLevel: 1,
+                effectSource: new FeatEffectSource(
+                    FeatIds.PointBlankShot,
+                    new List<StatusEffect>
+                    {
+                        // Conditional — applied by CombatResolver when target is within 30 ft (6 tiles)
+                        // Placeholder: no persistent stat effect; checked at attack resolution
+                    }
+                )
+            )},
+
+            { FeatIds.FarShot, new FeatDefinition(
+                featId:      FeatIds.FarShot,
+                displayName: "Far Shot",
+                description: "You can make accurate shots at extreme range. Ranged weapon range increments increase by 50%.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Ranged },
+                requiredLevel: 1,
+                requiredFeatIds: new List<string> { FeatIds.PointBlankShot }
+            )},
+
+            { FeatIds.DeadAim, new FeatDefinition(
+                featId:      FeatIds.DeadAim,
+                displayName: "Dead Aim",
+                description: "By taking a moment to line up your shot precisely, you make a devastating ranged attack. " +
+                             "Spend your Standard and Move actions to make one ranged attack with a significant bonus to hit. " +
+                             "Cannot be used if you moved this turn.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Ranged },
+                requiredLevel: 1,
+                requiredFeatIds: new List<string> { FeatIds.FarShot },
+                actionSource: new FeatActionSource(FeatIds.DeadAim, new List<string> { ActionIds.DeadAim })
+            )},
+
+            { FeatIds.DoubleTap, new FeatDefinition(
+                featId:      FeatIds.DoubleTap,
+                displayName: "Double Tap",
+                description: "A rapid follow-up shot at the same target. Make a second ranged attack at −2 to hit immediately after your first.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Ranged },
+                requiredLevel: 1,
+                requiredFeatIds: new List<string> { FeatIds.PersonalFirearmsProficiency }
+            )},
+
+            // --- Skill Feats ---
+
+            { FeatIds.Stealthy, new FeatDefinition(
+                featId:      FeatIds.Stealthy,
+                displayName: "Stealthy",
+                description: "Training in staying out of sight. Gain +2 to Stealth checks. May be taken twice.",
+                category:    FeatDefinition.FeatCategory.Utility,
+                requiredLevel: 1,
+                effectSource: new FeatEffectSource(
+                    FeatIds.Stealthy,
+                    new List<StatusEffect>
+                    {
+                        new StatBonusEffect(StatType.SkillStealth, 2, FeatIds.Stealthy, StatModifier.BonusType.Competence)
+                    }
+                )
+            )},
+
+            { FeatIds.Alertness, new FeatDefinition(
+                featId:      FeatIds.Alertness,
+                displayName: "Alertness",
+                description: "Heightened situational awareness. Gain +2 to Perception and SenseMotive checks.",
+                category:    FeatDefinition.FeatCategory.Utility,
+                requiredLevel: 1,
+                effectSource: new FeatEffectSource(
+                    FeatIds.Alertness,
+                    new List<StatusEffect>
+                    {
+                        new StatBonusEffect(StatType.SkillPerception,  2, FeatIds.Alertness, StatModifier.BonusType.Competence),
+                        new StatBonusEffect(StatType.SkillSenseMotive, 2, FeatIds.Alertness, StatModifier.BonusType.Competence)
+                    }
+                )
+            )},
+
+            { FeatIds.Meticulous, new FeatDefinition(
+                featId:      FeatIds.Meticulous,
+                displayName: "Meticulous",
+                description: "Careful, methodical attention to detail. Gain +2 to Investigate checks.",
+                category:    FeatDefinition.FeatCategory.Utility,
+                requiredLevel: 1,
+                effectSource: new FeatEffectSource(
+                    FeatIds.Meticulous,
+                    new List<StatusEffect>
+                    {
+                        new StatBonusEffect(StatType.SkillInvestigate, 2, FeatIds.Meticulous, StatModifier.BonusType.Competence)
+                    }
+                )
+            )},
+
+            { FeatIds.ImprovedInitiative, new FeatDefinition(
+                featId:      FeatIds.ImprovedInitiative,
+                displayName: "Improved Initiative",
+                description: "Hair-trigger reflexes let you act before most opponents. Gain +4 to Initiative.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                requiredLevel: 1,
+                effectSource: new FeatEffectSource(
+                    FeatIds.ImprovedInitiative,
+                    new List<StatusEffect>
+                    {
+                        new StatBonusEffect(StatType.Initiative, 4, FeatIds.ImprovedInitiative, StatModifier.BonusType.Competence)
+                    }
+                )
+            )},
+
+            { FeatIds.Dodge, new FeatDefinition(
+                featId:      FeatIds.Dodge,
+                displayName: "Dodge",
+                description: "Constant movement and awareness keep you harder to hit. Gain +1 to Defense.",
+                category:    FeatDefinition.FeatCategory.Passive,
+                requiredLevel: 1,
+                effectSource: new FeatEffectSource(
+                    FeatIds.Dodge,
+                    new List<StatusEffect>
+                    {
+                        new StatBonusEffect(StatType.Evasion, 1, FeatIds.Dodge, StatModifier.BonusType.Dodge)
+                    }
+                )
+            )},
+
+            // --- Armor Proficiency Chain ---
+
+            { FeatIds.ArmorProficiencyLight, new FeatDefinition(
+                featId:      FeatIds.ArmorProficiencyLight,
+                displayName: "Armor Proficiency (Light)",
+                description: "Proficient with all light armor. No armor check penalty on attack rolls or skills.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                requiredLevel: 1
+            )},
+
+            { FeatIds.ArmorProficiencyMedium, new FeatDefinition(
+                featId:      FeatIds.ArmorProficiencyMedium,
+                displayName: "Armor Proficiency (Medium)",
+                description: "Proficient with all medium armor. No armor check penalty on attack rolls or skills.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                requiredLevel: 1
+            )},
+
+            { FeatIds.ArmorProficiencyHeavy, new FeatDefinition(
+                featId:      FeatIds.ArmorProficiencyHeavy,
+                displayName: "Armor Proficiency (Heavy)",
+                description: "Proficient with all heavy armor. No armor check penalty on attack rolls or skills.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                requiredLevel: 1,
+                requiredFeatIds: new List<string> { FeatIds.ArmorProficiencyMedium }
+            )},
+
+            // --- Power Attack Derivatives ---
+
+            { FeatIds.ImprovedBullRush, new FeatDefinition(
+                featId:      FeatIds.ImprovedBullRush,
+                displayName: "Improved Bull Rush",
+                description: "You can bull rush opponents without provoking an attack of opportunity. " +
+                             "Gain +4 on opposed Power checks when attempting a bull rush.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
+                requiredLevel: 1,
+                requiredFeatIds: new List<string> { FeatIds.PowerAttack }
+            )},
+
+            { FeatIds.Sunder, new FeatDefinition(
+                featId:      FeatIds.Sunder,
+                displayName: "Sunder",
+                description: "You can attempt to damage or destroy an opponent's weapon or equipment. " +
+                             "Make a melee attack against the item rather than the target; success deals damage to the item.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
+                requiredLevel: 1,
+                requiredFeatIds: new List<string> { FeatIds.PowerAttack }
+            )},
+
+            // --- Massive Damage Threshold / Fear / Endurance ---
+
+            { FeatIds.ImprovedDamageThreshold, new FeatDefinition(
+                featId:      FeatIds.ImprovedDamageThreshold,
+                displayName: "Improved Damage Threshold",
+                description: "Your body shrugs off blows that would incapacitate others. " +
+                             "+3 to your massive damage threshold. May be taken multiple times; effects stack.",
+                category:    FeatDefinition.FeatCategory.Passive,
+                requiredLevel: 1,
+                effectSource: new FeatEffectSource(
+                    FeatIds.ImprovedDamageThreshold,
+                    new List<StatusEffect>
+                    {
+                        new StatBonusEffect(StatType.MassiveDamageThreshold, 3,
+                            FeatIds.ImprovedDamageThreshold, StatModifier.BonusType.Untyped)
+                    }
+                )
+            )},
+
+            { FeatIds.FrightfulPresence, new FeatDefinition(
+                featId:      FeatIds.FrightfulPresence,
+                displayName: "Frightful Presence",
+                description: "Your combat ferocity unnerves weaker opponents. When you reduce an enemy to 0 HP, " +
+                             "all enemies within 10 feet must make a Focus save (DC 10 + half level + PRE modifier) " +
+                             "or become Shaken for 2 rounds.",
+                category:    FeatDefinition.FeatCategory.Combat,
+                tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
+                requiredLevel: 1,
+                effectSource: new FeatEffectSource(
+                    FeatIds.FrightfulPresence,
+                    new List<StatusEffect>
+                    {
+                        new FrightfulPresenceEffect()
+                    }
+                )
+            )},
+
+            { FeatIds.Endurance, new FeatDefinition(
+                featId:      FeatIds.Endurance,
+                displayName: "Endurance",
+                description: "Prolonged physical exertion is less taxing for you. Sleep in light armor without " +
+                             "penalties. Extended marches and forced activity impose reduced fatigue.",
+                category:    FeatDefinition.FeatCategory.Passive,
+                requiredLevel: 1
+            )},
+
+            // --- Field Medic Feats ---
+
+            { FeatIds.MedicalExpert, new FeatDefinition(
+                featId:      FeatIds.MedicalExpert,
+                displayName: "Medical Expert",
+                description: "Advanced field medicine training. A medkit can be used to treat any number of " +
+                             "patients per day, removing the standard single-use restriction.",
+                category:    FeatDefinition.FeatCategory.Utility,
+                requiredLevel: 1,
+                effectSource: new FeatEffectSource(
+                    FeatIds.MedicalExpert,
+                    new List<StatusEffect>
+                    {
+                        new MedicalExpertEffect()
+                    }
+                )
+            )},
+
+            { FeatIds.DefensiveMartialArts, new FeatDefinition(
+                featId:      FeatIds.DefensiveMartialArts,
+                displayName: "Defensive Martial Arts",
+                description: "Training in defensive techniques against melee attackers. Gain +1 Defense.",
+                category:    FeatDefinition.FeatCategory.Passive,
+                requiredLevel: 1,
+                effectSource: new FeatEffectSource(
+                    FeatIds.DefensiveMartialArts,
+                    new List<StatusEffect>
+                    {
+                        new StatBonusEffect(StatType.Evasion, 1, FeatIds.DefensiveMartialArts, StatModifier.BonusType.Dodge)
+                    }
+                )
+            )},
+
+            { FeatIds.Cautious, new FeatDefinition(
+                featId:      FeatIds.Cautious,
+                displayName: "Cautious",
+                description: "Careful, methodical attention to your environment. " +
+                             "Gain +2 to Investigate and DisableDevice checks.",
+                category:    FeatDefinition.FeatCategory.Utility,
+                requiredLevel: 1,
+                effectSource: new FeatEffectSource(
+                    FeatIds.Cautious,
+                    new List<StatusEffect>
+                    {
+                        new StatBonusEffect(StatType.SkillInvestigate,   2, FeatIds.Cautious, StatModifier.BonusType.Competence),
+                        new StatBonusEffect(StatType.SkillDisableDevice, 2, FeatIds.Cautious, StatModifier.BonusType.Competence),
+                    }
+                )
+            )},
+
+            { FeatIds.Educated, new FeatDefinition(
+                featId:      FeatIds.Educated,
+                displayName: "Educated",
+                description: "Deep academic training or implanted expertise across multiple knowledge domains. " +
+                             "Gain +2 to Knowledge checks.",
+                category:    FeatDefinition.FeatCategory.Utility,
+                requiredLevel: 1,
+                effectSource: new FeatEffectSource(
+                    FeatIds.Educated,
+                    new List<StatusEffect>
+                    {
+                        new StatBonusEffect(StatType.SkillKnowledge, 2, FeatIds.Educated, StatModifier.BonusType.Competence)
+                    }
+                )
             )},
         };
 

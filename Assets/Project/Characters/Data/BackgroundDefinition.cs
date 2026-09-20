@@ -13,6 +13,9 @@ public class BackgroundDefinition
 
     public List<SkillType> bonusClassSkills;
 
+    // Number of skills the player may choose from bonusClassSkills (-1 sentinel = full list)
+    public int bonusSkillChoices;
+
     //Flat stat bonuses applied at creation
     public List<StatModifier> statBonuses;
 
@@ -25,6 +28,7 @@ public class BackgroundDefinition
         string description,
         List<string> bonusFeatIds = null,
         List<SkillType> bonusClassSkills = null,
+        int bonusSkillChoices = -1,
         List<StatModifier> statBonuses = null,
         IEffectSource effectSource = null)
     {
@@ -33,21 +37,30 @@ public class BackgroundDefinition
         this.description = description;
         this.bonusFeatIds = bonusFeatIds ?? new List<string>();
         this.bonusClassSkills = bonusClassSkills ?? new List<SkillType>();
+        this.bonusSkillChoices = bonusSkillChoices < 0
+            ? this.bonusClassSkills.Count
+            : bonusSkillChoices;
         this.statBonuses = statBonuses ?? new List<StatModifier>();
         this.effectSource = effectSource;
     }
 
     //Called once at character creation - mutates CharacterData only
+    //Applies the player's chosen feat (backgroundFeatChoice) and chosen skills
+    //(backgroundSkillChoices), rather than granting every option unconditionally.
     public void Apply(CharacterData data)
     {
-        foreach (var featId in bonusFeatIds)
+        // Apply chosen feat (always exactly 1 if any feat options exist)
+        if (!string.IsNullOrEmpty(data.backgroundFeatChoice))
         {
-            if (!data.unlockedFeatIds.Contains(featId))
-                data.unlockedFeatIds.Add(featId);
+            if (!data.unlockedFeatIds.Contains(data.backgroundFeatChoice))
+                data.unlockedFeatIds.Add(data.backgroundFeatChoice);
         }
 
-        foreach (var skill in bonusClassSkills)
+        // Apply chosen skills (up to bonusSkillChoices from bonusClassSkills)
+        foreach (var skill in data.backgroundSkillChoices)
         {
+            if (!bonusClassSkills.Contains(skill)) continue; // guard against invalid choices
+
             if (data.classSkills.Contains(skill))
             {
                 data.backgroundSkillBonuses.Add(new StatModifier(

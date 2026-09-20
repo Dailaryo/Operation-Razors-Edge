@@ -19,6 +19,10 @@ public class SpeciesDefinition
     public IActionSource actionSource;
     public IEffectSource effectSource;
 
+    //Optional hooks for species-specific behavior at character creation / level-up
+    public System.Action<CharacterData> onApply;
+    public System.Action<CharacterData> onLevelUp;
+
     public SpeciesDefinition(
         string speciesId,
         string displayName,
@@ -39,12 +43,21 @@ public class SpeciesDefinition
         this.effectSource = effectSource;
     }
 
-    public void Apply(CharacterData data)
+    public virtual void Apply(CharacterData data)
     {
         foreach (var featId in bonusFeatIds)
         {
             if (!data.unlockedFeatIds.Contains(featId))
                 data.unlockedFeatIds.Add(featId);
         }
+
+        onApply?.Invoke(data);
+    }
+
+    // Called by CharacterData.LevelUp() after classDef.ApplyLevelUp().
+    // Default invokes onLevelUp if set. Override in species with level-scaling traits.
+    public virtual void ApplyLevelUp(CharacterData data)
+    {
+        onLevelUp?.Invoke(data);
     }
 }

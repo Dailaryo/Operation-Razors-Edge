@@ -3,6 +3,15 @@ using System.Collections.Generic;
 
 public class ItemDefinition
 {
+    public enum ArmorWeightClass
+    {
+        None,
+        Light,
+        Medium,
+        Heavy,
+        Powered
+    }
+
     //Identity
     public string itemId;
     public string displayName;
@@ -13,6 +22,7 @@ public class ItemDefinition
     public EquipmentSlot slot;
     public int techTier;
     public TechCategory techCategory;
+    public ArmorWeightClass armorWeightClass;
 
     //Metadata
     public float weight;
@@ -52,7 +62,8 @@ public class ItemDefinition
         WeaponTag weaponTag = WeaponTag.Unarmed,
         int damageDiceCount = 1,
         int damageDiceSides = 4,
-        int damageBonus =0
+        int damageBonus =0,
+        ArmorWeightClass armorWeightClass = ArmorWeightClass.None
     )
     {
         this.itemId = itemId;
@@ -72,5 +83,6 @@ public class ItemDefinition
         this.damageDiceCount = damageDiceCount;
         this.damageDiceSides = damageDiceSides;
         this.damageBonus = damageBonus;
+        this.armorWeightClass = armorWeightClass;
     }
 }

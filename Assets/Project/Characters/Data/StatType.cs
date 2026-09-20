@@ -23,6 +23,7 @@ public enum StatType
     PresenceModifier,
     FastHealing,
     NaturalArmor,
+    MassiveDamageThreshold,
 
     //Skills
     SkillAthletics,

@@ -832,6 +832,561 @@ public static class ActionDatabase
                 attackType:     ActionDefinition.AttackType.None,
                 requiresLoS:    false
             )},
+
+            // --- Infiltrator ---
+
+            { ActionIds.DeadAim, new ActionDefinition(
+                actionID:          ActionIds.DeadAim,
+                targetType:        TargetType.Enemy,
+                requiresTarget:    true,
+                minRange:          2,
+                maxRange:          10,
+                cooldown:          0,
+                dealsDamage:       true,
+                targetingMode:     ActionDefinition.TargetingMode.Tile,
+                category:          ActionDefinition.ActionCategory.Standard,
+                consumesCategories: new List<ActionDefinition.ActionCategory>
+                {
+                    ActionDefinition.ActionCategory.Standard,
+                    ActionDefinition.ActionCategory.Move
+                },
+                effects: new List<IActionEffect>
+                {
+                    new DamageEffect()
+                },
+                attackType:        ActionDefinition.AttackType.Ranged
+            )},
+
+            { ActionIds.InfiltratorVanish, new ActionDefinition(
+                actionID:       ActionIds.InfiltratorVanish,
+                targetType:     TargetType.None,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       0,
+                cooldown:       0,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.None,
+                category:       ActionDefinition.ActionCategory.Standard
+                // Re-enters stealth mid-combat — effect scoped during M23 stealth authoring
+            )},
+
+            { ActionIds.InfiltratorSpectralForm, new ActionDefinition(
+                actionID:       ActionIds.InfiltratorSpectralForm,
+                targetType:     TargetType.None,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       0,
+                cooldown:       0,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.None,
+                category:       ActionDefinition.ActionCategory.Standard
+                // 1/combat untargetable for 1 round — effect scoped during Ghost path authoring
+            )},
+
+            { ActionIds.InfiltratorDeathFromShadows, new ActionDefinition(
+                actionID:       ActionIds.InfiltratorDeathFromShadows,
+                targetType:     TargetType.Enemy,
+                requiresTarget: true,
+                minRange:       2,
+                maxRange:       10,
+                cooldown:       0,
+                dealsDamage:    true,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects: new List<IActionEffect>
+                {
+                    new DamageEffect()
+                },
+                attackType:     ActionDefinition.AttackType.Ranged
+                // 3/combat guaranteed crit from stealth — crit logic scoped during Ghost path authoring
+            )},
+
+            { ActionIds.InfiltratorExposeWeakness, new ActionDefinition(
+                actionID:       ActionIds.InfiltratorExposeWeakness,
+                targetType:     TargetType.Enemy,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       6,
+                cooldown:       0,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Standard
+                // Target suffers -2 Defense until end of round — effect scoped during Operative path authoring
+            )},
+
+            { ActionIds.InfiltratorDisablingStrike, new ActionDefinition(
+                actionID:       ActionIds.InfiltratorDisablingStrike,
+                targetType:     TargetType.Enemy,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       1,
+                cooldown:       0,
+                dealsDamage:    true,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects: new List<IActionEffect>
+                {
+                    new DamageEffect()
+                },
+                attackType:     ActionDefinition.AttackType.Melee
+                // On hit, target loses 1 action next turn — scoped during Operative path authoring
+            )},
+
+            { ActionIds.InfiltratorChokePoint, new ActionDefinition(
+                actionID:       ActionIds.InfiltratorChokePoint,
+                targetType:     TargetType.None,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       6,
+                cooldown:       0,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Standard
+                // Designate tile; enemies entering spend +1 action — scoped during Operative path authoring
+            )},
+
+            { ActionIds.InfiltratorCalculatedTakedown, new ActionDefinition(
+                actionID:       ActionIds.InfiltratorCalculatedTakedown,
+                targetType:     TargetType.Enemy,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       1,
+                cooldown:       0,
+                dealsDamage:    true,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects: new List<IActionEffect>
+                {
+                    new DamageEffect()
+                },
+                attackType:     ActionDefinition.AttackType.Melee
+                // Guaranteed stun if target is debuffed — scoped during Operative path authoring
+            )},
+
+            { ActionIds.InfiltratorPsionicFeint, new ActionDefinition(
+                actionID:       ActionIds.InfiltratorPsionicFeint,
+                targetType:     TargetType.Enemy,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       6,
+                cooldown:       0,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Standard
+                // COG-based attack, Confused 1 round on hit — scoped during Phantom path authoring
+            )},
+
+            { ActionIds.InfiltratorMentalCloak, new ActionDefinition(
+                actionID:       ActionIds.InfiltratorMentalCloak,
+                targetType:     TargetType.None,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       0,
+                cooldown:       0,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.None,
+                category:       ActionDefinition.ActionCategory.Standard
+                // Immune to Sweep/Detect for 3 rounds — scoped during Phantom path authoring
+            )},
+
+            { ActionIds.InfiltratorPsychicDisplacement, new ActionDefinition(
+                actionID:       ActionIds.InfiltratorPsychicDisplacement,
+                targetType:     TargetType.None,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       4,
+                cooldown:       0,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Move
+                // Teleport 4 tiles as Move action, 3/combat — scoped during Phantom path authoring
+            )},
+
+            { ActionIds.InfiltratorPhaseOut, new ActionDefinition(
+                actionID:       ActionIds.InfiltratorPhaseOut,
+                targetType:     TargetType.None,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       0,
+                cooldown:       0,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.None,
+                category:       ActionDefinition.ActionCategory.Standard
+                // Incorporeal for 2 rounds, 1/combat — scoped during Phantom path authoring
+            )},
+
+            // --- Dreadnought ---
+
+            { ActionIds.AbilitySurge, new ActionDefinition(
+                ActionIds.AbilitySurge,
+                TargetType.None,
+                requiresTarget: false,
+                minRange: 0,
+                maxRange: 0,
+                cooldown: 0,
+                dealsDamage: false,
+                targetingMode: ActionDefinition.TargetingMode.None,
+                category: ActionDefinition.ActionCategory.Free,
+                effects: new List<IActionEffect>
+                {
+                    new ApplySelfStatusEffectEffect(unit =>
+                    {
+                        int classLevel = unit.sourceCharacterData?.level ?? 1;
+
+                        bool upgraded = unit.sourceCharacterData != null &&
+                            unit.sourceCharacterData.unlockedPassiveIds
+                                .Contains(PassiveIds.JuggernautAbilitySurgeUpgrade);
+
+                        int powBonus = upgraded ? 10 : 8;
+
+                        return new AbilitySurgeEffect(classLevel, powBonus);
+                    })
+                },
+                attackType: ActionDefinition.AttackType.None,
+                resourceCost: 1
+            )},
+
+            { ActionIds.BastionBulwark, new ActionDefinition(
+                ActionIds.BastionBulwark,
+                TargetType.Ally,
+                requiresTarget: true,
+                minRange: 1,
+                maxRange: 1,
+                cooldown: 0,
+                dealsDamage: false,
+                targetingMode: ActionDefinition.TargetingMode.Tile,
+                category: ActionDefinition.ActionCategory.Standard,
+                effects: new List<IActionEffect>
+                {
+                    new BastionBulwarkEffect()
+                },
+                attackType: ActionDefinition.AttackType.None
+            )},
+
+            { ActionIds.JuggernautUnstoppableCharge, new ActionDefinition(
+                ActionIds.JuggernautUnstoppableCharge,
+                TargetType.Enemy,
+                requiresTarget: true,
+                minRange: 2,
+                maxRange: 6,
+                cooldown: 0,
+                dealsDamage: true,
+                targetingMode: ActionDefinition.TargetingMode.Tile,
+                category: ActionDefinition.ActionCategory.Standard,
+                consumesCategories: new List<ActionDefinition.ActionCategory>
+                {
+                    ActionDefinition.ActionCategory.Standard,
+                    ActionDefinition.ActionCategory.Move
+                },
+                effects: new List<IActionEffect>
+                {
+                    new JuggernautUnstoppableChargeEffect()
+                },
+                attackType: ActionDefinition.AttackType.Melee
+            )},
+
+            { ActionIds.JuggernautGroundbreaker, new ActionDefinition(
+                ActionIds.JuggernautGroundbreaker,
+                TargetType.None,
+                requiresTarget: false,
+                minRange: 0,
+                maxRange: 0,
+                cooldown: Unit.CombatCooldown,
+                dealsDamage: false,
+                targetingMode: ActionDefinition.TargetingMode.None,
+                category: ActionDefinition.ActionCategory.Standard,
+                effects: new List<IActionEffect>
+                {
+                    new JuggernautGroundbreakerEffect()
+                },
+                attackType: ActionDefinition.AttackType.None
+            )},
+
+            { ActionIds.ArtilleristSuppressionFire, new ActionDefinition(
+                ActionIds.ArtilleristSuppressionFire,
+                TargetType.Enemy,
+                requiresTarget: true,
+                minRange: 1,
+                maxRange: 8,
+                cooldown: 0,
+                dealsDamage: true,
+                targetingMode: ActionDefinition.TargetingMode.Tile,
+                category: ActionDefinition.ActionCategory.Standard,
+                effects: new List<IActionEffect>
+                {
+                    new DamageEffect(),
+                    new ArtilleristSuppressionFireEffect()
+                },
+                attackType: ActionDefinition.AttackType.Ranged
+            )},
+
+            { ActionIds.ArtilleristIndirectFire, new ActionDefinition(
+                ActionIds.ArtilleristIndirectFire,
+                TargetType.Enemy,
+                requiresTarget: true,
+                minRange: 2,
+                maxRange: 10,
+                cooldown: 0,
+                dealsDamage: true,
+                targetingMode: ActionDefinition.TargetingMode.Tile,
+                category: ActionDefinition.ActionCategory.Standard,
+                effects: new List<IActionEffect>
+                {
+                    new DamageEffect(),
+                    new ArtilleristIndirectFireEffect()
+                },
+                attackType: ActionDefinition.AttackType.Ranged
+            )},
+
+            { ActionIds.ArtilleristVolleyFire, new ActionDefinition(
+                ActionIds.ArtilleristVolleyFire,
+                TargetType.Enemy,
+                requiresTarget: true,
+                minRange: 1,
+                maxRange: 3,
+                cooldown: 0,
+                dealsDamage: true,
+                targetingMode: ActionDefinition.TargetingMode.Tile,
+                category: ActionDefinition.ActionCategory.Standard,
+                effects: new List<IActionEffect>
+                {
+                    new ArtilleristVolleyFireEffect()
+                },
+                attackType: ActionDefinition.AttackType.Ranged
+            )},
+
+            { ActionIds.ArtilleristDevastation, new ActionDefinition(
+                ActionIds.ArtilleristDevastation,
+                TargetType.Enemy,
+                requiresTarget: true,
+                minRange: 1,
+                maxRange: 8,
+                cooldown: Unit.CombatCooldown,
+                dealsDamage: false,
+                targetingMode: ActionDefinition.TargetingMode.Tile,
+                category: ActionDefinition.ActionCategory.Standard,
+                effects: new List<IActionEffect>
+                {
+                    new ArtilleristDevastationEffect()
+                },
+                attackType: ActionDefinition.AttackType.Ranged
+            )},
+
+            { ActionIds.HealAlly, new ActionDefinition(
+                actionID:       ActionIds.HealAlly,
+                targetType:     TargetType.Ally,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       1,
+                cooldown:       0,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects:        new List<IActionEffect>
+                {
+                    new HealAllyEffect()
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
+
+            { ActionIds.MinorMedicalMiracle, new ActionDefinition(
+                actionID:       ActionIds.MinorMedicalMiracle,
+                targetType:     TargetType.Ally,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       1,
+                cooldown:       0,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects:        new List<IActionEffect>
+                {
+                    new MinorMedicalMiracleEffect()
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
+
+            { ActionIds.MedicalMiracle, new ActionDefinition(
+                actionID:       ActionIds.MedicalMiracle,
+                targetType:     TargetType.Ally,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       1,
+                cooldown:       0,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects:        new List<IActionEffect>
+                {
+                    new MedicalMiracleEffect()
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
+
+            { ActionIds.TSStabilize, new ActionDefinition(
+                actionID:       ActionIds.TSStabilize,
+                targetType:     TargetType.Ally,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       1,
+                cooldown:       0,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Move,
+                effects:        new List<IActionEffect>
+                {
+                    new TSStabilizeEffect()
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
+
+            { ActionIds.TSMassTriage, new ActionDefinition(
+                actionID:       ActionIds.TSMassTriage,
+                targetType:     TargetType.None,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       0,
+                cooldown:       0,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.None,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects:        new List<IActionEffect>
+                {
+                    new TSMassTriageEffect()
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
+
+            { ActionIds.CMBattlefieldPatch, new ActionDefinition(
+                actionID:       ActionIds.CMBattlefieldPatch,
+                targetType:     TargetType.Ally,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       1,
+                cooldown:       0,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Free,
+                effects:        new List<IActionEffect>
+                {
+                    new CMBattlefieldPatchEffect()
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
+
+            { ActionIds.CMRevive, new ActionDefinition(
+                actionID:       ActionIds.CMRevive,
+                targetType:     TargetType.Ally,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       1,
+                cooldown:       Unit.CombatCooldown,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects:        new List<IActionEffect>
+                {
+                    new CMReviveEffect()
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
+
+            { ActionIds.CMPriorityPatient, new ActionDefinition(
+                actionID:       ActionIds.CMPriorityPatient,
+                targetType:     TargetType.Ally,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       8,
+                cooldown:       Unit.CombatCooldown,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects:        new List<IActionEffect>
+                {
+                    new CMPriorityPatientEffect()
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
+
+            { ActionIds.CMMedicApotheosis, new ActionDefinition(
+                actionID:       ActionIds.CMMedicApotheosis,
+                targetType:     TargetType.None,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       0,
+                cooldown:       0,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.None,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects:        new List<IActionEffect>
+                {
+                    new CMMedicApotheosisEffect()
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
+
+            { ActionIds.FPStimInjection, new ActionDefinition(
+                actionID:       ActionIds.FPStimInjection,
+                targetType:     TargetType.Ally,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       1,
+                cooldown:       0,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects:        new List<IActionEffect>
+                {
+                    new FPStimInjectionEffect()
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
+
+            { ActionIds.FPFieldSynthesis, new ActionDefinition(
+                actionID:       ActionIds.FPFieldSynthesis,
+                targetType:     TargetType.None,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       0,
+                cooldown:       Unit.CombatCooldown,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.None,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects:        new List<IActionEffect>
+                {
+                    new FPFieldSynthesisEffect()
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
+
+            { ActionIds.FPPharmacistApotheosis, new ActionDefinition(
+                actionID:       ActionIds.FPPharmacistApotheosis,
+                targetType:     TargetType.None,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       0,
+                cooldown:       0,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.None,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects:        new List<IActionEffect>
+                {
+                    new FPPharmacistApotheosisEffect()
+                },
+                attackType:     ActionDefinition.AttackType.None,
+                requiresLoS:    false
+            )},
         };
 
     public static ActionDefinition Get(string id)

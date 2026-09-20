@@ -17,7 +17,8 @@ public static class BackgroundDatabase
                     SkillType.ComputerUse,
                     SkillType.Investigate,
                     SkillType.Knowledge
-                }
+                },
+                bonusSkillChoices: 3
             )},
             { BackgroundIds.Gladiator, new BackgroundDefinition(
                 backgroundId: BackgroundIds.Gladiator,
@@ -27,14 +28,75 @@ public static class BackgroundDatabase
                               "first contact.",
                 bonusFeatIds: new List<string>
                 {
-                    FeatIds.Brawl
+                    FeatIds.Brawl,
+                    FeatIds.CombatMartialArts
                 },
                 bonusClassSkills: new List<SkillType>
                 {
                     SkillType.Intimidate,
                     SkillType.Athletics,
                     SkillType.SenseMotive
-                }
+                },
+                bonusSkillChoices: 1
+            )},
+            { BackgroundIds.Criminal, new BackgroundDefinition(
+                backgroundId: BackgroundIds.Criminal,
+                displayName:  "Criminal",
+                description:  "Implanted memory construct encoding the operational habits, reflexes, and tradecraft of a " +
+                              "career criminal. The instincts are genuine; the history is fabricated. Covers larceny, " +
+                              "surveillance evasion, and the baseline social engineering that keeps you out of custody.",
+                bonusFeatIds: new List<string>
+                {
+                    FeatIds.PersonalFirearmsProficiency
+                },
+                bonusClassSkills: new List<SkillType>
+                {
+                    SkillType.Stealth,
+                    SkillType.DisableDevice,
+                    SkillType.Bluff,
+                    SkillType.Knowledge
+                },
+                bonusSkillChoices: 2
+            )},
+            { BackgroundIds.Military, new BackgroundDefinition(
+                backgroundId: BackgroundIds.Military,
+                displayName:  "Military",
+                description:  "Implanted memory construct encoding the training, tactical vocabulary, and chain-of-command " +
+                              "instincts of a career soldier. The discipline is genuine; the service record is fabricated. " +
+                              "Unit-cohesion reflexes emerged from the implant as a side effect — whether by design or " +
+                              "accident depends on who built it.",
+                bonusFeatIds: new List<string>
+                {
+                    FeatIds.Brawl,
+                    FeatIds.CombatMartialArts,
+                    FeatIds.ArmorProficiencyLight,
+                    FeatIds.PersonalFirearmsProficiency
+                },
+                bonusClassSkills: new List<SkillType>
+                {
+                    SkillType.Athletics,
+                    SkillType.Demolitions,
+                    SkillType.Stealth,
+                    SkillType.Knowledge,
+                    SkillType.Navigate,
+                    SkillType.Survival
+                },
+                bonusSkillChoices: 2
+            )},
+            { BackgroundIds.Doctor, new BackgroundDefinition(
+                backgroundId: BackgroundIds.Doctor,
+                displayName:  "Doctor",
+                description:  "Implanted memory construct encoding the expertise, reflexes, and clinical judgment of a " +
+                              "practicing physician. The medical skills are genuine and deeply integrated. " +
+                              "The residency, the patients, the years of training — fabricated.",
+                bonusClassSkills: new List<SkillType>
+                {
+                    SkillType.ComputerUse,
+                    SkillType.Knowledge,
+                    SkillType.Investigate,
+                    SkillType.TreatInjury,
+                },
+                bonusSkillChoices: 2
             )},
         };
 

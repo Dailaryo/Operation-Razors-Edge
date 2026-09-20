@@ -259,8 +259,21 @@ public class CombatResolver
         return manager.GetAllUnits();
     }
 
-    void HandleUnitDeath(Unit unit)
+    void HandleUnitDeath(Unit unit, Unit attacker = null)
     {
+        // Frightful Presence trigger
+        if (attacker != null)
+        {
+            foreach (var effect in attacker.activeEffects)
+            {
+                if (effect is FrightfulPresenceEffect fp)
+                {
+                    fp.TriggerOnKill(attacker, GetAllUnits(), this);
+                    break;
+                }
+            }
+        }
+
         if (!unit.isEnemy)
         {
             //Player unit: handoff to SquadManager for incapacitation and snapshot logic
@@ -427,9 +440,22 @@ public class CombatResolver
 
         CombatLog.Add($"{target.unitName} takes {actual} damage. HP: {target.currentHP}");
 
+        // Massive damage check: single hit >= MDT forces Resolve save or immediate disable
+        if (actual >= target.GetMassiveDamageThreshold())
+        {
+            int saveRoll = target.RollSave(Unit.SaveType.Resolve);
+            CombatLog.Add($"{target.unitName} massive damage check: rolled {saveRoll} vs DC 15");
+
+            if (saveRoll < 15 && !target.IsDead())
+            {
+                target.currentHP = 0;
+                CombatLog.Add($"{target.unitName} fails massive damage save — disabled!");
+            }
+        }
+
         if (target.IsDead())
         {
-            HandleUnitDeath(target);
+            HandleUnitDeath(target, ctx.attacker);
         }
         else if (target.IsDying())
         {

@@ -20,7 +20,11 @@ public class DemoralizeEffect : IActionEffect
             {
                 if (!result.success) return;
                 if (!resolver.IsSimulation)
-                    ctx.finalTarget.AddEffect(new DemoralizedEffect());
+                {
+                    var effect = new ShakenEffect();
+                    effect.sourceLevel = ctx.attacker?.sourceCharacterData?.level ?? 0;
+                    ctx.finalTarget.AddEffect(effect);
+                }
             }
         };
 

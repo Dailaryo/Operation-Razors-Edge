@@ -33,4 +33,7 @@ public class ActionContext
     public bool isForcedMovement = false;
     public Unit forcedMoveTarget;
     public Vector2Int forcedMoveDelta;
+
+    // Set by effects (e.g. ArtilleristIndirectFire) to bypass LoS requirements at targeting/validation
+    public bool ignoresLoS = false;
 }

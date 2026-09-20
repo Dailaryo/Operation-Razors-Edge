@@ -76,4 +76,60 @@ public static class ActionIds
     // Helix Warrior — Iron Flesh Path
     public const string HelixIronApotheosis = "HelixIronApotheosis";
     public const string HelixApexMutationIron = "HelixApexMutationIron";
+
+    // Infiltrator
+    public const string DeadAim = "DeadAim";
+
+    // Infiltrator — Ghost Path
+    public const string InfiltratorVanish           = "InfiltratorVanish";
+    public const string InfiltratorSpectralForm     = "InfiltratorSpectralForm";
+    public const string InfiltratorDeathFromShadows = "InfiltratorDeathFromShadows";
+
+    // Infiltrator — Operative Path
+    public const string InfiltratorExposeWeakness     = "InfiltratorExposeWeakness";
+    public const string InfiltratorDisablingStrike     = "InfiltratorDisablingStrike";
+    public const string InfiltratorChokePoint          = "InfiltratorChokePoint";
+    public const string InfiltratorCalculatedTakedown  = "InfiltratorCalculatedTakedown";
+
+    // Infiltrator — Phantom Path
+    public const string InfiltratorPsionicFeint        = "InfiltratorPsionicFeint";
+    public const string InfiltratorMentalCloak          = "InfiltratorMentalCloak";
+    public const string InfiltratorPsychicDisplacement  = "InfiltratorPsychicDisplacement";
+    public const string InfiltratorPhaseOut             = "InfiltratorPhaseOut";
+
+    // Dreadnought
+    public const string AbilitySurge = "AbilitySurge";
+
+    // Dreadnought — Bastion Path
+    public const string BastionBulwark               = "BastionBulwark";
+
+    // Dreadnought — Juggernaut Path
+    public const string JuggernautUnstoppableCharge  = "JuggernautUnstoppableCharge";
+    public const string JuggernautGroundbreaker      = "JuggernautGroundbreaker";
+
+    // Dreadnought — Artillerist Path
+    public const string ArtilleristSuppressionFire   = "ArtilleristSuppressionFire";
+    public const string ArtilleristIndirectFire      = "ArtilleristIndirectFire";
+    public const string ArtilleristVolleyFire        = "ArtilleristVolleyFire";
+    public const string ArtilleristDevastation       = "ArtilleristDevastation";
+
+    // Field Medic
+    public const string HealAlly            = "HealAlly";
+    public const string MinorMedicalMiracle = "MinorMedicalMiracle";
+    public const string MedicalMiracle      = "MedicalMiracle";
+
+    // Field Medic — Trauma Surgeon Path
+    public const string TSStabilize  = "TSStabilize";
+    public const string TSMassTriage = "TSMassTriage";
+
+    // Field Medic — Combat Medic Path
+    public const string CMBattlefieldPatch = "CMBattlefieldPatch";
+    public const string CMRevive           = "CMRevive";
+    public const string CMPriorityPatient  = "CMPriorityPatient";
+    public const string CMMedicApotheosis  = "CMMedicApotheosis";
+
+    // Field Medic — Field Pharmacist Path
+    public const string FPStimInjection        = "FPStimInjection";
+    public const string FPFieldSynthesis       = "FPFieldSynthesis";
+    public const string FPPharmacistApotheosis = "FPPharmacistApotheosis";
 }

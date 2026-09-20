@@ -19,8 +19,14 @@ public static class FeatIds
     // Cleave Chain
     public const string Cleave = "Cleave";
     public const string GreatCleave = "GreatCleave";
+    // Power Attack derivatives
+    public const string ImprovedBullRush = "ImprovedBullRush";
+    public const string Sunder           = "Sunder";
     // Proficiency Feats
     public const string SimpleWeaponsProficiency = "SimpleWeaponsProficiency";
+    public const string ArmorProficiencyLight  = "ArmorProficiencyLight";
+    public const string ArmorProficiencyMedium = "ArmorProficiencyMedium";
+    public const string ArmorProficiencyHeavy  = "ArmorProficiencyHeavy";
 
     //Tactical Feats
     public const string FlankingExpert = "FlankingExpert";
@@ -30,6 +36,9 @@ public static class FeatIds
     //Passive Feats
     public const string IronWill = "IronWill";
     public const string Toughness = "Toughness";
+    public const string ImprovedDamageThreshold = "ImprovedDamageThreshold";
+    public const string FrightfulPresence       = "FrightfulPresence";
+    public const string Endurance               = "Endurance";
 
     //Utility Feats
     public const string CombatMedic = "CombatMedic";
@@ -51,4 +60,23 @@ public static class FeatIds
 
     // Defensive Feats
     public const string Resilience = "Resilience";
+
+    // Ranged Combat Chain
+    public const string PersonalFirearmsProficiency  = "PersonalFirearmsProficiency";
+    public const string AdvancedFirearmsProficiency  = "AdvancedFirearmsProficiency";
+    public const string PointBlankShot               = "PointBlankShot";
+    public const string FarShot                      = "FarShot";
+    public const string DeadAim                      = "DeadAim";
+    public const string DoubleTap                    = "DoubleTap";
+
+    // Skill Feats
+    public const string Stealthy           = "Stealthy";
+    public const string Alertness          = "Alertness";
+    public const string Meticulous         = "Meticulous";
+    public const string ImprovedInitiative = "ImprovedInitiative";
+    public const string Dodge              = "Dodge";
+    public const string MedicalExpert        = "MedicalExpert";
+    public const string DefensiveMartialArts = "DefensiveMartialArts";
+    public const string Cautious             = "Cautious";
+    public const string Educated             = "Educated";
 }

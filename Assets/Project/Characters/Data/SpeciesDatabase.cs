@@ -48,6 +48,86 @@ public static class SpeciesDatabase
                     FeatIds.SimpleWeaponsProficiency,
                 }
             )},
+            { SpeciesIds.Cryptian, new SpeciesDefinition(
+                speciesId:   SpeciesIds.Cryptian,
+                displayName: "Cryptian",
+                description: "Homo sapiens cryptus. A further modification of the Phytonian genome. " +
+                             "Cryptians carry a latent empathic architecture that allows them to read " +
+                             "emotional states and behavioral cues at exceptional resolution. " +
+                             "Communities are paradoxically isolationist — the same sensitivity that " +
+                             "enables their perception makes dense social environments exhausting.",
+                statBonuses: new List<StatModifier>
+                {
+                    new StatModifier(StatType.Agility,    2, 1f, SpeciesIds.Cryptian, StatModifier.BonusType.Racial),
+                    new StatModifier(StatType.Endurance, -2, 1f, SpeciesIds.Cryptian, StatModifier.BonusType.Racial),
+                    new StatModifier(StatType.Cognition,  2, 1f, SpeciesIds.Cryptian, StatModifier.BonusType.Racial),
+                    new StatModifier(StatType.Presence,   2, 1f, SpeciesIds.Cryptian, StatModifier.BonusType.Racial),
+                },
+                passiveIds: new List<string>
+                {
+                    PassiveIds.CryptianEmpathicSense,
+                    PassiveIds.CryptianSleepImmunity,
+                    PassiveIds.CryptianFocusSaveBonus,
+                    PassiveIds.CryptianConcealedDetection,
+                    PassiveIds.CryptianLightSensitivity,
+                }
+            ) { 
+                onApply    = data => data.psionicResistance = 11 + data.level,
+                onLevelUp  = data => data.psionicResistance = 11 + data.level
+            } },
+            { SpeciesIds.Osteo, new SpeciesDefinition(
+                speciesId:   SpeciesIds.Osteo,
+                displayName: "Osteo",
+                description: "Homo sapiens osteus. Illegally engineered genotype with enhanced aggression, increased muscle mass, " +
+                             "and Neanderthal skeletal density. Shorter lifespan than baseline humans due to metabolic strain. " +
+                             "Pronounced brow ridge and heavy jaw; moves and fights with the confidence of something that has " +
+                             "never needed to calculate odds.",
+                statBonuses: new List<StatModifier>
+                {
+                    new StatModifier(StatType.Power,    4, 1f, SpeciesIds.Osteo, StatModifier.BonusType.Racial),
+                    new StatModifier(StatType.Cognition,-2, 1f, SpeciesIds.Osteo, StatModifier.BonusType.Racial),
+                    new StatModifier(StatType.Presence, -2, 1f, SpeciesIds.Osteo, StatModifier.BonusType.Racial),
+                },
+                passiveIds: new List<string>
+                {
+                    PassiveIds.OsteoCombatConditioning,
+                    PassiveIds.OsteoFortitudeHardening,
+                    PassiveIds.OsteoAggressionAura,
+                },
+                bonusFeatIds: new List<string>
+                {
+                    FeatIds.SimpleWeaponsProficiency,
+                }
+            )},
+            { SpeciesIds.Radix, new SpeciesDefinition(
+                speciesId:   SpeciesIds.Radix,
+                displayName: "Radix",
+                description: "Homo sapiens radix. Engineered for harsh terrestrial environments. " +
+                             "Stockier and shorter than baseline humans, with a genotype-wide modified dwarfism " +
+                             "that Project Prometheus was never able to eliminate. Renowned for stubbornness, " +
+                             "metabolic hardiness, and the tenacity to outlast every expectation attached to their stature.",
+                statBonuses: new List<StatModifier>
+                {
+                    new StatModifier(StatType.Endurance,  2, 1f, SpeciesIds.Radix, StatModifier.BonusType.Racial),
+                    new StatModifier(StatType.Presence,  -2, 1f, SpeciesIds.Radix, StatModifier.BonusType.Racial),
+                },
+                passiveIds: new List<string>
+                {
+                    PassiveIds.RadixDarkvision,
+                    PassiveIds.RadixStability,
+                    PassiveIds.RadixToxinResilience,
+                    PassiveIds.RadixPsionicResilience,
+                    PassiveIds.RadixStructuralIntuition,
+                    PassiveIds.RadixRepairAptitude,
+                },
+                bonusFeatIds: new List<string>
+                {
+                    FeatIds.SimpleWeaponsProficiency,
+                }
+            )
+            {
+                onApply = data => data.moveSpeed = 4
+            }},
         };
 
     public static SpeciesDefinition Get(string id)

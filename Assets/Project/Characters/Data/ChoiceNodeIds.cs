@@ -33,4 +33,42 @@ public static class ChoiceNodeIds
     public const string HelixGreaterMutationRapidHealing = "helix_greater_rapid_healing";
     public const string HelixGreaterMutationMusculature = "helix_greater_musculature";
     public const string HelixGreaterMutationAdrenaline = "helix_greater_adrenaline";
+
+    // Infiltrator — Skill Mastery node (level 5)
+    public const string InfiltratorSkillMasteryNode    = "infiltrator_skill_mastery";
+
+    // Infiltrator Skill Mastery option IDs
+    public const string InfiltratorSkillMasteryStealth       = "infiltrator_sm_stealth";
+    public const string InfiltratorSkillMasteryAcrobatics    = "infiltrator_sm_acrobatics";
+    public const string InfiltratorSkillMasteryDisableDevice = "infiltrator_sm_disable_device";
+    public const string InfiltratorSkillMasteryPerception    = "infiltrator_sm_perception";
+    public const string InfiltratorSkillMasteryInvestigate   = "infiltrator_sm_investigate";
+    public const string InfiltratorSkillMasterySenseMotive   = "infiltrator_sm_sense_motive";
+    public const string InfiltratorSkillMasteryBluff         = "infiltrator_sm_bluff";
+    public const string InfiltratorSkillMasteryKnowledge     = "infiltrator_sm_knowledge";
+    public const string InfiltratorSkillMasteryAthletics     = "infiltrator_sm_athletics";
+
+    // Infiltrator — Path choice node (level 10)
+    public const string InfiltratorPath    = "infiltrator_path";
+
+    // Infiltrator path option IDs
+    public const string InfiltratorGhost     = "infiltrator_ghost";
+    public const string InfiltratorOperative = "infiltrator_operative";
+    public const string InfiltratorPhantom   = "infiltrator_phantom";
+
+    // Dreadnought — Path choice node (level 10)
+    public const string DreadnoughtPath             = "dreadnought_path";
+
+    // Dreadnought path option IDs
+    public const string DreadnoughtBastion          = "dreadnought_bastion";
+    public const string DreadnoughtJuggernaut       = "dreadnought_juggernaut";
+    public const string DreadnoughtArtillerist      = "dreadnought_artillerist";
+
+    // Field Medic — Path choice node (level 10)
+    public const string FieldMedicPath            = "field_medic_path";
+
+    // Field Medic path option IDs
+    public const string FieldMedicTraumaSurgeon   = "field_medic_trauma_surgeon";
+    public const string FieldMedicCombatMedic     = "field_medic_combat_medic";
+    public const string FieldMedicPharmacist      = "field_medic_pharmacist";
 }

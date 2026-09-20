@@ -7,6 +7,7 @@ public class StatusEffect
     public int duration;
 
     public bool isPersistent = false;
+    public int sourceLevel = 0;
     public Unit Target { get; private set; }
     public int Priority { get; protected set; } = 0;
 

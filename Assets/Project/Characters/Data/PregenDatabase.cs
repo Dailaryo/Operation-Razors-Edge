@@ -8,6 +8,9 @@ public static class PregenDatabase
         {
             { PregenIds.AlexandraIvanova, AlexandraIvanova.Build() },
             { PregenIds.RogDarrel, RogDarrel.Build() },
+            { PregenIds.MeharelNueva, MeharelNueva.Build() },
+            { PregenIds.GrokBaird, GrokBaird.Build() },
+            { PregenIds.HarveyJones, HarveyJones.Build() },
         };
 
     public static CharacterData Get(string id)

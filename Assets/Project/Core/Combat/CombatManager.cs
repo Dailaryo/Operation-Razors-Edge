@@ -42,6 +42,17 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         return all;
     }
 
+    public int GetCurrentRound() => turnManager.turnCount;
+
+    private void HandleUnitDeath(Unit unit)
+    {
+        if (unit.sourceCharacterData == null) return;
+        if (unit.sourceCharacterData.deathRound >= 0) return; // Already stamped — guard against double-fire
+
+        unit.sourceCharacterData.deathRound = turnManager.turnCount;
+        CombatLog.Add($"{unit.unitName} died on round {turnManager.turnCount}.");
+    }
+
     public ActionDefinition GetPendingAction()
     {
         return pendingAction;
@@ -397,6 +408,13 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
                 if (effect is ElectronicShroudEffect es) es.ResetForCombat();
                 if (effect is ResilienceEffect res) res.ResetForCombat();
             }
+
+            // Reset death round tracking for miracle actions
+            if (unit.sourceCharacterData != null)
+                unit.sourceCharacterData.deathRound = -1;
+
+            // Subscribe to OnDeath for miracle window tracking
+            unit.OnDeath += HandleUnitDeath;
 
             // Re-apply Combat Reflexes if the unit has it, since oaState
             // didn't exist when ApplyFeats() ran earlier

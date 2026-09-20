@@ -167,6 +167,154 @@ public static class ChoiceNodeDatabase
                     ),
                 }
             )},
+
+            // --- Infiltrator Skill Mastery (level 5) ---
+            { ChoiceNodeIds.InfiltratorSkillMasteryNode, new ChoiceNodeDefinition(
+                nodeId:      ChoiceNodeIds.InfiltratorSkillMasteryNode,
+                displayName: "Skill Mastery",
+                nodeType:    NodeType.FreeChoice,
+                options: new List<ChoiceNodeDefinition.ChoiceOption>
+                {
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.InfiltratorSkillMasteryStealth,
+                        displayName: "Stealth",
+                        description: "You may always Take 10 on Stealth checks, even under pressure."
+                    ),
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.InfiltratorSkillMasteryAcrobatics,
+                        displayName: "Acrobatics",
+                        description: "You may always Take 10 on Acrobatics checks, even under pressure."
+                    ),
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.InfiltratorSkillMasteryDisableDevice,
+                        displayName: "Disable Device",
+                        description: "You may always Take 10 on DisableDevice checks, even under pressure."
+                    ),
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.InfiltratorSkillMasteryPerception,
+                        displayName: "Perception",
+                        description: "You may always Take 10 on Perception checks, even under pressure."
+                    ),
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.InfiltratorSkillMasteryInvestigate,
+                        displayName: "Investigate",
+                        description: "You may always Take 10 on Investigate checks, even under pressure."
+                    ),
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.InfiltratorSkillMasterySenseMotive,
+                        displayName: "Sense Motive",
+                        description: "You may always Take 10 on SenseMotive checks, even under pressure."
+                    ),
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.InfiltratorSkillMasteryBluff,
+                        displayName: "Bluff",
+                        description: "You may always Take 10 on Bluff checks, even under pressure."
+                    ),
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.InfiltratorSkillMasteryKnowledge,
+                        displayName: "Knowledge",
+                        description: "You may always Take 10 on Knowledge checks, even under pressure."
+                    ),
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.InfiltratorSkillMasteryAthletics,
+                        displayName: "Athletics",
+                        description: "You may always Take 10 on Athletics checks, even under pressure."
+                    ),
+                }
+            )},
+
+            // --- Infiltrator Path Choice (level 10) ---
+            { ChoiceNodeIds.InfiltratorPath, new ChoiceNodeDefinition(
+                nodeId:      ChoiceNodeIds.InfiltratorPath,
+                displayName: "Infiltrator Path",
+                nodeType:    NodeType.TreeBranch,
+                treeId:      ChoiceNodeIds.InfiltratorPath,
+                options: new List<ChoiceNodeDefinition.ChoiceOption>
+                {
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.InfiltratorGhost,
+                        displayName: "Ghost",
+                        description: "Stealth mastery and assassination. Shadow Step, Death Blow, and Ghost Apotheosis " +
+                                     "make you a threat enemies cannot locate, engage, or survive."
+                    ),
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.InfiltratorOperative,
+                        displayName: "Operative",
+                        description: "Battlefield control through debuffs and action economy manipulation. " +
+                                     "Expose Weakness, Disabling Strike, and Calculated Takedown dismantle enemy effectiveness."
+                    ),
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.InfiltratorPhantom,
+                        displayName: "Phantom",
+                        description: "Psionic supplementation layered on the Infiltrator toolkit. Requires Wild Talent feat. " +
+                                     "Psionic Feint, Psychic Displacement, and Phase Out add a second layer of misdirection.",
+                        prerequisiteOptionId: null
+                        // Note: Wild Talent prerequisite is enforced by description and future feat gate;
+                        // not currently wired to requiredFeatIds since ChoiceOption doesn't support that field.
+                    ),
+                }
+            )},
+
+            // --- Dreadnought Path Choice (level 10) ---
+            { ChoiceNodeIds.DreadnoughtPath, new ChoiceNodeDefinition(
+                nodeId:      ChoiceNodeIds.DreadnoughtPath,
+                displayName: "Dreadnought Path",
+                nodeType:    NodeType.TreeBranch,
+                treeId:      ChoiceNodeIds.DreadnoughtPath,
+                options: new List<ChoiceNodeDefinition.ChoiceOption>
+                {
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.DreadnoughtBastion,
+                        displayName: "Bastion",
+                        description: "Pure defensive escalation and ally protection. Damage Reduction, forced movement " +
+                                     "immunity, and Protective Aura make you the squad's immovable anchor. " +
+                                     "Bulwark lets you intercept attacks aimed at allies."
+                    ),
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.DreadnoughtJuggernaut,
+                        displayName: "Juggernaut",
+                        description: "Converts defensive mass into offensive force. Unstoppable Charge displaces enemies " +
+                                     "along the path, Shockwave turns Knockdown into an area effect, and Momentum " +
+                                     "rewards relentless pressure on a single target."
+                    ),
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.DreadnoughtArtillerist,
+                        displayName: "Artillerist",
+                        description: "Transforms physical resilience into a weapons platform. Suppression Fire, " +
+                                     "Indirect Fire, and Volley Fire add ranged area control. Fortified Position " +
+                                     "rewards staying stationary with DR and Defense bonuses."
+                    ),
+                }
+            )},
+
+            // --- Field Medic Path Choice (level 10) ---
+            { ChoiceNodeIds.FieldMedicPath, new ChoiceNodeDefinition(
+                nodeId:      ChoiceNodeIds.FieldMedicPath,
+                displayName: "Field Medic Specialization",
+                nodeType:    NodeType.TreeBranch,
+                treeId:      ChoiceNodeIds.FieldMedicPath,
+                options: new List<ChoiceNodeDefinition.ChoiceOption>
+                {
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.FieldMedicTraumaSurgeon,
+                        displayName: "Trauma Surgeon",
+                        description: "Deep healing and revival mastery. Extended miracle windows, Mass Triage, " +
+                                     "and Surgeon Apotheosis make you the last line between the squad and permanent loss."
+                    ),
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.FieldMedicCombatMedic,
+                        displayName: "Combat Medic",
+                        description: "Healing integrated into active combat. Move-action treatment, free-action patches, " +
+                                     "and Priority Patient let you keep the squad fighting without leaving the fight yourself."
+                    ),
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.FieldMedicPharmacist,
+                        displayName: "Field Pharmacist",
+                        description: "Pharmaceutical expertise and chemical enhancement. Stim Injection, Field Synthesis, " +
+                                     "and Pharmacological Mastery add a second dimension to your support toolkit."
+                    ),
+                }
+            )},
         };
 
     public static ChoiceNodeDefinition Get(string id)
