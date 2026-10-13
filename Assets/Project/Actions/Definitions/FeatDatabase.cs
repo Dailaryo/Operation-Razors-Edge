@@ -45,7 +45,7 @@ public static class FeatDatabase
                     FeatIds.Toughness,
                     new List<StatusEffect>
                     {
-                        new StatBonusEffect(StatType.MaxHP, 10, FeatIds.Toughness, StatModifier.BonusType.Competence)
+                        new StatBonusEffect(StatType.MaxHP, 10, FeatIds.Toughness, StatModifier.BonusType.Untyped)
                     }
                 )
             )},
@@ -60,7 +60,7 @@ public static class FeatDatabase
                     FeatIds.IronWill,
                     new List<StatusEffect>
                     {
-                        new StatBonusEffect(StatType.Willpower,  2, FeatIds.IronWill, StatModifier.BonusType.Morale)
+                        new StatBonusEffect(StatType.Willpower,  2, FeatIds.IronWill, StatModifier.BonusType.Untyped)
                     }
                 )
             )},
@@ -92,8 +92,8 @@ public static class FeatDatabase
                     FeatIds.TechLiterate,
                     new List<StatusEffect>
                     {
-                        new StatBonusEffect(StatType.SkillComputerUse, 2, FeatIds.TechLiterate, StatModifier.BonusType.Competence),
-                        new StatBonusEffect(StatType.SkillDisableDevice, 2, FeatIds.TechLiterate, StatModifier.BonusType.Competence)
+                        new StatBonusEffect(StatType.SkillComputerUse, 2, FeatIds.TechLiterate, StatModifier.BonusType.Untyped),
+                        new StatBonusEffect(StatType.SkillDisableDevice, 2, FeatIds.TechLiterate, StatModifier.BonusType.Untyped)
                     }
                 )
             )},
@@ -236,7 +236,7 @@ public static class FeatDatabase
                     FeatIds.ImprovedCombatMartialArts,
                     new List<StatusEffect>
                     {
-                        new StatBonusEffect(StatType.Accuracy, 1, FeatIds.ImprovedCombatMartialArts, StatModifier.BonusType.Competence)
+                        new StatBonusEffect(StatType.Accuracy, 1, FeatIds.ImprovedCombatMartialArts, StatModifier.BonusType.Untyped)
                     }
                 )
             )},
@@ -253,7 +253,7 @@ public static class FeatDatabase
                     FeatIds.AdvancedCombatMartialArts,
                     new List<StatusEffect>
                     {
-                        new StatBonusEffect(StatType.Accuracy, 1, FeatIds.AdvancedCombatMartialArts, StatModifier.BonusType.Competence)
+                        new StatBonusEffect(StatType.Accuracy, 1, FeatIds.AdvancedCombatMartialArts, StatModifier.BonusType.Untyped)
                     }
                 )
             )},
@@ -290,7 +290,7 @@ public static class FeatDatabase
                     FeatIds.ImprovedGrapple,
                     new List<StatusEffect>
                     {
-                        new StatBonusEffect(StatType.MeleePower, 4, FeatIds.ImprovedGrapple, StatModifier.BonusType.Competence)
+                        new StatBonusEffect(StatType.MeleePower, 4, FeatIds.ImprovedGrapple, StatModifier.BonusType.Untyped)
                     }
                 )
             )},
@@ -425,7 +425,7 @@ public static class FeatDatabase
                     FeatIds.Stealthy,
                     new List<StatusEffect>
                     {
-                        new StatBonusEffect(StatType.SkillStealth, 2, FeatIds.Stealthy, StatModifier.BonusType.Competence)
+                        new StatBonusEffect(StatType.SkillStealth, 2, FeatIds.Stealthy, StatModifier.BonusType.Untyped)
                     }
                 )
             )},
@@ -440,8 +440,8 @@ public static class FeatDatabase
                     FeatIds.Alertness,
                     new List<StatusEffect>
                     {
-                        new StatBonusEffect(StatType.SkillPerception,  2, FeatIds.Alertness, StatModifier.BonusType.Competence),
-                        new StatBonusEffect(StatType.SkillSenseMotive, 2, FeatIds.Alertness, StatModifier.BonusType.Competence)
+                        new StatBonusEffect(StatType.SkillPerception,  2, FeatIds.Alertness, StatModifier.BonusType.Untyped),
+                        new StatBonusEffect(StatType.SkillSenseMotive, 2, FeatIds.Alertness, StatModifier.BonusType.Untyped)
                     }
                 )
             )},
@@ -456,7 +456,7 @@ public static class FeatDatabase
                     FeatIds.Meticulous,
                     new List<StatusEffect>
                     {
-                        new StatBonusEffect(StatType.SkillInvestigate, 2, FeatIds.Meticulous, StatModifier.BonusType.Competence)
+                        new StatBonusEffect(StatType.SkillInvestigate, 2, FeatIds.Meticulous, StatModifier.BonusType.Untyped)
                     }
                 )
             )},
@@ -471,7 +471,7 @@ public static class FeatDatabase
                     FeatIds.ImprovedInitiative,
                     new List<StatusEffect>
                     {
-                        new StatBonusEffect(StatType.Initiative, 4, FeatIds.ImprovedInitiative, StatModifier.BonusType.Competence)
+                        new StatBonusEffect(StatType.Initiative, 4, FeatIds.ImprovedInitiative, StatModifier.BonusType.Untyped)
                     }
                 )
             )},
@@ -486,7 +486,7 @@ public static class FeatDatabase
                     FeatIds.Dodge,
                     new List<StatusEffect>
                     {
-                        new StatBonusEffect(StatType.Evasion, 1, FeatIds.Dodge, StatModifier.BonusType.Dodge)
+                        new StatBonusEffect(StatType.Defense, 1, FeatIds.Dodge, StatModifier.BonusType.Dodge)
                     }
                 )
             )},
@@ -616,7 +616,7 @@ public static class FeatDatabase
                     FeatIds.DefensiveMartialArts,
                     new List<StatusEffect>
                     {
-                        new StatBonusEffect(StatType.Evasion, 1, FeatIds.DefensiveMartialArts, StatModifier.BonusType.Dodge)
+                        new StatBonusEffect(StatType.Defense, 1, FeatIds.DefensiveMartialArts, StatModifier.BonusType.Dodge)
                     }
                 )
             )},
@@ -632,8 +632,23 @@ public static class FeatDatabase
                     FeatIds.Cautious,
                     new List<StatusEffect>
                     {
-                        new StatBonusEffect(StatType.SkillInvestigate,   2, FeatIds.Cautious, StatModifier.BonusType.Competence),
-                        new StatBonusEffect(StatType.SkillDisableDevice, 2, FeatIds.Cautious, StatModifier.BonusType.Competence),
+                        new StatBonusEffect(StatType.SkillInvestigate,   2, FeatIds.Cautious, StatModifier.BonusType.Untyped),
+                        new StatBonusEffect(StatType.SkillDisableDevice, 2, FeatIds.Cautious, StatModifier.BonusType.Untyped),
+                    }
+                )
+            )},
+
+            { FeatIds.Studious, new FeatDefinition(
+                featId:      FeatIds.Studious,
+                displayName: "Studious",
+                description: "A disciplined habit of study and research. Gain +2 to Knowledge checks.",
+                category:    FeatDefinition.FeatCategory.Utility,
+                requiredLevel: 1,
+                effectSource: new FeatEffectSource(
+                    FeatIds.Studious,
+                    new List<StatusEffect>
+                    {
+                        new StatBonusEffect(StatType.SkillKnowledge, 2, FeatIds.Studious, StatModifier.BonusType.Untyped)
                     }
                 )
             )},
@@ -645,14 +660,153 @@ public static class FeatDatabase
                              "Gain +2 to Knowledge checks.",
                 category:    FeatDefinition.FeatCategory.Utility,
                 requiredLevel: 1,
+                requiredFeatIds: new List<string> { FeatIds.Studious },
                 effectSource: new FeatEffectSource(
                     FeatIds.Educated,
                     new List<StatusEffect>
                     {
-                        new StatBonusEffect(StatType.SkillKnowledge, 2, FeatIds.Educated, StatModifier.BonusType.Competence)
+                        new StatBonusEffect(StatType.SkillKnowledge, 2, FeatIds.Educated, StatModifier.BonusType.Untyped)
                     }
                 )
             )},
+
+            { FeatIds.Attentive, new FeatDefinition(
+                featId:      FeatIds.Attentive,
+                displayName: "Attentive",
+                description: "You notice what others miss. Gain +2 to Investigate and Sense Motive checks.",
+                category:    FeatDefinition.FeatCategory.Utility,
+                requiredLevel: 1,
+                effectSource: new FeatEffectSource(
+                    FeatIds.Attentive,
+                    new List<StatusEffect>
+                    {
+                        new StatBonusEffect(StatType.SkillInvestigate,  2, FeatIds.Attentive, StatModifier.BonusType.Untyped),
+                        new StatBonusEffect(StatType.SkillSenseMotive, 2, FeatIds.Attentive, StatModifier.BonusType.Untyped),
+                    }
+                )
+            )},
+            { FeatIds.Deceptive, new FeatDefinition(
+                featId:      FeatIds.Deceptive,
+                displayName: "Deceptive",
+                description: "You are adept at misdirection. Gain +2 to Bluff checks.",
+                category:    FeatDefinition.FeatCategory.Utility,
+                requiredLevel: 1,
+                effectSource: new FeatEffectSource(
+                    FeatIds.Deceptive,
+                    new List<StatusEffect>
+                    {
+                        new StatBonusEffect(StatType.SkillBluff, 2, FeatIds.Deceptive, StatModifier.BonusType.Untyped),
+                    }
+                )
+            )},
+
+            { FeatIds.Renown, new FeatDefinition(
+                featId:      FeatIds.Renown,
+                displayName: "Renown",
+                description: "Your name carries weight. Gain +2 to Diplomacy and Intimidate checks.",
+                category:    FeatDefinition.FeatCategory.Utility,
+                requiredLevel: 1,
+                effectSource: new FeatEffectSource(
+                    FeatIds.Renown,
+                    new List<StatusEffect>
+                    {
+                        new StatBonusEffect(StatType.SkillDiplomacy,  2, FeatIds.Renown, StatModifier.BonusType.Untyped),
+                        new StatBonusEffect(StatType.SkillIntimidate, 2, FeatIds.Renown, StatModifier.BonusType.Untyped),
+                    }
+                )
+            )},
+
+            { FeatIds.Focused, new FeatDefinition(
+                featId:      FeatIds.Focused,
+                displayName: "Focused",
+                description: "Your balance and concentration hold under pressure. Gain +2 to Acrobatics and Autohypnosis checks.",
+                category:    FeatDefinition.FeatCategory.Utility,
+                requiredLevel: 1,
+                effectSource: new FeatEffectSource(
+                    FeatIds.Focused,
+                    new List<StatusEffect>
+                    {
+                        new StatBonusEffect(StatType.SkillAcrobatics,   2, FeatIds.Focused, StatModifier.BonusType.Untyped),
+                        new StatBonusEffect(StatType.SkillAutohypnosis, 2, FeatIds.Focused, StatModifier.BonusType.Untyped),
+                    }
+                )
+            )},
+
+            { FeatIds.Confident, new FeatDefinition(
+                featId:      FeatIds.Confident,
+                displayName: "Confident",
+                description: "Your sense of self is hard to shake. Gain +2 on saves against mind-affecting effects.",
+                category:    FeatDefinition.FeatCategory.Passive,
+                requiredLevel: 1,
+                effectSource: new FeatEffectSource(
+                    FeatIds.Confident,
+                    new List<StatusEffect>
+                    {
+                        new ConditionalSaveBonusEffect(StatType.Willpower, 2, EffectDescriptor.MindAffecting, FeatIds.Confident),
+                        new ConditionalSaveBonusEffect(StatType.Fortitude, 2, EffectDescriptor.MindAffecting, FeatIds.Confident),
+                        new ConditionalSaveBonusEffect(StatType.Evasion,   2, EffectDescriptor.MindAffecting, FeatIds.Confident),
+                    }
+                )
+            )},
+
+            // --- Class bonus-list feats: STUBS ---
+            // No effect or prerequisites yet; authored when a pregen route or class feature needs them.
+            { FeatIds.ActionBoost, new FeatDefinition(featId: FeatIds.ActionBoost, displayName: "Action Boost",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Utility) },
+            { FeatIds.Acrobatic, new FeatDefinition(featId: FeatIds.Acrobatic, displayName: "Acrobatic",
+                description: "Stub. +2 to Acrobatics checks.", category: FeatDefinition.FeatCategory.Utility) },
+            { FeatIds.AdvancedTwoWeaponFighting, new FeatDefinition(featId: FeatIds.AdvancedTwoWeaponFighting, displayName: "Advanced Two-Weapon Fighting",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Combat) },
+            { FeatIds.ArmorProficiencyPowered, new FeatDefinition(featId: FeatIds.ArmorProficiencyPowered, displayName: "Armor Proficiency (powered)",
+                description: "Stub. Proficient with powered armor.", category: FeatDefinition.FeatCategory.Passive) },
+            { FeatIds.Athletic, new FeatDefinition(featId: FeatIds.Athletic, displayName: "Athletic",
+                description: "Stub. +2 to Athletics checks.", category: FeatDefinition.FeatCategory.Utility) },
+            { FeatIds.BurstFire, new FeatDefinition(featId: FeatIds.BurstFire, displayName: "Burst Fire",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Combat) },
+            { FeatIds.CombatExpertise, new FeatDefinition(featId: FeatIds.CombatExpertise, displayName: "Combat Expertise",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Combat) },
+            { FeatIds.CombatThrow, new FeatDefinition(featId: FeatIds.CombatThrow, displayName: "Combat Throw",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Combat) },
+            { FeatIds.ElusiveTarget, new FeatDefinition(featId: FeatIds.ElusiveTarget, displayName: "Elusive Target",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Combat) },
+            { FeatIds.ExoticFirearmsProficiency, new FeatDefinition(featId: FeatIds.ExoticFirearmsProficiency, displayName: "Exotic Firearms Proficiency",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Combat) },
+            { FeatIds.ExoticMeleeWeaponProficiency, new FeatDefinition(featId: FeatIds.ExoticMeleeWeaponProficiency, displayName: "Exotic Melee Weapon Proficiency",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Combat) },
+            { FeatIds.GreatFortitude, new FeatDefinition(featId: FeatIds.GreatFortitude, displayName: "Great Fortitude",
+                description: "Stub. +2 on Resolve saves.", category: FeatDefinition.FeatCategory.Passive) },
+            { FeatIds.ImprovedCombatThrow, new FeatDefinition(featId: FeatIds.ImprovedCombatThrow, displayName: "Improved Combat Throw",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Combat) },
+            { FeatIds.ImprovedDisarm, new FeatDefinition(featId: FeatIds.ImprovedDisarm, displayName: "Improved Disarm",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Combat) },
+            { FeatIds.ImprovedTrip, new FeatDefinition(featId: FeatIds.ImprovedTrip, displayName: "Improved Trip",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Combat) },
+            { FeatIds.ImprovedTwoWeaponFighting, new FeatDefinition(featId: FeatIds.ImprovedTwoWeaponFighting, displayName: "Improved Two-Weapon Fighting",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Combat) },
+            { FeatIds.LightningReflexes, new FeatDefinition(featId: FeatIds.LightningReflexes, displayName: "Lightning Reflexes",
+                description: "Stub. +2 on Response saves.", category: FeatDefinition.FeatCategory.Passive) },
+            { FeatIds.Mobility, new FeatDefinition(featId: FeatIds.Mobility, displayName: "Mobility",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Combat) },
+            { FeatIds.NervePinch, new FeatDefinition(featId: FeatIds.NervePinch, displayName: "Nerve Pinch",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Combat) },
+            { FeatIds.Nimble, new FeatDefinition(featId: FeatIds.Nimble, displayName: "Nimble",
+                description: "Stub. +2 to Acrobatics and Disable Device checks.", category: FeatDefinition.FeatCategory.Utility) },
+            { FeatIds.Run, new FeatDefinition(featId: FeatIds.Run, displayName: "Run",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Passive) },
+            { FeatIds.SpringAttack, new FeatDefinition(featId: FeatIds.SpringAttack, displayName: "Spring Attack",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Combat) },
+            { FeatIds.Strafe, new FeatDefinition(featId: FeatIds.Strafe, displayName: "Strafe",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Combat) },
+            { FeatIds.TwoWeaponFighting, new FeatDefinition(featId: FeatIds.TwoWeaponFighting, displayName: "Two-Weapon Fighting",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Combat) },
+            { FeatIds.UltraImmuneSystem, new FeatDefinition(featId: FeatIds.UltraImmuneSystem, displayName: "Ultra Immune System",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Passive) },
+            { FeatIds.WeaponFocus, new FeatDefinition(featId: FeatIds.WeaponFocus, displayName: "Weapon Focus",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Combat) },
+            { FeatIds.WhirlwindAttack, new FeatDefinition(featId: FeatIds.WhirlwindAttack, displayName: "Whirlwind Attack",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Combat) },
+            { FeatIds.ZeroGTraining, new FeatDefinition(featId: FeatIds.ZeroGTraining, displayName: "Zero-G Training",
+                description: "Stub.", category: FeatDefinition.FeatCategory.Utility) },
         };
 
     public static FeatDefinition Get(string id)

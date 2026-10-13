@@ -51,19 +51,8 @@ public class RespecManager : MonoBehaviour
 
         IsInRespec = true;
 
-        //Reset and re-apply species and background
-        data.ResetToLevelOne();
-
-        var species = SpeciesDatabase.Get(data.speciesId);
-        if (species != null) species.Apply(data);
-
-        var background = BackgroundDatabase.Get(data.backgroundId);
-        if (background != null) background.Apply(data);
-
-        //Seed XP to cumulative total for the target level,
-        //then trigger the level-up loop via GainXP
-        data.xp = CharacterProgression.GetTotalXPForLevel(targetLevel);
-        data.GainXP(0);
+        //Rebuild from scratch; pregens re-follow their plan automatically
+        CharacterBuilder.BuildToLevel(data, targetLevel);
 
         failReason = null;
         return true;
@@ -77,6 +66,7 @@ public class RespecManager : MonoBehaviour
             return;
         }
 
+        ClassItemGrants.RemoveUnearned(respecTarget);
         var unequippedItems = EquipmentValidator.ValidateAndUnequip(respecTarget);
 
         if (unequippedItems.Count > 0)

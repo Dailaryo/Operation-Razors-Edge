@@ -71,4 +71,18 @@ public static class ChoiceNodeIds
     public const string FieldMedicTraumaSurgeon   = "field_medic_trauma_surgeon";
     public const string FieldMedicCombatMedic     = "field_medic_combat_medic";
     public const string FieldMedicPharmacist      = "field_medic_pharmacist";
+
+    // Telepath — Trigger Power (granted at Telepath 2, 5, 8 and the path level; one pick each)
+    public const string TriggerPower = "telepath_trigger_power";
+
+    // Trigger Power option IDs: prefix + power ID (e.g. TriggerPowerOptionPrefix + PowerIds.Daze)
+    public const string TriggerPowerOptionPrefix = "trigger_";
+
+    // Telepath — Path choice node (level 10)
+    public const string TelepathPath = "telepath_path";
+
+    // Telepath path option IDs
+    public const string TelepathEmpath = "telepath_empath";
+    public const string TelepathInquisitor = "telepath_inquisitor";
+    public const string TelepathDominator = "telepath_dominator";
 }

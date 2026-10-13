@@ -9,19 +9,22 @@ public class SkillDefinition
     public StatType governingAttribute;
 
     public bool trainedOnly;
+    public bool psionicOnly;
 
     public SkillDefinition(
         string skillId,
         string displayName,
         string description,
         StatType govAtt,
-        bool trained)
+        bool trained,
+        bool psionicOnly = false)
     {
         this.skillId = skillId;
         this.displayName = displayName;
         this.description = description;
         governingAttribute = govAtt;
         trainedOnly = trained;
+        this.psionicOnly = psionicOnly;
     }
 
 }

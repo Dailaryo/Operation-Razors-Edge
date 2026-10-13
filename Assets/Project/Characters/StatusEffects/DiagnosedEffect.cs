@@ -5,8 +5,7 @@ public class DiagnosedEffect : StatusEffect
 {
     public DiagnosedEffect() : base("Diagnosed", 2)
     {
-        // Duration 2: applied at end of attacker's turn, expires after target's
-        // next turn end — net effect is active through attacker's following turn
+        isHarmful = true;
     }
 
     public override List<StatModifier> GetStatModifiers(Unit unit)
@@ -14,7 +13,7 @@ public class DiagnosedEffect : StatusEffect
         return new List<StatModifier>
         {
             new StatModifier(
-                StatType.Evasion,
+                StatType.Defense,
                 -1,
                 1f,
                 "Diagnosed",

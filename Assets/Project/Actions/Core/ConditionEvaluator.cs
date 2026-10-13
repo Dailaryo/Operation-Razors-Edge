@@ -31,7 +31,7 @@ public static class ConditionEvaluator
             //Targer conditions
             case ConditionType.TargetBelowHalfHP:
                 if (ctx.finalTarget == null) return false;
-                return ctx.finalTarget.currentHP < (ctx.finalTarget.maxHP / 2);
+                return ctx.finalTarget.currentHP < (ctx.finalTarget.GetMaxHP() / 2);
 
             case ConditionType.TargetIsFlanked:
                 //FUTURE: requires flanking detection system

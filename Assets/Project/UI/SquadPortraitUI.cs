@@ -44,7 +44,10 @@ public class SquadPortraitUI : MonoBehaviour
             nameLabel.text = boundCharacter.name;
 
         if (hpLabel != null)
-            hpLabel.text = $"{boundCharacter.currentHP} / {boundCharacter.baseMaxHP}";
+        {
+            var tempUnit = CharacterFactory.CreatePlayerUnit(boundCharacter);
+            hpLabel.text = $"{tempUnit.currentHP} / {tempUnit.GetMaxHP()}";
+        }
 
         if (flatFootedTag != null)
             flatFootedTag.gameObject.SetActive(boundCharacter.isFlatFooted);

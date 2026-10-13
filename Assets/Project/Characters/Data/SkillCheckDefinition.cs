@@ -14,4 +14,5 @@ public class SkillCheckDefinition
     public string narrativeFlagId;
     public int narrativeFlagTier = 1;
     public string description;
+    public bool allowUntrained = false; //Bypasses the trained-only gate (e.g. psionic concentration)
 }

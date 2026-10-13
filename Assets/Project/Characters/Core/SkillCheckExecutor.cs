@@ -12,7 +12,7 @@ public static class SkillCheckExecutor
         if (skillCheck == null) return;
 
         //Step 2: Validate trained-only gate
-        if (!SkillResolver.CanAttempt(context.attacker, skillCheck.skill))
+        if (!skillCheck.allowUntrained && !SkillResolver.CanAttempt(context.attacker, skillCheck.skill))
         {
             var failResult = new SkillCheckResult
             {
@@ -54,7 +54,7 @@ public static class SkillCheckExecutor
         {
             case SkillCheckDefinition.CheckMode.FixedDC:
                 int dc = context.dcOverride ?? (skillCheck.fixedDC + DifficultySettings.GetSkillCheckDCModifier());
-                result = SkillResolver.Resolve(context.attacker, skillCheck.skill, dc);
+                result = SkillResolver.Resolve(context.attacker, skillCheck.skill, dc, skillCheck.allowUntrained);
                 break;
 
             case SkillCheckDefinition.CheckMode.Opposed:

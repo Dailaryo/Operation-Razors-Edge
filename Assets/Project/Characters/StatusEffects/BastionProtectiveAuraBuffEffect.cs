@@ -9,7 +9,7 @@ public class BastionProtectiveAuraBuffEffect : StatusEffect
     {
         return new List<StatModifier>
         {
-            new StatModifier(StatType.Evasion, 2, 1f,
+            new StatModifier(StatType.Defense, 2, 1f,
                 "bastion_protective_aura", StatModifier.BonusType.Competence)
         };
     }

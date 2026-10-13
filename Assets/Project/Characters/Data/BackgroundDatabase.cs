@@ -98,6 +98,28 @@ public static class BackgroundDatabase
                 },
                 bonusSkillChoices: 2
             )},
+            { BackgroundIds.Psychic, new BackgroundDefinition(
+                backgroundId: BackgroundIds.Psychic,
+                displayName:  "Psychic",
+                description:  "Implanted memory construct encoding the perceptual habits, social fluency, and reflexive " +
+                              "people-reading of someone who has lived on the edge of social legitimacy. Whether the original " +
+                              "memories hold genuine psionic ability or a skilled performance of it is rarely clear, even to " +
+                              "the bearer. Wealth bonus +2.",
+                bonusFeatIds: new List<string>
+                {
+                    FeatIds.WildTalent, //Deferred: no FeatDefinition yet. Do not select until Wild Talent is authored
+                    FeatIds.IronWill
+                },
+                bonusClassSkills: new List<SkillType>
+                {
+                    SkillType.Bluff,
+                    SkillType.Diplomacy,      //absorbs Gather Information
+                    SkillType.Intimidate,
+                    SkillType.Knowledge,
+                    SkillType.SenseMotive
+                },
+                bonusSkillChoices: 2
+            )},
         };
 
     public static BackgroundDefinition Get(string id)

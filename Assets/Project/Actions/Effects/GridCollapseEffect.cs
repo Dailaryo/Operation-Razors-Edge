@@ -7,7 +7,7 @@ public class GridCollapseEffect : IActionEffect
     {
         if (ctx.attacker == null) return;
 
-        ctx.attacker.SetCooldown(ctx.definition, Unit.-1);
+        ctx.attacker.SetCooldown(ctx.definition, Unit.CombatCooldown);
 
         var enemies = new List<Unit>();
 

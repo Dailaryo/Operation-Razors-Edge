@@ -6,7 +6,19 @@ public class DemoralizeEffect : IActionEffect
     {
         if (ctx.attacker == null || ctx.finalTarget == null) return;
 
-        int defenderTotal = ctx.finalTarget.RollSave(Unit.SaveType.Focus);
+        var fear = EffectDescriptor.Fear | EffectDescriptor.MindAffecting;
+        int sourceLevel = ctx.attacker.sourceCharacterData?.level ?? 0;
+
+        resolver.TryFireReaction(ctx.finalTarget, ReactionTrigger.TargetedByMindAffecting, ctx.attacker);
+
+        if (ctx.finalTarget.IsImmuneTo(fear, sourceLevel, consume: !resolver.IsSimulation))
+        {
+            if (!resolver.IsSimulation)
+                CombatLog.Add($"{ctx.finalTarget.unitName} is immune to Demoralize.");
+            return;
+        }
+
+        int defenderTotal = ctx.finalTarget.RollSave(Unit.SaveType.Focus, fear);
 
         var context = new SkillCheckContext
         {
@@ -22,7 +34,7 @@ public class DemoralizeEffect : IActionEffect
                 if (!resolver.IsSimulation)
                 {
                     var effect = new ShakenEffect();
-                    effect.sourceLevel = ctx.attacker?.sourceCharacterData?.level ?? 0;
+                    effect.sourceLevel = sourceLevel;
                     ctx.finalTarget.AddEffect(effect);
                 }
             }

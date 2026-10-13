@@ -36,9 +36,12 @@ public static class EquipmentValidator
         return unequipped;
     }
 
-    //Stub: always returns true until ItemDefinition has prerequisite fields
     private static bool IsItemValid(CharacterData data, ItemInstance item)
     {
+        //Bound items (Power Crystal) only work for their owner
+        if (!string.IsNullOrEmpty(item.ownerCharacterId) && item.ownerCharacterId != data.characterId)
+            return false;
+
         // TODO: Check class restrictions, ability score minimums, feat prerequisites
         // once ItemDefinition gains those fields.
         return true;

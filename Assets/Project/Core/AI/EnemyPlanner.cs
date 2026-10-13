@@ -309,7 +309,7 @@ public class EnemyPlanner
 
                 int dist = DistanceUtility.Chebyshev(unitPos, enemyPos);
 
-                if (dist <= action.definition.maxRange)
+                if (dist <= action.definition.GetMaxRange(unit))
                 {
                     score += 8f;
                 }
@@ -348,7 +348,7 @@ public class EnemyPlanner
                     simResolver.GetPosition(action.target)
                 );
 
-                if (dist <= def.maxRange)
+                if (dist <= def.GetMaxRange(unit))
                 {
                     score += 10; //Strongly encourage attacking
                 }

@@ -3,8 +3,9 @@ using System.Collections.Generic;
 
 public class CharacterSnapshot
 {
+    //Any field added here must also be added to CharacterSaveData, SnapshotSaveData and CharacterData.ResetToLevelOne()
     //Captured fields
-    public int currentHP;
+    public int hpDamage;
     public int baseMaxHP;
     public int level;
     public int xp;
@@ -15,6 +16,19 @@ public class CharacterSnapshot
     public List<string> equippedFeatIds;
     public List<string> pendingChoiceNodeIds;
 
+    public int manifesterLevel;
+    public int psionicResistance;
+    public int cyberneticCapacityBonus;
+
+    public List<string> unlockedFeatIds;
+    public List<string> takenChoiceOptionIds;
+    public List<string> unlockedActions;
+    public List<string> unlockedPassiveIds;
+    public List<string> knownPowerIds;
+    public List<string> preparedPowerIds;
+    public List<SkillType> classSkills;
+    public List<StatModifier> backgroundSkillBonuses;
+
     public Dictionary<SkillType, int> skillRanks;
     public Dictionary<EquipmentSlot, ItemInstance> cyberneticItemIds;
     public Dictionary<StatType, int> abilityScoreIncreases;
@@ -23,7 +37,7 @@ public class CharacterSnapshot
     public static CharacterSnapshot Capture(CharacterData data)
     {
         var snap = new CharacterSnapshot();
-        snap.currentHP = data.currentHP;
+        snap.hpDamage = data.hpDamage;
         snap.baseMaxHP = data.baseMaxHP;
         snap.level = data.level;
         snap.xp = data.xp;
@@ -33,6 +47,19 @@ public class CharacterSnapshot
 
         snap.equippedFeatIds = new List<string>(data.equippedFeatIds);
         snap.pendingChoiceNodeIds = new List<string>(data.pendingChoiceNodeIds);
+
+        snap.manifesterLevel = data.manifesterLevel;
+        snap.psionicResistance = data.psionicResistance;
+        snap.cyberneticCapacityBonus = data.cyberneticCapacityBonus;
+
+        snap.unlockedFeatIds = new List<string>(data.unlockedFeatIds);
+        snap.takenChoiceOptionIds = new List<string>(data.takenChoiceOptionIds);
+        snap.unlockedActions = new List<string>(data.unlockedActions);
+        snap.unlockedPassiveIds = new List<string>(data.unlockedPassiveIds);
+        snap.knownPowerIds = new List<string>(data.knownPowerIds);
+        snap.preparedPowerIds = new List<string>(data.preparedPowerIds);
+        snap.classSkills = new List<SkillType>(data.classSkills);
+        snap.backgroundSkillBonuses = new List<StatModifier>(data.backgroundSkillBonuses);
 
         snap.skillRanks = new Dictionary<SkillType, int>();
         foreach (var kvp in data.skillRanks)
@@ -61,7 +88,7 @@ public class CharacterSnapshot
     //Restore
     public void Restore(CharacterData target)
     {
-        target.currentHP = currentHP;
+        target.hpDamage = hpDamage;
         target.baseMaxHP = baseMaxHP;
         target.level = level;
         target.xp = xp;
@@ -72,6 +99,19 @@ public class CharacterSnapshot
 
         target.equippedFeatIds = new List<string>(equippedFeatIds);
         target.pendingChoiceNodeIds = new List<string>(pendingChoiceNodeIds);
+
+        target.manifesterLevel = manifesterLevel;
+        target.psionicResistance = psionicResistance;
+        target.cyberneticCapacityBonus = cyberneticCapacityBonus;
+
+        target.unlockedFeatIds = new List<string>(unlockedFeatIds);
+        target.takenChoiceOptionIds = new List<string>(takenChoiceOptionIds);
+        target.unlockedActions = new List<string>(unlockedActions);
+        target.unlockedPassiveIds = new List<string>(unlockedPassiveIds);
+        target.knownPowerIds = new List<string>(knownPowerIds);
+        target.preparedPowerIds = new List<string>(preparedPowerIds);
+        target.classSkills = new List<SkillType>(classSkills);
+        target.backgroundSkillBonuses = new List<StatModifier>(backgroundSkillBonuses);
 
         target.skillRanks = new Dictionary<SkillType, int>();
         foreach (var kvp in skillRanks)

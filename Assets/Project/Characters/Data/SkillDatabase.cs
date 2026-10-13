@@ -150,7 +150,25 @@ public static class SkillDatabase
                 description: "The art of movement and surviving in free-fall or microgravity environments",
                 govAtt: StatType.Agility,
                 trained: true
-            )}
+            )},
+
+            //Psionic
+            {SkillIds.Autohypnosis, new SkillDefinition(
+                skillId: SkillIds.Autohypnosis,
+                displayName: "Autohypnosis",
+                description: "Mental discipline to endure pain, resist fear, and hold focus while manifesting",
+                govAtt: StatType.Insight,
+                trained: true,
+                psionicOnly: true
+            )},
+            {SkillIds.Psicraft, new SkillDefinition(
+                skillId: SkillIds.Psicraft,
+                displayName: "Psicraft",
+                description: "Identifying psionic powers and effects, and knowledge of psionic lore",
+                govAtt: StatType.Cognition,
+                trained: true,
+                psionicOnly: true
+            )},
         };
 
     public static SkillDefinition Get(string id)

@@ -12,10 +12,16 @@ public class CombatAction
 
     public List<StatusEffect> temporaryEffects = new List<StatusEffect>();
     public List<ActionDefinition.ActionCategory> resolvedCategories = new List<ActionDefinition.ActionCategory>();
+    public List<PsionicPowerDefinition.AugmentationOption> augmentations = new List<PsionicPowerDefinition.AugmentationOption>();
 
     public Vector2Int? movePosition;
 
     public ActionDefinition definition;
+    public bool payMaterialWithCredits = false; //Psionic only: UI override to keep the component item and pay its value in credits
+    public bool maximize = false; //Psionic only: Maximize Power (+6 PP, variable dice roll their maximum)
+    public bool isReaction = false; //Armed reaction: fires from its trigger, never in initiative order, never provokes
+    public Unit transferSource;          //Sympathetic Link: ally the condition is taken from (UI pick; null = default)
+    public StatusEffect transferEffect;  //Sympathetic Link: the condition to move (UI pick; null = default)
 
     public CombatAction(Unit sourceUnit, Unit targetUnit, ActionDefinition definition, CombatManager managerRef)
     {
@@ -34,10 +40,11 @@ public class CombatAction
     {
         if (definition == null) return;
 
-        if (definition.cooldown > 0)
-        {
+        if (definition.cooldown > 0 || definition.cooldown == Unit.CombatCooldown)
             source.SetCooldown(definition, definition.cooldown);
-        }
+
+        if (definition.usesPerCombat > 0)
+            source.combatUses[definition] = source.GetCombatUses(definition) + 1;
     }
 
     public void OnResolved()

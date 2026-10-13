@@ -45,6 +45,9 @@ public class EnemyDefinition
     public int moveSpeed = 6;
     public Unit.SizeCategory size = Unit.SizeCategory.Medium;
 
+    //Awareness checks: set by hand for stat-block enemies. Enemies with a species use the species' category
+    public KnowledgeCategory knowledgeCategory = KnowledgeCategory.Human;
+
     public EnemyDefinition(string enemy, string name, bool classed = false, int level = 1)
     {
         enemyId = enemy;

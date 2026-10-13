@@ -19,7 +19,7 @@ public enum StatType
     Initiative,
     BaseAttackBonus,
     MoveSpeed,
-    PsionicSaveDC,
+    Defense,
     PresenceModifier,
     FastHealing,
     NaturalArmor,
@@ -45,7 +45,7 @@ public enum StatType
     SkillDiplomacy,
     SkillIntimidate,
     SkillZeroGOperations,
-
-    //LEGACY (TEMP)
+    SkillAutohypnosis,
+    SkillPsicraft,
     MaxHP
 }

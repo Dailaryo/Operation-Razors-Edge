@@ -78,7 +78,10 @@ public class CharacterDetailPanel : MonoBehaviour
             speciesBackgroundText.text = $"{character.speciesId} / {character.backgroundId}";
 
         if (hpText != null)
-            hpText.text = $"HP: {character.currentHP} / {character.baseMaxHP}";
+        {
+            var tempUnit = CharacterFactory.CreatePlayerUnit(character);
+            hpText.text = $"HP: {tempUnit.currentHP} / {tempUnit.GetMaxHP()}";
+        }
 
         // Attributes block
         if (attributesText != null)
@@ -112,15 +115,16 @@ public class CharacterDetailPanel : MonoBehaviour
         // Skills
         if (skillsText != null)
         {
-            var classDef = ClassDatabase.Get(character.classId);
             var lines = new System.Collections.Generic.List<string>();
 
             foreach (SkillType skill in System.Enum.GetValues(typeof(SkillType)))
             {
+                if (!SkillResolver.IsSkillAvailable(character, skill)) continue;
+
                 character.skillRanks.TryGetValue(skill, out int ranks);
                 if (ranks == 0) continue;
 
-                bool isClassSkill = classDef != null && classDef.classSkills.Contains(skill);
+                bool isClassSkill = character.classSkills.Contains(skill);
                 string classTag = isClassSkill ? " (Class)" : "";
                 lines.Add($"{skill}{classTag}: {ranks} ranks");
             }
@@ -157,7 +161,7 @@ public class CharacterDetailPanel : MonoBehaviour
 
     string Mod(int score)
     {
-        int mod = (score - 10) / 2;
+        int mod = CharacterProgression.GetAbilityModifier(score);
         return mod >= 0 ? $"+{mod}" : $"{mod}";
     }
 }

@@ -232,6 +232,15 @@ public static class InfiltratorClass
             }
         );
 
+        // Bonus feats (d20 Modern Infiltrator list, unchanged)
+        def.bonusFeatIds = new List<string>
+        {
+            FeatIds.Acrobatic, FeatIds.Alertness, FeatIds.ArmorProficiencyLight, FeatIds.Athletic,
+            FeatIds.Attentive, FeatIds.Brawl, FeatIds.Cautious, FeatIds.DefensiveMartialArts, FeatIds.Dodge,
+            FeatIds.ElusiveTarget, FeatIds.Meticulous, FeatIds.Mobility, FeatIds.Nimble, FeatIds.Renown,
+            FeatIds.Run, FeatIds.Stealthy,
+        };
+
         return def;
     }
 }

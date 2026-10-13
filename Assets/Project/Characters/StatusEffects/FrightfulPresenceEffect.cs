@@ -17,14 +17,17 @@ public class FrightfulPresenceEffect : StatusEffect
         int preMod = attacker.GetModifier(StatType.Presence);
         int dc = 10 + (level / 2) + preMod;
         int range = 2; // 10 feet = 2 tiles
+        var fear = EffectDescriptor.Fear | EffectDescriptor.MindAffecting;
 
         foreach (Unit unit in allUnits)
         {
             if (unit == attacker) continue;
-            if (!unit.isEnemy || unit.IsDead()) continue;
+            if (unit.isEnemy == attacker.isEnemy || unit.IsDead()) continue;
             if (DistanceUtility.MovementCostDistance(unit.position, attacker.position) > range) continue;
+            resolver.TryFireReaction(unit, ReactionTrigger.TargetedByMindAffecting, attacker);
+            if (unit.IsImmuneTo(fear, level, consume: true)) continue;
 
-            int saveRoll = unit.RollSave(Unit.SaveType.Focus);
+            int saveRoll = unit.RollSave(Unit.SaveType.Focus, fear);
             CombatLog.Add($"{unit.unitName} Frightful Presence save: {saveRoll} vs DC {dc}");
 
             if (saveRoll < dc)

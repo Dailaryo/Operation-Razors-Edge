@@ -128,6 +128,36 @@ public static class SpeciesDatabase
             {
                 onApply = data => data.moveSpeed = 4
             }},
+            { SpeciesIds.Phytonian, new SpeciesDefinition(
+                speciesId:   SpeciesIds.Phytonian,
+                displayName: "Phytonian",
+                description: "Homo sapiens phytonius. The first successful Project Prometheus genotype, adapted for " +
+                             "lower-gravity worlds. Shorter, slimmer and more agile than Prometheans, but physically frail. " +
+                             "An extended lifespan of up to ten times the baseline produces insular communities and acute " +
+                             "cognition, and Phytonians manifest psychic ability more readily than Prometheans.",
+                bonusFeatIds: new List<string> { FeatIds.SimpleWeaponsProficiency },
+                statBonuses: new List<StatModifier>
+                {
+                    new StatModifier(StatType.Agility,    2, 1f, SpeciesIds.Phytonian, StatModifier.BonusType.Racial),
+                    new StatModifier(StatType.Endurance, -2, 1f, SpeciesIds.Phytonian, StatModifier.BonusType.Racial),
+                },
+                passiveIds: new List<string>
+                {
+                    PassiveIds.LowLightVision,
+                    PassiveIds.PhytonianSleepImmunity,
+                    PassiveIds.PhytonianPsionicAwareness,
+                    PassiveIds.PhytonianEmpathicSenses,
+                    PassiveIds.PhytonianConcealedPassage,
+                }
+            ) {
+                //Psionic Affinity: +1 manifester level (penetration and the augmentation cap; NOT save DCs).
+                //onApply only — ClassDefinition.ApplyLevelUp increments ML, so this +1 persists through leveling.
+                onApply = data =>
+                {
+                    if (ClassDatabase.Get(data.classId)?.isPsionicClass == true)
+                        data.manifesterLevel += 1;
+                }
+            } },
         };
 
     public static SpeciesDefinition Get(string id)

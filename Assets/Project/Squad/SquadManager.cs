@@ -31,9 +31,11 @@ public class SquadManager : MonoBehaviour
 
         foreach (var runtime in runtimeSquad)
         {
-            if (runtime.currentHP <= 0 || runtime.isIncapacitated) continue;
+            if (runtime.isIncapacitated) continue;
 
             Unit unit = CharacterFactory.CreatePlayerUnit(runtime);
+            if (unit.currentHP <= 0) continue;
+
             units.Add(unit);
         }
 
@@ -45,11 +47,23 @@ public class SquadManager : MonoBehaviour
     {
         foreach (var unit in units)
         {
-            var runtime = runtimeSquad.Find(r => r.source.name == unit.unitName);
+            var runtime = runtimeSquad.Find(r => r.source == unit.sourceCharacterData);
 
             if (runtime != null)
             {
-                runtime.currentHP = unit.currentHP;
+                runtime.hpDamage = Mathf.Max(0, unit.GetMaxHP() - unit.currentHP);
+
+                //Effects lasting 1 hour+ carry between encounters until the Hub restore clears them (TEMP until time mechanics are implemented)
+                runtime.persistentEffects.Clear();
+                foreach (var effect in unit.activeEffects)
+                    if (effect.lastsUntilHub && effect.maintainerCount == 0)
+                        runtime.persistentEffects.Add(effect);
+
+                if (unit.powerPoints != null)
+                {
+                    runtime.powerPointsSpent = unit.powerPoints.max - unit.powerPoints.current;
+                    runtime.zeroLevelUsesSpent = unit.powerPoints.freeZeroLevelUsed;
+                }
             }
         }
     }
@@ -63,6 +77,11 @@ public class SquadManager : MonoBehaviour
         }
 
         CommitRuntimeToCharacters();
+
+        foreach (var character in squad)
+            character.hpDamage = 0;
+
+        RechargeStoredPowerPoints();
     }
 
     public void CreateRuntimeSquad()
@@ -83,7 +102,9 @@ public class SquadManager : MonoBehaviour
     {
         foreach (var runtime in runtimeSquad)
         {
-            runtime.source.currentHP = runtime.currentHP;
+            runtime.source.hpDamage = runtime.hpDamage;
+            runtime.source.powerPointsSpent = runtime.powerPointsSpent;
+            runtime.source.zeroLevelUsesSpent = runtime.zeroLevelUsesSpent;
         }
     }
 
@@ -194,6 +215,19 @@ public class SquadManager : MonoBehaviour
         return result;
     }
 
+    public void SetSnapshot(string characterId, CharacterSnapshot snapshot)
+    {
+        var runtime = runtimeSquad.Find(r => r.source.characterId == characterId);
+
+        if (runtime == null)
+        {
+            Debug.LogWarning($"[SquadManager] SetSnapshot: no runtime for '{characterId}'.");
+            return;
+        }
+
+        runtime.snapshot = snapshot;
+    }
+
     public void CommitNewSnapshot()
     {
         foreach (var runtime in runtimeSquad)
@@ -203,7 +237,7 @@ public class SquadManager : MonoBehaviour
         CombatLog.Add("[SquadManager] Squad snapshots committed.");
     }
 
-    public void SetIncapacitated(Unit unit)
+    public void SetIncapacitated(Unit unit, bool rollback = true)
     {
         var runtime = runtimeSquad.Find(r => r.source == unit.sourceCharacterData);
 
@@ -215,6 +249,7 @@ public class SquadManager : MonoBehaviour
 
         runtime.isIncapacitated = true;
         runtime.source.isIncapacitated = true;
+        runtime.source.incapacitatedWithoutRollback = !rollback;
 
         UpdateSquadInventoryCapacity();
 
@@ -231,14 +266,20 @@ public class SquadManager : MonoBehaviour
         {
             if (!runtime.isIncapacitated) continue;
 
-            runtime.snapshot.Restore(runtime.source);
+            if (runtime.source.incapacitatedWithoutRollback)
+                CombatLog.Add($"[SquadManager] {runtime.source.name} recovers.");
+            else
+            {
+                runtime.snapshot.Restore(runtime.source);
+                CombatLog.Add($"[SquadManager] {runtime.source.name} restored from snapshot.");
+            }
+
             runtime.isIncapacitated = false;
             runtime.source.isIncapacitated = false;
-            runtime.currentHP = runtime.source.currentHP;
+            runtime.source.incapacitatedWithoutRollback = false;
+            runtime.hpDamage = runtime.source.hpDamage;
 
             UpdateSquadInventoryCapacity();
-
-            CombatLog.Add($"[SquadManager] {runtime.source.name} restored from snapshot.");
         }
     }
 
@@ -280,5 +321,21 @@ public class SquadManager : MonoBehaviour
         else
             CombatLog.Add($"[Economy] Insufficient credits. Need {cost}, have {creditBalance.credits}");
         return success;
+    }
+
+    //Power Crystal and similar: stored power points refill at the Hub
+    void RechargeStoredPowerPoints()
+    {
+        var instances = new List<ItemInstance>(squadInventory.GetAll());
+        instances.AddRange(ShipInventory.GetAll());
+        foreach (var character in squad)
+            instances.AddRange(character.equippedItemIds.Values);
+
+        foreach (var inst in instances)
+        {
+            var def = ItemDatabase.Get(inst.definitionId);
+            if (def != null && def.storedPowerPoints > 0)
+                inst.charges = def.storedPowerPoints;
+        }
     }
 }

@@ -11,9 +11,9 @@ public class ApplySelfStatusEffectEffect : IActionEffect
 
     public void Execute(ActionContext ctx, CombatResolver resolver)
     {
-        if (ctx.attacker == null) return;
+        if (ctx.attacker == null || resolver.IsSimulation) return;
 
-        var effect = effectFactory(ctx.attacker);
-        ctx.attacker.AddEffect(effect);
+        var applied = ctx.attacker.AddEffect(effectFactory(ctx.attacker));
+        if (applied != null) ctx.appliedEffects.Add(applied);
     }
 }

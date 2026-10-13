@@ -23,6 +23,7 @@ public class DyingState : StatusEffect
         if (unit.IsDead())
         {
             CombatLog.Add($"{unit.unitName} has died.");
+            unit.Kill();
             return;
         }
 

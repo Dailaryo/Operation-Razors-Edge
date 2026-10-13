@@ -32,7 +32,7 @@ public class CMBattlefieldPatchEffect : IActionEffect
         {
             ctx.finalTarget.currentHP = Mathf.Min(
                 ctx.finalTarget.currentHP + total,
-                ctx.finalTarget.maxHP);
+                ctx.finalTarget.GetMaxHP());
 
             ctx.finalTarget.OnHealthChanged?.Invoke(ctx.finalTarget);
 

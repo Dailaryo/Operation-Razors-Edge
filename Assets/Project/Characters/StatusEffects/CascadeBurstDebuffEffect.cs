@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 public class CascadeBurstDebuffEffect : StatusEffect
 {
-    public CascadeBurstDebuffEffect() : base("CascadeBurstDebuff", 1) { }
+    public CascadeBurstDebuffEffect() : base("CascadeBurstDebuff", 1) { isHarmful = true; }
 
     public override List<StatModifier> GetStatModifiers(Unit unit)
     {

@@ -26,7 +26,7 @@ public static class EnemyFactory
 
         Debug.Log($"[EnemyFactory] Built enemy: {unit.unitName} " +
                   $"| Level: {spawnLevel} | PlanetTier: {planetTier} " +
-                  $"| HP: {unit.maxHP} | Attack: {unit.attackRating}");
+                  $"| HP: {unit.GetMaxHP()} | Attack: {unit.attackRating}");
 
         return unit;
     }
@@ -91,6 +91,8 @@ public static class EnemyFactory
         if (def.featIds.Count > 0)
             unit.ApplyFeats();
 
+        unit.currentHP = unit.GetMaxHP();
+
         //Derive reach profile from size and equipped weapon
         data.reachProfile = ReachProfile.DeriveFrom(data);
         unit.sizeCategory = data.size;
@@ -153,7 +155,7 @@ public static class EnemyFactory
 
         //Apply difficulty multiplier post construction
         unit.maxHP = Mathf.Max(1, Mathf.RoundToInt(unit.maxHP * scaled.difficultyModifier));
-        unit.currentHP = unit.maxHP;
+        unit.currentHP = unit.GetMaxHP();
         unit.attackRating = Mathf.Max(1, Mathf.RoundToInt(unit.attackRating * scaled.difficultyModifier));
 
         data.reachProfile = ReachProfile.DeriveFrom(data);

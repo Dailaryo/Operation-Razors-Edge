@@ -8,4 +8,5 @@ public static class ClassIds
     public const string Infiltrator = "infiltrator";
     public const string Dreadnought = "dreadnought";
     public const string FieldMedic = "field_medic";
+    public const string Telepath = "telepath";
 }

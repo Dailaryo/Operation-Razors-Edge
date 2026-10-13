@@ -422,6 +422,21 @@ public static class TechnosavantClass
             regenMode: ResourceDefinition.RegenMode.FullOnCombatStart,
             baseMax: 4);
 
+        // Bonus feats (d20 Future Technosavant list; alien weapon, crafting, surgery and vehicle feats dropped)
+        // Adapted: project tech feats and the Smart-hero Studious/Educated line added
+        def.bonusFeatIds = new List<string>
+        {
+            FeatIds.ArmorProficiencyLight, FeatIds.ArmorProficiencyMedium, FeatIds.ArmorProficiencyPowered,
+            FeatIds.Cybertaker, FeatIds.ExoticFirearmsProficiency, FeatIds.ExoticMeleeWeaponProficiency,
+            // Adaptations
+            FeatIds.TechLiterate, FeatIds.SensorLink, FeatIds.CyberneticMastery, FeatIds.TacticalRelay,
+            FeatIds.Studious, FeatIds.Educated,
+        };
+        def.pathBonusFeatIds = new Dictionary<string, List<string>>
+        {
+            { ChoiceNodeIds.TechnosavantVanguard, new List<string> { FeatIds.OverwatchSpecialist } },
+        };
+
         return def;
     }
 }

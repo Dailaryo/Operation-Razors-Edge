@@ -77,7 +77,7 @@ public class MedicalMiracleEffect : IActionEffect
                 {
                     int restored = Random.Range(1, 7);
 
-                    ctx.finalTarget.currentHP = Mathf.Min(restored, ctx.finalTarget.maxHP);
+                    ctx.finalTarget.currentHP = Mathf.Min(restored, ctx.finalTarget.GetMaxHP());
                     ctx.finalTarget.sourceCharacterData.deathRound = -1;
                     ctx.finalTarget.RemoveEffect<DyingState>();
                     ctx.finalTarget.RemoveEffect<StabilizedState>();

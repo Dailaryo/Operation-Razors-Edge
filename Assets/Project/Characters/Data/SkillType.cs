@@ -31,5 +31,9 @@ public enum SkillType
     Intimidate,
 
     //Other
-    ZeroGOperations
+    ZeroGOperations,
+
+    //Psionic
+    Autohypnosis,
+    Psicraft
 }

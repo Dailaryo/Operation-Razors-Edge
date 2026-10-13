@@ -34,6 +34,10 @@ public class FeatDefinition
     public List<string> requiredFeatIds;
     public Dictionary<StatType, int> requiredAttributes;
 
+    //How many times this feat can be taken. Default 1: all feats are once-only
+    //unless the feat itself says otherwise (case-by-case exceptions).
+    public int maxTakes;
+
     //Payload
     //A feat may grant actions, passive effects, or both
     //Either field may be null if the feat only does one thing
@@ -54,7 +58,8 @@ public class FeatDefinition
         Dictionary<StatType, int> requiredAttributes = null,
         IActionSource actionSource = null,
         IEffectSource effectSource = null,
-        StealthBreakProfile stealthBreakProfile = null
+        StealthBreakProfile stealthBreakProfile = null,
+        int maxTakes = 1
     )
     {
         this.featId = featId;
@@ -68,6 +73,7 @@ public class FeatDefinition
         this.actionSource = actionSource;
         this.effectSource = effectSource;
         this.stealthBreakProfile = stealthBreakProfile;
+        this.maxTakes = maxTakes < 1 ? 1 : maxTakes;
     }
 
     public bool MeetsPrerequisites(CharacterData character)
@@ -84,21 +90,39 @@ public class FeatDefinition
         //Attribute threshold check
         foreach (var kvp in requiredAttributes)
         {
-            int characterValue = 0;
-
-            switch (kvp.Key)
-            {
-                case StatType.Power: characterValue = character.power; break;
-                case StatType.Agility: characterValue = character.agility; break;
-                case StatType.Endurance: characterValue = character.endurance; break;
-                case StatType.Cognition: characterValue = character.cognition; break;
-                case StatType.Insight: characterValue = character.insight; break;
-                case StatType.Presence: characterValue = character.presence; break;
-            }
+            int characterValue = character.GetAttributeScore(kvp.Key);
 
             if (characterValue < kvp.Value) return false;
         }
 
+        return true;
+    }
+
+    public int GetTimesTaken(CharacterData character)
+    {
+        int count = 0;
+        foreach (var id in character.equippedFeatIds)
+            if (id == featId) count++;
+        return count;
+    }
+
+    //Single availability rule shared by the level-up flow and the pregen plan applier:
+    //under the take limit, and prerequisites met
+    public bool CanTake(CharacterData character, out string reason)
+    {
+        if (GetTimesTaken(character) >= maxTakes)
+        {
+            reason = maxTakes == 1 ? "already taken" : $"already taken {maxTakes} times";
+            return false;
+        }
+
+        if (!MeetsPrerequisites(character))
+        {
+            reason = "prerequisites not met";
+            return false;
+        }
+
+        reason = null;
         return true;
     }
 }

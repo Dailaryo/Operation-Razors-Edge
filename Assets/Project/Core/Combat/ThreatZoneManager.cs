@@ -50,7 +50,7 @@ public static class ThreatZoneManager
             HashSet<Vector2Int> tiles = kvp.Value;
 
             if (unit.isEnemy != isEnemy) continue;
-            if (unit.IsDead() || unit.IsDying() || unit.IsStabilized()) continue;
+            if (!unit.CanAct()) continue;
 
             if (tiles.Contains(tile))
                 result.Add(unit);

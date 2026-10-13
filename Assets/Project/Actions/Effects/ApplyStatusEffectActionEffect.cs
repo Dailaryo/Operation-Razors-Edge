@@ -17,11 +17,10 @@ public class ApplyStatusEffectActionEffect : IActionEffect
 
         var effect = effectFactory(target);
 
-        effect.OnApply(target);
-
-        if(!resolver.IsSimulation)
+        if (!resolver.IsSimulation)
         {
-            target.AddEffect(effect);
+            var applied = target.AddEffect(effect);
+            if (applied != null) ctx.appliedEffects.Add(applied);
         }
     }
 }

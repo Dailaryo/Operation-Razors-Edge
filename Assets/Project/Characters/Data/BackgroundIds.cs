@@ -8,4 +8,5 @@ public static class BackgroundIds
     public const string Academic = "academic";
     public const string Criminal = "criminal";
     public const string Gladiator = "gladiator";
+    public const string Psychic = "psychic";
 }

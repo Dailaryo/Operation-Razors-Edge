@@ -16,7 +16,7 @@ public class ActivateElectronicShroudEffect : IActionEffect
             return;
         }
 
-        ctx.attacker.SetCooldown(ctx.definition, Unit.-1);
+        ctx.attacker.SetCooldown(ctx.definition, Unit.CombatCooldown);
 
         var shroud = new ElectronicShroudEffect();
         shroud.Activate();

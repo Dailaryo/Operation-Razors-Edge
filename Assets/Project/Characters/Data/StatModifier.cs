@@ -13,6 +13,7 @@ public class StatModifier
         Insight, //Highest insight always wins
         Racial, //Highest racial always wins, species-granted modifiers
         Equipment, //Highest equipment always wins
+        Resistance, //Highest resistance always wins (Mind Blank)
     }
     
     public StatType stat;

@@ -35,7 +35,10 @@ public class ApplyStatusEffectToUnitsInRangeEffect : IActionEffect
             if (dist > range) continue;
 
             if (!resolver.IsSimulation)
-                unit.AddEffect(effectFactory(ctx.attacker));
+            {
+                var applied = unit.AddEffect(effectFactory(ctx.attacker));
+                if (applied != null) ctx.appliedEffects.Add(applied);
+            }
         }
     }
 }

@@ -95,7 +95,7 @@ public class CharacterSheetData
         }
 
         // Combat stats
-        maxHP = unit.maxHP;
+        maxHP = unit.GetMaxHP();
         currentHP = unit.currentHP;
         bab = unit.GetBAB();
         defense = unit.GetDefense();
@@ -108,9 +108,6 @@ public class CharacterSheetData
         // Skills
         if (SkillDatabase.Definitions != null)
         {
-            ClassDefinition classDef = null;
-            classDef = ClassDatabase.Get(data.classId);
-
             foreach (var kvp in SkillDatabase.Definitions)
             {
                 SkillDefinition skillDef = kvp.Value;
@@ -121,18 +118,16 @@ public class CharacterSheetData
                     continue;
                 }
 
+                // Psionic skills are hidden from characters without a psionic class
+                if (!SkillResolver.IsSkillAvailable(data, skillType)) continue;
+
                 data.skillRanks.TryGetValue(skillType, out int ranks);
                 int attrMod = unit.GetModifier(skillDef.governingAttribute);
-                int total = ranks + attrMod;
+                int misc = unit.GetSkillModifierBonus(SkillResolver.GetSkillStatType(skillType));
+                int total = SkillResolver.GetSkillTotal(unit, skillType);
+                bool isClassSkill = SkillResolver.IsClassSkill(unit, skillType);
 
-                bool isClassSkill = classDef != null &&
-                    classDef.classSkills != null &&
-                    classDef.classSkills.Contains(skillType);
-
-                // Class skill bonus: +3 if at least 1 rank invested
-                if (isClassSkill && ranks >= 1) total += 3;
-
-                skills[skillType] = (ranks, attrMod, 0, total, isClassSkill);
+                skills[skillType] = (ranks, attrMod, misc, total, isClassSkill);
             }
         }
 

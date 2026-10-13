@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 public class StunPulseEffect : StatusEffect
 {
-    public StunPulseEffect() : base("StunPulse", 1) { }
+    public StunPulseEffect() : base("StunPulse", 1) { isHarmful = true; }
 
     public override List<StatModifier> GetStatModifiers(Unit unit)
     {

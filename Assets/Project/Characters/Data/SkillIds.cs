@@ -32,4 +32,8 @@ public static class SkillIds
 
     //Other
     public const string ZeroGOperations = "ZeroGOperations";
+
+    //Psionic
+    public const string Autohypnosis = "Autohypnosis";
+    public const string Psicraft = "Psicraft";
 }

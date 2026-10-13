@@ -8,7 +8,7 @@ public static class MovementResolver
     public static HashSet<Vector2Int> GetReachableTiles(Unit unit, CombatResolver resolver)
     {
         Vector2Int start = resolver.GetPosition(unit);
-        int budget = unit.GetMoveSpeed();
+        int budget = resolver.GetMoveSpeed(unit);
 
         //Dijkstra over the tile grid
         //Key: tile position, Value: cheapest cost to reach it
@@ -98,7 +98,7 @@ public static class MovementResolver
     public static List<Vector2Int> GetPath(Unit unit, Vector2Int destination, CombatResolver resolver)
     {
         Vector2Int start = resolver.GetPosition(unit);
-        int budget = unit.GetMoveSpeed();
+        int budget = resolver.GetMoveSpeed(unit);
 
         Dictionary<Vector2Int, Vector2Int> cameFrom = new Dictionary<Vector2Int, Vector2Int>();
         Dictionary<Vector2Int, int> costSoFar = new Dictionary<Vector2Int, int>();

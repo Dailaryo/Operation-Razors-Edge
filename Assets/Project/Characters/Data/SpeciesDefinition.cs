@@ -15,6 +15,9 @@ public class SpeciesDefinition
     //Flat stat bonuses applied at creation
     public List<StatModifier> statBonuses;
 
+    //Awareness checks against units of this species (every current genotype is Human)
+    public KnowledgeCategory knowledgeCategory = KnowledgeCategory.Human;
+
     //Action and Effect sources
     public IActionSource actionSource;
     public IEffectSource effectSource;
@@ -59,5 +62,17 @@ public class SpeciesDefinition
     public virtual void ApplyLevelUp(CharacterData data)
     {
         onLevelUp?.Invoke(data);
+    }
+
+    //Sum of this species' modifiers to one core attribute (applied at the data level)
+    public int GetAttributeBonus(StatType attribute)
+    {
+        int total = 0;
+        foreach (var mod in statBonuses)
+        {
+            if (mod.stat == attribute)
+                total += mod.flatBonus;
+        }
+        return total;
     }
 }

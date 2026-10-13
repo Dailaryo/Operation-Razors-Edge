@@ -173,6 +173,7 @@ public static class ChoiceNodeDatabase
                 nodeId:      ChoiceNodeIds.InfiltratorSkillMasteryNode,
                 displayName: "Skill Mastery",
                 nodeType:    NodeType.FreeChoice,
+                pickCount:   data => 3 + CharacterProgression.GetAbilityModifier(data.GetAttributeScore(StatType.Cognition)),
                 options: new List<ChoiceNodeDefinition.ChoiceOption>
                 {
                     new ChoiceNodeDefinition.ChoiceOption(
@@ -312,6 +313,147 @@ public static class ChoiceNodeDatabase
                         displayName: "Field Pharmacist",
                         description: "Pharmaceutical expertise and chemical enhancement. Stim Injection, Field Synthesis, " +
                                      "and Pharmacological Mastery add a second dimension to your support toolkit."
+                    ),
+                }
+            )},
+
+            // --- Telepath Trigger Power (levels 2, 5, 8 and the path level) ---
+            //One known 0–3rd level power per pick. Manifest it for 0 PP on a successful ability check
+            //(power's key ability, DC 11/13/15/17 by power level). See TriggerPower
+            { ChoiceNodeIds.TriggerPower, new ChoiceNodeDefinition(
+                nodeId:      ChoiceNodeIds.TriggerPower,
+                displayName: "Trigger Power",
+                nodeType:    NodeType.FreeChoice,
+                options: new List<ChoiceNodeDefinition.ChoiceOption>
+                {
+                    // 0-level (DC 11)
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.Burst,
+                        "Burst", "Trigger Power: Burst (DC 11).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.Burst)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.Daze,
+                        "Daze", "Trigger Power: Daze (DC 11).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.Daze)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.DetectPsionics,
+                        "Detect Psionics", "Trigger Power: Detect Psionics (DC 11).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.DetectPsionics)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.Distract,
+                        "Distract", "Trigger Power: Distract (DC 11).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.Distract)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.FarHand,
+                        "Far Hand", "Trigger Power: Far Hand (DC 11).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.FarHand)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.FingerOfFire,
+                        "Finger of Fire", "Trigger Power: Finger of Fire (DC 11).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.FingerOfFire)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.Missive,
+                        "Missive", "Trigger Power: Missive (DC 11).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.Missive)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.TelempathicProjection,
+                        "Telempathic Projection", "Trigger Power: Telempathic Projection (DC 11).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.TelempathicProjection)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.Verve,
+                        "Verve", "Trigger Power: Verve (DC 11).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.Verve)),
+
+                    // 1st-level (DC 13)
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.Attraction,
+                        "Attraction", "Trigger Power: Attraction (DC 13).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.Attraction)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.CharmPerson,
+                        "Charm Person", "Trigger Power: Charm Person (DC 13).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.CharmPerson)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.ConcealThoughts,
+                        "Conceal Thoughts", "Trigger Power: Conceal Thoughts (DC 13).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.ConcealThoughts)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.ControlObject,
+                        "Control Object", "Trigger Power: Control Object (DC 13).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.ControlObject)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.LesserBodyAdjustment,
+                        "Lesser Body Adjustment", "Trigger Power: Lesser Body Adjustment (DC 13).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.LesserBodyAdjustment)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.LesserMindlink,
+                        "Lesser Mindlink", "Trigger Power: Lesser Mindlink (DC 13).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.LesserMindlink)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.ObjectReading,
+                        "Object Reading", "Trigger Power: Object Reading (DC 13).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.ObjectReading)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.WhiteNoise,
+                        "White Noise", "Trigger Power: White Noise (DC 13).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.WhiteNoise)),
+
+                    // 2nd-level (DC 15)
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.BrainLock,
+                        "Brain Lock", "Trigger Power: Brain Lock (DC 15).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.BrainLock)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.ClairaudienceClairvoyance,
+                        "Clairaudience/Clairvoyance", "Trigger Power: Clairaudience/Clairvoyance (DC 15).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.ClairaudienceClairvoyance)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.DetectThoughts,
+                        "Detect Thoughts", "Trigger Power: Detect Thoughts (DC 15).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.DetectThoughts)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.ElectronicFog,
+                        "Electronic Fog", "Trigger Power: Electronic Fog (DC 15).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.ElectronicFog)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.InflictPain,
+                        "Inflict Pain", "Trigger Power: Inflict Pain (DC 15).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.InflictPain)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.Levitate,
+                        "Levitate", "Trigger Power: Levitate (DC 15).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.Levitate)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.SensitivityToPsychicImpressions,
+                        "Sensitivity to Psychic Impressions", "Trigger Power: Sensitivity to Psychic Impressions (DC 15).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.SensitivityToPsychicImpressions)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.Suggestion,
+                        "Suggestion", "Trigger Power: Suggestion (DC 15).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.Suggestion)),
+
+                    // 3rd-level (DC 17)
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.CharmCreature,
+                        "Charm Creature", "Trigger Power: Charm Creature (DC 17).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.CharmCreature)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.FalseSensoryInput,
+                        "False Sensory Input", "Trigger Power: False Sensory Input (DC 17).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.FalseSensoryInput)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.LesserDomination,
+                        "Lesser Domination", "Trigger Power: Lesser Domination (DC 17).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.LesserDomination)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.MentalBlast,
+                        "Mental Blast", "Trigger Power: Mental Blast (DC 17).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.MentalBlast)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.Mindlink,
+                        "Mindlink", "Trigger Power: Mindlink (DC 17).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.Mindlink)),
+                    new ChoiceNodeDefinition.ChoiceOption(ChoiceNodeIds.TriggerPowerOptionPrefix + PowerIds.NegatePsionics,
+                        "Negate Psionics", "Trigger Power: Negate Psionics (DC 17).",
+                        requirement: data => data.knownPowerIds.Contains(PowerIds.NegatePsionics)),
+                }
+            )},
+
+            // --- Telepath Path Choice (level 10) ---
+            { ChoiceNodeIds.TelepathPath, new ChoiceNodeDefinition(
+                nodeId:      ChoiceNodeIds.TelepathPath,
+                displayName: "Telepath Specialization",
+                nodeType:    NodeType.TreeBranch,
+                treeId:      ChoiceNodeIds.TelepathPath,
+                options: new List<ChoiceNodeDefinition.ChoiceOption>
+                {
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.TelepathEmpath,
+                        displayName: "Empath",
+                        description: "Battlefield emotional influence. Crowd Read, Sympathetic Link and Aura of Calm read " +
+                                     "the room, turn your allies' afflictions on the enemy, and steady the squad's nerve."
+                    ),
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.TelepathInquisitor,
+                        displayName: "Inquisitor",
+                        description: "Intelligence extraction and remote surveillance. Deep Scan, Trace Memory and " +
+                                     "Complete Probe pull secrets from any mind, near or far."
+                    ),
+                    new ChoiceNodeDefinition.ChoiceOption(
+                        optionId:    ChoiceNodeIds.TelepathDominator,
+                        displayName: "Dominator",
+                        description: "Direct mental control at scale. Mass Brain Lock, Chain Domination and Psionic " +
+                                     "Puppeteer turn enemies into instruments."
                     ),
                 }
             )},

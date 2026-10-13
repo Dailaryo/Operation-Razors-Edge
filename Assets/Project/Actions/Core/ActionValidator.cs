@@ -8,8 +8,12 @@ public static class ActionValidator
 
         if (action.source == null) return false;
 
-        // Units that have lost their next action cannot take any actions
-        if (action.source.activeEffects.Exists(e => e is LoseNextActionEffect))
+        // Units under an action-blocking condition cannot plan actions
+        if (action.source.IsActionBlocked())
+            return false;
+
+        // Catapsi: a free 0-level manifestation inside an opposing field uses the whole round
+        if (CatapsiEffect.ViolatesFullRound(action, resolver))
             return false;
 
         // Electronic Shroud blocks ranged attacks
@@ -32,7 +36,39 @@ public static class ActionValidator
         if (action.definition is PsionicPowerDefinition psionicDef)
         {
             if (action.source.powerPoints == null) return false;
-            if (!action.source.powerPoints.CanAfford(psionicDef.basePowerPointCost)) return false;
+            if (action.source.IsManifestingBlocked()) return false;
+
+            //Mindwipe: a power lost to negative levels can't be manifested
+            var negative = action.source.activeEffects.Find(e => e is NegativeLevelsEffect) as NegativeLevelsEffect;
+            if (negative != null && negative.lostPowerId == psionicDef.actionID) return false;
+
+            //Sum PP and free 0-level uses already commited by this unit's earlier planned actions
+            int committedPP = 0;
+            int committedFreeUses = 0;
+
+            foreach (var prior in action.manager.GetPlannedActions(action.source))
+            {
+                if (prior == action) break;
+                if (!(prior.definition is PsionicPowerDefinition priorPower)) continue;
+
+                bool priorFree = AugmentationProcessor.UsesFreeZeroLevel(action.source, priorPower, committedFreeUses);
+                if (priorFree) committedFreeUses++;
+
+                committedPP += AugmentationProcessor.GetTotalCost(priorPower, prior.augmentations, priorFree, prior.maximize);
+            }
+
+            //Maximize Power requires the class feature
+            if (action.maximize &&
+                (action.source.sourceCharacterData == null ||
+                 !action.source.sourceCharacterData.unlockedPassiveIds.Contains(PassiveIds.TelepathMaximizePower)))
+                return false;
+
+            var cost = AugmentationProcessor.Validate(
+                action.source, psionicDef, action.augmentations, committedPP, committedFreeUses, action.maximize);
+
+            if (!cost.isValid) return false;
+
+            if (!MaterialComponentResolver.CanPay(action, psionicDef, out _)) return false;
         }
 
         resolver = BuildSimulationState(action, resolver);
@@ -105,7 +141,7 @@ public static class ActionValidator
             resolver.GetPosition(action.target)
         );
 
-        int effectiveMaxRange = def.maxRange;
+        int effectiveMaxRange = def.GetMaxRange(action.source);
 
         // Signal Scramble II extends SystemOverride range by 2 tiles
         if (def.actionID == ActionIds.SystemOverride &&

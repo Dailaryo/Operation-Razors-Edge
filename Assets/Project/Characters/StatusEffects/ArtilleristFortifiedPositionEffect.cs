@@ -24,7 +24,7 @@ public class ArtilleristFortifiedPositionEffect : StatusEffect
 
         return new List<StatModifier>
         {
-            new StatModifier(StatType.Evasion,  4, 1f,
+            new StatModifier(StatType.Defense,  4, 1f,
                 "fortified_position", StatModifier.BonusType.Competence)
         };
     }

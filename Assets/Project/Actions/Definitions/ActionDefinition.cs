@@ -15,7 +15,10 @@ public class ActionDefinition
 
     public bool requiresLoS;
     public bool provokesOA = false;
-
+    public ReactionTrigger reactionTrigger = ReactionTrigger.None; //Reaction: planned normally, armed for the
+                                                                   //round, fires on this trigger
+    public bool IsReaction => reactionTrigger != ReactionTrigger.None;
+    public int usesPerCombat = 0; //0 = unlimited. Counted when the action resolves; resets at combat start
     public enum TargetingMode
     {
         None, //no target needed
@@ -88,5 +91,11 @@ public class ActionDefinition
         this.scalingMultiplier = scalingMultiplier;
         this.resourceCost = resourceCost;
         this.requiresLoS = requiresLoS;
+    }
+
+    //Effective range for this user. Psionic powers override this with manifester-level range bands
+    public virtual int GetMaxRange(Unit source)
+    {
+        return maxRange;
     }
 }

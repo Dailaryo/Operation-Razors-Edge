@@ -17,8 +17,6 @@ public static class CharacterFactory
             data.baseInitiative
         );
 
-        //Restore persistent HP from runtime
-        unit.currentHP = runtime.currentHP;
         unit.sourceCharacterData = data;
         unit.attackRating = data.baseAttack;
 
@@ -41,7 +39,17 @@ public static class CharacterFactory
         //Step 6: Equipment
         unit.ApplyEquipment();
 
-        //Step. 7 Derive reach profile from size and equipped weapon
+        //Step 7: Effects carried from earlier encounters (1 hour+). Before HP so any max HP effect counts (TEMP)
+        foreach (var effect in runtime.persistentEffects)
+            unit.AddEffect(effect);
+
+        //Step 8: HP — max HP is only known once every source is applied
+        unit.currentHP = unit.GetMaxHP() - runtime.hpDamage;
+
+        //Step 9: Power Points
+        PowerPointManager.Initialize(unit, runtime.powerPointsSpent, runtime.zeroLevelUsesSpent);
+
+        //Step 10: Derive reach profile from size and equipped weapon
         data.reachProfile = ReachProfile.DeriveFrom(data);
         unit.sizeCategory = data.size;
 

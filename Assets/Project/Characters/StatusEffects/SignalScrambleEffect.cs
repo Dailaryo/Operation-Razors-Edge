@@ -8,6 +8,7 @@ public class SignalScrambleEffect : StatusEffect
     public SignalScrambleEffect(int penalty) : base("SignalScramble", 2)
     {
         this.penalty = penalty;
+        isHarmful = true;
     }
 
     public override List<StatModifier> GetStatModifiers(Unit unit)

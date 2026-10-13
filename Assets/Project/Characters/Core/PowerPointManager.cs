@@ -8,6 +8,9 @@ public static class PowerPointManager
     {
         public int max;
         public int current;
+        public int freeZeroLevelMax;
+        public int freeZeroLevelUsed;
+        public int FreeZeroLevelRemaining => Mathf.Max(0, freeZeroLevelMax - freeZeroLevelUsed);
 
         public PowerPointState(int max)
         {
@@ -15,10 +18,21 @@ public static class PowerPointManager
             current = max;
         }
 
-        public bool CanAfford(int cost) => current >= cost;
+        public ItemInstance crystal; //Equipped bound Power Crystal: its stored PP are spent first
+
+        public int CrystalPoints => crystal != null ? crystal.charges : 0;
+
+        public bool CanAfford(int cost) => current + CrystalPoints >= cost;
 
         public void Spend(int cost)
         {
+            if (crystal != null)
+            {
+                int fromCrystal = Mathf.Min(crystal.charges, cost);
+                crystal.charges -= fromCrystal;
+                cost -= fromCrystal;
+            }
+
             current -= cost;
             if (current < 0) current = 0;
         }
@@ -31,6 +45,7 @@ public static class PowerPointManager
         public void RestoreFull()
         {
             current = max;
+            freeZeroLevelUsed = 0;
         }
     }
 
@@ -53,21 +68,32 @@ public static class PowerPointManager
             basePoints = tableValue;
         }
 
-        //Key attribute modifer bonus (modifier * manifester level)
+        //3.5 rule: bonus PP = key ability modifier × manifester level × 1/2 (rounded down)
         int keyMod = unit.GetModifier(classDef.psionicKeyAbility);
-        int abilityBonus = Mathf.Max(0, keyMod * data.level);
+        int abilityBonus = Mathf.Max(0, keyMod * data.manifesterLevel / 2);
 
         return Mathf.Max(0, basePoints + abilityBonus);
     }
 
     //Initialization (calleed during Unit setup, alongside ApplyClass)
-    public static void Initialize(Unit unit)
+    public static void Initialize(Unit unit, int spent = 0, int zeroLevelUsed = 0)
     {
         int max = CalculateMaxPowerPoints(unit);
         if (max <= 0) return;
 
         unit.powerPoints = new PowerPointState(max);
-        Debug.Log($"{unit.unitName}: Power points initialized — {max} PP");
+
+        unit.powerPoints.crystal = FindEquippedCrystal(unit.sourceCharacterData);
+
+        if (spent > 0)
+            unit.powerPoints.current = Mathf.Max(0, max - spent);
+
+        //d20 Modern: 3 + manifester level free 0-level manifestations per rest
+        unit.powerPoints.freeZeroLevelMax = 3 + unit.sourceCharacterData.manifesterLevel;
+        unit.powerPoints.freeZeroLevelUsed = Mathf.Min(zeroLevelUsed, unit.powerPoints.freeZeroLevelMax);
+
+        Debug.Log($"{unit.unitName}: Power points initialized — {unit.powerPoints.current}/{max} PP, " +
+        $"{unit.powerPoints.FreeZeroLevelRemaining} free 0-level uses");
     }
 
     //Expenditure
@@ -86,7 +112,8 @@ public static class PowerPointManager
         }
 
         unit.powerPoints.Spend(cost);
-        CombatLog.Add($"{unit.unitName}: Spent {cost} PP ({unit.powerPoints.current}/{unit.powerPoints.max} remaining)");
+        CombatLog.Add($"{unit.unitName}: Spent {cost} PP ({unit.powerPoints.current}/{unit.powerPoints.max} remaining" +
+    (unit.powerPoints.crystal != null ? $", crystal {unit.powerPoints.CrystalPoints})" : ")"));
         return true;
     }
 
@@ -103,5 +130,19 @@ public static class PowerPointManager
         if (unit.powerPoints == null) return;
         unit.powerPoints.Restore(amount);
         CombatLog.Add($"{unit.unitName}: Restored {amount} PP ({unit.powerPoints.current}/{unit.powerPoints.max} remaining)");
+    }
+
+    //The character's own equipped item with stored power points (Power Crystal), if any
+    private static ItemInstance FindEquippedCrystal(CharacterData data)
+    {
+        foreach (var inst in data.equippedItemIds.Values)
+        {
+            if (inst.ownerCharacterId != data.characterId) continue;
+
+            var def = ItemDatabase.Get(inst.definitionId);
+            if (def != null && def.storedPowerPoints > 0) return inst;
+        }
+
+        return null;
     }
 }

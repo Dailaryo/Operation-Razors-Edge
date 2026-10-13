@@ -84,6 +84,23 @@ public static class SkillCheckDatabase
                 }
             }
         },
+        {
+            SkillCheckIds.PsionicConcentration,
+            new SkillCheckDefinition
+            {
+                checkId        = SkillCheckIds.PsionicConcentration,
+                skill          = SkillType.Autohypnosis,
+                checkMode      = SkillCheckDefinition.CheckMode.FixedDC,
+                fixedDC        = 0, // Always overridden at runtime via dcOverride
+                allowUntrained = true,
+                description    = "Autohypnosis concentration",
+                tiers = new List<SkillCheckTier>
+                {
+                    new SkillCheckTier { tier = 0, minimumTotal = 0 },
+                    new SkillCheckTier { tier = 1, minimumTotal = 1 }
+                }
+            }
+        },
     };
 
     public static SkillCheckDefinition Get(string id)

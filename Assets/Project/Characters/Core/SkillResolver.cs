@@ -40,7 +40,7 @@ public static class SkillResolver
         return ranks > 0;
     }
 
-    public static SkillCheckResult Resolve(Unit unit, SkillType skill, int dc)
+    public static SkillCheckResult Resolve(Unit unit, SkillType skill, int dc, bool allowUntrained = false)
     {
         var result = new SkillCheckResult();
         result.skill = skill;
@@ -48,7 +48,7 @@ public static class SkillResolver
         result.modifier = GetSkillTotal(unit, skill);
 
         //Trained only gate
-        if (!CanAttempt(unit, skill))
+        if (!allowUntrained && !CanAttempt(unit, skill))
         {
             result.roll = 0;
             result.total = 0;
@@ -120,9 +120,23 @@ public static class SkillResolver
             case SkillType.Diplomacy: return StatType.SkillDiplomacy;
             case SkillType.Intimidate: return StatType.SkillIntimidate;
             case SkillType.ZeroGOperations: return StatType.SkillZeroGOperations;
+            case SkillType.Autohypnosis: return StatType.SkillAutohypnosis;
+            case SkillType.Psicraft: return StatType.SkillPsicraft;
             default:
                 Debug.LogWarning($"[SkillResolver] No StatType mapping for {skill}");
                 return StatType.SkillAthletics; //Safe fallback
         }
+    }
+
+    //Psionic-only skills are available only to characters with a psionic class.
+    //Any future skill-rank allocation UI must also filter with this.
+    public static bool IsSkillAvailable(CharacterData data, SkillType skill)
+    {
+        var def = SkillDatabase.Definitions[skill.ToString()];
+        if (!def.psionicOnly) return true;
+        if (data == null) return false;
+
+        var classDef = ClassDatabase.Get(data.classId);
+        return classDef != null && classDef.isPsionicClass;
     }
 }

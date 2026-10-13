@@ -12,6 +12,22 @@ public class CombatResolver
 
     public bool IsSimulation => isSimulation;
 
+    //Planning only: speed bonus from this unit's earlier planned actions (e.g. Burst on self)
+    public void AddSimulatedMoveSpeedBonus(Unit unit, int bonus)
+    {
+        if (isSimulation && simUnits.TryGetValue(unit, out var sim))
+            sim.moveSpeedBonus += bonus;
+    }
+
+    public int GetMoveSpeed(Unit unit)
+    {
+        int planningBonus = 0;
+        if (isSimulation && simUnits.TryGetValue(unit, out var sim))
+            planningBonus = sim.moveSpeedBonus;
+
+        return unit.GetMoveSpeed(planningBonus);
+    }
+
     public Vector2Int GetPosition(Unit unit)
     {
         if (isSimulation)
@@ -136,6 +152,14 @@ public class CombatResolver
 
     IEnumerator ExecuteActions(List<CombatAction> actions)
     {
+        //Reactions are armed for the round and fire from their trigger, not in initiative order
+        ArmReactions(actions);
+
+        //Count each unit's planned actions so effects can tell whether the unit still acts this round
+        foreach (CombatAction planned in actions) planned.source.pendingActionCount = 0;
+        foreach (CombatAction planned in actions)
+            if (!planned.isReaction) planned.source.pendingActionCount++;
+
         foreach (CombatAction action in actions)
         {
             // Run passive detection sweep once per unit at the start of their turn,
@@ -154,7 +178,7 @@ public class CombatResolver
                 DetectionStateManager.ResetExposed(action.source);
             }
 
-            if (!action.source.IsDead() && !action.source.IsDying() && !action.source.IsStabilized())
+            if (action.source.CanAct() && !action.source.IsActionBlocked())
             {
                 //Debug.Log("Executing action from: " + action.source.unitName);
                     
@@ -165,7 +189,10 @@ public class CombatResolver
                 {
                     action.source.RegenResource();
                 }
-    
+
+                //Armed reactions resolve from their trigger (regen above still runs for the unit's first slot)
+                if (action.isReaction) continue;
+
                 ExecuteAction(action);
 
                 //Refresh grid visuals after state changes
@@ -173,16 +200,98 @@ public class CombatResolver
                  
                 yield return new WaitForSeconds(0.75f);
             }
+
+            else if (!isSimulation && action.source.IsActionBlocked() && action.sequenceIndex == 0)
+            {
+                CombatLog.Add($"{action.source.unitName} is unable to act.");
+            }
+
+            if (!action.isReaction) action.source.pendingActionCount--;
         }
     }
 
     public void ExecuteAction(CombatAction action)
     {
-        if (action.source.IsDead()) return;
+        if (!action.source.CanAct()) return;
 
         ActionContext ctx = BuildContext(action);
 
         var def = ctx.definition;
+
+        //Psionic manifestation cost: paid before effects resolve
+        //(d20: power points are spent even if the power is disrupted)
+        if (!isSimulation && def is PsionicPowerDefinition psionicPower)
+        {
+            if (ctx.attacker.IsManifestingBlocked())
+            {
+                CombatLog.Add($"{ctx.attacker.unitName} cannot manifest {psionicPower.actionID}.");
+                return;
+            }
+
+            var cost = AugmentationProcessor.Validate(ctx.attacker, psionicPower, action.augmentations,
+                maximized: action.maximize);
+
+            if (!cost.isValid)
+            {
+                CombatLog.Add($"{ctx.attacker.unitName} fails to manifest {psionicPower.actionID}: {cost.failureReason}");
+                return;
+            }
+
+            if (ctx.isMaximized)
+                CombatLog.Add($"{ctx.attacker.unitName} maximizes {psionicPower.actionID}.");
+
+            //Catapsi: inside an opposing field, a paid manifestation costs double unless resisted
+            int powerPointCost = cost.totalPowerPointCost;
+            if (powerPointCost > 0)
+            {
+                var field = CatapsiEffect.FindOpposingField(ctx.attacker, this);
+                if (field != null && field.DoublesCost(ctx.attacker))
+                {
+                    powerPointCost *= 2;
+                    if (!ctx.attacker.powerPoints.CanAfford(powerPointCost))
+                    {
+                        CombatLog.Add($"{ctx.attacker.unitName} fails to manifest {psionicPower.actionID}: " +
+                                      $"not enough power points inside the catapsi field");
+                        return;
+                    }
+                }
+            }
+
+            //Material component: paid alongside power points, so it is lost if the manifestation is disrupted
+            if (!MaterialComponentResolver.TryPay(action, psionicPower)) return;
+
+            //Trigger Power: a successful ability check manifests it for 0 PP (after catapsi doubling and the
+            //material component; the material is still paid)
+            if (powerPointCost > 0 && !cost.usesFreeZeroLevel && TriggerPower.TryTrigger(ctx.attacker, psionicPower))
+                powerPointCost = 0;
+
+            if (cost.usesFreeZeroLevel)
+            {
+                ctx.attacker.powerPoints.freeZeroLevelUsed++;
+                CombatLog.Add($"{ctx.attacker.unitName}: free 0-level manifestation " +
+                    $"({ctx.attacker.powerPoints.FreeZeroLevelRemaining} remaining)");
+            }
+
+            if (powerPointCost > 0)
+                PowerPointManager.TrySpend(ctx.attacker, powerPointCost);
+        }
+
+        //Opportunity attacks and psionic concentration resolve BEFORE the action takes effect.
+        //Skip in simulation mode — OA logic does not run during AI planning
+        if (!isSimulation && !action.isReaction)
+        {
+            if (!ResolveProvocation(ctx, action)) return;
+        }
+
+        //Concentration powers: manifesting a new one ends any power already being maintained
+        var concentrationPower = def as PsionicPowerDefinition;
+        bool startsConcentration = !isSimulation
+            && concentrationPower != null
+            && concentrationPower.concentrationRequired;
+
+        if (startsConcentration)
+            ctx.attacker.EndConcentration("manifested another concentration power");
+
         BaseAction baseAction = new GenericAction(def);
 
         if (baseAction == null)
@@ -193,18 +302,15 @@ public class CombatResolver
 
         //Execute action (behavior only)
         baseAction.Execute(ctx, this);
+
+        //Link everything this power applied to a ConcentrationEffect on the manifester
+        if (startsConcentration && ctx.appliedEffects.Count > 0)
+            ctx.attacker.AddEffect(new ConcentrationEffect(concentrationPower,
+                new List<StatusEffect>(ctx.appliedEffects),
+                concentrationPower.GetConcentrationMaxRounds(ctx.attacker)));
+
         if (ctx.definition.resourceCost > 0)
             AudioEventBus.Fire(AudioEventIds.Combat.AbilityActivate);
-
-        // Check if this action provokes OAs (ranged attacks, psionic actions)
-        // Skip in simulation mode — OA logic does not run during AI planning
-        if (!isSimulation)
-        {
-            CheckActionProvocation(ctx);
-
-            // If the actor was killed by the OA, abort without executing the action
-            if (ctx.attacker.IsDead()) return;
-        }
 
         //Spend resource cost
         int effectiveCost = ctx.attacker.GetEffectiveResourceCost(ctx.definition);
@@ -222,9 +328,12 @@ public class CombatResolver
         }
         else if (ctx.shouldApplyDamage)
         {
+            TryFireReaction(ctx.finalTarget, ReactionTrigger.TargetedByAttack, ctx.attacker);
+
             if (!ResolveHit(ctx))
             {
                 CombatLog.Add($"{ctx.attacker.unitName} misses {ctx.finalTarget.unitName}");
+                action.OnResolved();
                 return;
             }
 
@@ -259,6 +368,53 @@ public class CombatResolver
         return manager.GetAllUnits();
     }
 
+    public void RemoveFromEncounter(Unit unit)
+    {
+        //Planning treats removal as defeat
+        if (isSimulation)
+        {
+            simUnits[unit].currentHP = unit.GetDeathThreshold();
+            return;
+        }
+
+        manager.RemoveFromEncounter(unit);
+    }
+
+    //Death effects: the target dies outright
+    public void KillUnit(Unit target)
+    {
+        if (target == null || IsUnitDead(target)) return;
+
+        if (isSimulation)
+        {
+            simUnits[target].currentHP = target.GetDeathThreshold();
+            return;
+        }
+
+        target.Kill();
+    }
+
+    public int GetCurrentHP(Unit unit) => isSimulation ? simUnits[unit].currentHP : unit.currentHP;
+
+    //Drops a living target straight to -1 HP and dying (Psychic Crush)
+    public void DropToDying(Unit target)
+    {
+        if (target == null || IsUnitDead(target)) return;
+
+        if (isSimulation)
+        {
+            simUnits[target].currentHP = Mathf.Min(simUnits[target].currentHP, -1);
+            return;
+        }
+
+        if (target.currentHP <= -1) return;
+
+        target.currentHP = -1;
+        if (!target.CanAct()) target.EndConcentration("incapacitated");
+        target.OnHealthChanged?.Invoke(target);
+        HandleUnitDying(target);
+    }
+
     void HandleUnitDeath(Unit unit, Unit attacker = null)
     {
         // Frightful Presence trigger
@@ -274,48 +430,8 @@ public class CombatResolver
             }
         }
 
-        if (!unit.isEnemy)
-        {
-            //Player unit: handoff to SquadManager for incapacitation and snapshot logic
-            SquadManager.Instance.SetIncapacitated(unit);
-        }
-        else
-        {
-            //Enemy unit: collect equipped item drops and loot table drops into a queue
-            //The loot UI prompt is deferred; for now drops are staged in CombatManager
-            List<ItemInstance> lootQueue = new List<ItemInstance>();
-
-            //Equipped items always drop
-            if (unit.sourceCharacterData != null)
-            {
-                foreach (var kvp in unit.sourceCharacterData.equippedItemIds)
-                {
-                    lootQueue.Add(kvp.Value);
-                }
-            }
-
-            //Loot table drops, if the enemy has one
-            if (unit.sourceCharacterData != null &&
-                !string.IsNullOrEmpty(unit.sourceCharacterData.lootTableId))
-            {
-                List<ItemInstance> tableDrops = LootResolver.ResolveLoot(unit.sourceCharacterData.lootTableId);
-                lootQueue.AddRange(tableDrops);
-            }
-
-            //Stage drops for post-combat loot screen
-            LootQueue.Enqueue(lootQueue);
-
-            if (lootQueue.Count > 0)
-                CombatLog.Add($"[Loot] {unit.unitName} dropped {lootQueue.Count} item(s)");
-        }
-
-        ThreatZoneManager.UnregisterUnit(unit);
-        
-        //Remove from grid
-        GridManager.Instance.RemoveUnit(unit);
-
-        CombatLog.Add($"{unit.unitName} has been defeated");
-        AudioEventBus.Fire(AudioEventIds.Combat.UnitDeath);
+        //Removal, loot and incapacitation run from Unit.OnDeath (CombatManager.ProcessDefeat)
+        manager.ProcessDefeat(unit);
     }
 
     void HandleUnitDying(Unit unit)
@@ -404,7 +520,8 @@ public class CombatResolver
 
             action = action,
             temporaryEffects = action.temporaryEffects,
-            definition = action.definition
+            definition = action.definition,
+            isMaximized = action.maximize
         };
     }
 
@@ -557,6 +674,24 @@ public class CombatResolver
 
         bool hit = attackTotal >= defense;
 
+        //Miss chance: rolled only on a hit; the attacker's and target's sources don't stack, highest applies
+        if (hit)
+        {
+            int missChance = Mathf.Max(
+                ctx.attacker.GetMissChance(outgoing: true),
+                ctx.finalTarget.GetMissChance(outgoing: false));
+
+            if (missChance > 0)
+            {
+                int percentile = Random.Range(1, 101);
+                if (percentile <= missChance)
+                {
+                    hit = false;
+                    CombatLog.Add($"Miss chance: rolled {percentile} vs {missChance}%");
+                }
+            }
+        }
+
         if (hit)
         {
             if (attackType == ActionDefinition.AttackType.Melee)
@@ -667,7 +802,7 @@ public class CombatResolver
         foreach (OARecord record in queue)
         {
             //Re-check conditions, earlier OAs in this queue may have changed state
-            if (record.attacker.IsDead()) continue;
+            if (!record.attacker.CanAct()) continue;
             if (!record.attacker.oaState.CanTakeOA()) continue;
             if (record.target.IsDead()) continue;
 
@@ -692,39 +827,80 @@ public class CombatResolver
         }
     }
 
-    private void CheckActionProvocation(ActionContext ctx)
+    //Marks planned reaction powers and arms them on their unit for this round
+    //Marks planned reactions and arms them on their unit for this round
+    void ArmReactions(List<CombatAction> actions)
     {
+        foreach (var action in actions)
+        {
+            if (!action.definition.IsReaction) continue;
+
+            action.isReaction = true;
+            if (isSimulation) continue;
+
+            action.source.armedReaction = action;
+            if (!action.source.isEnemy)
+                CombatLog.Add($"{action.source.unitName} readies {action.definition.actionID}.");
+        }
+    }
+
+    //Fires the reactor's armed reaction if it matches the trigger. Shares the OA counter.
+    //Resolves before the triggering attack or effect, so its protection applies to it.
+    public void TryFireReaction(Unit reactor, ReactionTrigger trigger, Unit source)
+    {
+        if (isSimulation || reactor == null) return;
+
+        CombatAction reaction = reactor.armedReaction;
+        if (reaction == null || reaction.definition.reactionTrigger != trigger) return;
+
+        if (source != null && source.isEnemy == reactor.isEnemy) return; //hostile sources only
+        if (!reactor.CanAct() || reactor.IsActionBlocked()) return;
+        if (reactor.oaState != null && !reactor.oaState.CanTakeOA()) return;
+
+        reactor.armedReaction = null;
+        reactor.oaState?.RecordOA();
+
+        CombatLog.Add($"{reactor.unitName} reacts with {reaction.definition.actionID}!");
+        if (reaction.definition is PsionicPowerDefinition)
+            AudioEventBus.Fire(AudioEventIds.Combat.PsionicManifest);
+
+        ExecuteAction(reaction);
+    }
+
+    //Threateners that would take an attack of opportunity against this action (empty if it doesn't provoke)
+    private List<OARecord> CollectProvocationOAs(ActionContext ctx)
+    {
+        var oaQueue = new List<OARecord>();
         var def = ctx.definition;
 
         bool isRanged = def.attackType == ActionDefinition.AttackType.Ranged;
-        bool provokes = def.provokesOA;
-        if (ctx.definition is PsionicPowerDefinition)
-            AudioEventBus.Fire(AudioEventIds.Combat.PsionicManifest);
-        if (!isRanged && !provokes) return;
+        if (!isRanged && !def.provokesOA) return oaQueue;
 
         //Collect all enemy units threatening the actor's current tile(s)
         List<Unit> threateners = ThreatZoneManager.GetThreateningUnits(
             ctx.attacker.position, isEnemy: !ctx.attacker.isEnemy);
 
-        if (threateners.Count == 0) return;
-
-        List<OARecord> oaQueue = new List<OARecord>();
-
         foreach (Unit threatener in threateners)
         {
             //A threatener that cannot detect the mover cannot take an OA against them.
             if (!DetectionStateManager.CanTarget(threatener, ctx.attacker)) continue;
-            
+
             //Skip if the threatener is hidden from the target and has not opted
             //in to taking OAs while hidden
             if (DetectionStateManager.Get(ctx.attacker, threatener) == DetectionState.Hidden
                 && !threatener.oaState.reactWhileHidden)
                 continue;
-            
+
             if (threatener.oaState.CanTakeOA())
                 oaQueue.Add(new OARecord(threatener, ctx.attacker, ctx.attacker.position));
         }
 
+        return oaQueue;
+    }
+
+    private void CheckActionProvocation(ActionContext ctx)
+    {
+        var oaQueue = CollectProvocationOAs(ctx);
         if (oaQueue.Count > 0)
             ResolveInterruptOAs(oaQueue);
     }
@@ -779,5 +955,64 @@ public class CombatResolver
         GridManager.Instance.MoveUnit(target, destination);
         ThreatZoneManager.UpdateUnit(target);
         CombatLog.Add($"{target.unitName} is forced back to {destination}");
+    }
+
+    //Returns false if the action is lost: actor killed by an OA,
+    //or a psionic concentration check failed (power points stay spent)
+    private bool ResolveProvocation(ActionContext ctx, CombatAction action)
+    {
+        var power = ctx.definition as PsionicPowerDefinition;
+
+        if (power != null)
+            AudioEventBus.Fire(AudioEventIds.Combat.PsionicManifest);
+
+        //Synesthesia and similar: manifesting at all requires a concentration check
+        if (power != null)
+        {
+            int manifestDC = ctx.attacker.GetManifestConcentrationDC(power);
+            if (manifestDC > 0)
+            {
+                bool held = false;
+                ConcentrationManager.RequestConcentrationCheck(ctx.attacker, manifestDC,
+                    success => held = success);
+                if (!held) return false;
+            }
+        }
+
+        //Defensive Manifesting stance: while threatened, a concentration check replaces provoking.
+        //Not threatened: nothing to avoid, so no check
+        if (power != null && ctx.attacker.sourceCharacterData != null &&
+            ctx.attacker.sourceCharacterData.defensiveManifesting &&
+            CollectProvocationOAs(ctx).Count > 0)
+        {
+            bool defensiveSuccess = false;
+            ConcentrationManager.RequestDefensiveCheck(ctx.attacker, power.powerLevel,
+                success => defensiveSuccess = success);
+            return defensiveSuccess;
+        }
+
+        int hpBefore = ctx.attacker.currentHP;
+
+        CheckActionProvocation(ctx);
+
+        //Killed or dropped to dying by an OA: the action is lost
+        if (!ctx.attacker.CanAct())
+        {
+            if (!ctx.attacker.IsDead())
+                CombatLog.Add($"{ctx.attacker.unitName} collapses before completing {ctx.definition.actionID}.");
+            return false;
+        }
+
+        //Damaged while manifesting: concentration check or the power is lost
+        int damageTaken = hpBefore - ctx.attacker.currentHP;
+        if (power != null && damageTaken > 0)
+        {
+            bool held = false;
+            ConcentrationManager.RequestDamagedCheck(ctx.attacker, damageTaken, power.powerLevel,
+                success => held = success);
+            return held;
+        }
+
+        return true;
     }
 }

@@ -47,6 +47,7 @@ public static class FeatIds
     //Psionic Feats
     public const string PsionicFocus = "PsionicFocus";
     public const string MindShield = "MindShield";
+    public const string WildTalent = "WildTalent"; //Reserved: Psychic background option. Feat and per-rest uses deferred (R11)
 
     // Tech Feats
     public const string TechLiterate = "TechLiterate";
@@ -78,5 +79,41 @@ public static class FeatIds
     public const string MedicalExpert        = "MedicalExpert";
     public const string DefensiveMartialArts = "DefensiveMartialArts";
     public const string Cautious             = "Cautious";
+    public const string Studious             = "Studious";
     public const string Educated             = "Educated";
+    public const string Deceptive = "Deceptive";
+    public const string Confident = "Confident";
+    public const string Focused = "Focused";
+    public const string Attentive = "Attentive";
+    public const string Renown = "Renown";
+
+    // --- Class bonus-list feats: STUBS (no effect until a route or class needs them) ---
+    public const string ActionBoost = "ActionBoost";
+    public const string Acrobatic = "Acrobatic";
+    public const string AdvancedTwoWeaponFighting = "AdvancedTwoWeaponFighting";
+    public const string ArmorProficiencyPowered = "ArmorProficiencyPowered";
+    public const string Athletic = "Athletic";
+    public const string BurstFire = "BurstFire";
+    public const string CombatExpertise = "CombatExpertise";
+    public const string CombatThrow = "CombatThrow";
+    public const string ElusiveTarget = "ElusiveTarget";
+    public const string ExoticFirearmsProficiency = "ExoticFirearmsProficiency";
+    public const string ExoticMeleeWeaponProficiency = "ExoticMeleeWeaponProficiency";
+    public const string GreatFortitude = "GreatFortitude";
+    public const string ImprovedCombatThrow = "ImprovedCombatThrow";
+    public const string ImprovedDisarm = "ImprovedDisarm";
+    public const string ImprovedTrip = "ImprovedTrip";
+    public const string ImprovedTwoWeaponFighting = "ImprovedTwoWeaponFighting";
+    public const string LightningReflexes = "LightningReflexes";
+    public const string Mobility = "Mobility";
+    public const string NervePinch = "NervePinch";
+    public const string Nimble = "Nimble";
+    public const string Run = "Run";
+    public const string SpringAttack = "SpringAttack";
+    public const string Strafe = "Strafe";
+    public const string TwoWeaponFighting = "TwoWeaponFighting";
+    public const string UltraImmuneSystem = "UltraImmuneSystem";
+    public const string WeaponFocus = "WeaponFocus";
+    public const string WhirlwindAttack = "WhirlwindAttack";
+    public const string ZeroGTraining = "ZeroGTraining";
 }

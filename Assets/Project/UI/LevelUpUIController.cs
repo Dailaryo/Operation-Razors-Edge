@@ -37,6 +37,18 @@ public class LevelUpUIController : MonoBehaviour
 
     public void BeginLevelUp(CharacterData character)
     {
+        //Nothing left to choose (e.g. a pregen whose plan resolved every level): finish immediately
+        if (!character.levelUpPending)
+        {
+            pendingCharacter = character;
+            pendingLevel = character.level;
+            pendingClassId = character.classId;
+            pendingASIAttributeIndex = -1;
+            asiScreenShown = false;
+            CommitLevelUp();
+            return;
+        }
+
         pendingCharacter = character;
         pendingLevel = character.level;
         pendingClassId = character.classId;
@@ -274,8 +286,7 @@ public class LevelUpUIController : MonoBehaviour
         if (asiScreenShown && pendingASIAttributeIndex >= 0)
         {
             StatType attr = AttributeOrder[pendingASIAttributeIndex];
-            pendingCharacter.abilityScoreIncreases.TryGetValue(attr, out int current);
-            pendingCharacter.abilityScoreIncreases[attr] = current + 1;
+            CharacterProgression.ApplyAbilityScoreIncreases(pendingCharacter, attr);
             CombatLog.Add($"[LevelUp] ASI applied: {attr} +1");
         }
 

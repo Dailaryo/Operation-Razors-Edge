@@ -1,5 +1,6 @@
-using UnityEngine;
+using NUnit.Framework.Internal;
 using System.Collections.Generic;
+using UnityEngine;
 
 public static class PassiveDatabase
 {
@@ -516,7 +517,7 @@ public static class PassiveDatabase
                 passive: PassiveIds.CryptianSleepImmunity,
                 name:    "Sleep Immunity",
                 desc:    "Immune to sleep effects and forced unconsciousness powers.",
-                effect:  null // Flag checked by sleep/unconsciousness resolvers — no stat effect
+                effect:  new SimpleEffectSource(new List<StatusEffect> { new CryptianSleepImmunityEffect() })
             )},
 
             { PassiveIds.CryptianFocusSaveBonus, new PassiveDefinition(
@@ -525,7 +526,7 @@ public static class PassiveDatabase
                 desc:    "+1 species bonus on Focus saves against mind-affecting psionic powers.",
                 effect:  new SimpleEffectSource(new List<StatusEffect>
                 {
-                    new StatBonusEffect(StatType.Willpower, 1, PassiveIds.CryptianFocusSaveBonus, StatModifier.BonusType.Racial),
+                    new ConditionalSaveBonusEffect(StatType.Willpower, 1, EffectDescriptor.MindAffecting | EffectDescriptor.Psionic, PassiveIds.CryptianFocusSaveBonus, StatModifier.BonusType.Racial)
                 })
             )},
 
@@ -551,7 +552,7 @@ public static class PassiveDatabase
                 desc:    "At the start of each encounter, make a free Perception check with +4 bonus covering 30 ft. " +
                          "DC 10 reveals unconcealed threats, exits, and surveillance. Concealed elements are revealed " +
                          "if the check meets their Stealth result.",
-                effect:  null // Hooks into encounter-start logic in CombatManager — no persistent stat effect
+                effect: null // Resolved by SweepResolver
             )},
 
             { PassiveIds.InfiltratorImprovedEvasion, new PassiveDefinition(
@@ -596,7 +597,7 @@ public static class PassiveDatabase
                 name:    "Improved Sweep",
                 desc:    "Sweep now also reveals the relative threat level of each detected enemy — " +
                          "stronger, on par, or weaker by HD comparison.",
-                effect:  null // Extends Sweep output — hooks into CombatManager encounter-start logic
+                effect: null // Resolved by SweepResolver
             )},
 
             // --- Infiltrator Ghost Path ---
@@ -654,7 +655,7 @@ public static class PassiveDatabase
                 passive: PassiveIds.InfiltratorOperativeReadTheRoom,
                 name:    "Read the Room",
                 desc:    "Sweep triggers automatically at the start of every round, not just encounter start.",
-                effect:  null // Extends Sweep cadence — hooks into TurnManager round-start logic
+                effect: null // Resolved by SweepResolver
             )},
 
             { PassiveIds.InfiltratorOperativeExploitOpening, new PassiveDefinition(
@@ -668,7 +669,7 @@ public static class PassiveDatabase
                 passive: PassiveIds.InfiltratorOperativeTacticalBlind,
                 name:    "Tactical Blind",
                 desc:    "Sweep reveals the stealth positions of hidden enemies.",
-                effect:  null // Extends Sweep output — hooks into CombatManager Sweep logic
+                effect: null // Resolved by SweepResolver
             )},
 
             { PassiveIds.InfiltratorOperativeSurgicalPrecision, new PassiveDefinition(
@@ -697,7 +698,7 @@ public static class PassiveDatabase
                 passive: PassiveIds.InfiltratorPhantomBlurredPresence,
                 name:    "Blurred Presence",
                 desc:    "20% miss chance on all attacks against you.",
-                effect:  null // Miss chance flag — checked during attack resolution
+                effect:  new SimpleEffectSource(new List<StatusEffect> { new BlurredPresenceEffect() })
             )},
 
             { PassiveIds.InfiltratorPhantomEchoStep, new PassiveDefinition(
@@ -1025,7 +1026,7 @@ public static class PassiveDatabase
                 desc:    "+2 species bonus on Fortitude saves against poisons, drugs, and toxins.",
                 effect:  new SimpleEffectSource(new List<StatusEffect>
                 {
-                    new StatBonusEffect(StatType.Fortitude, 2, PassiveIds.RadixToxinResilience, StatModifier.BonusType.Racial)
+                    new ConditionalSaveBonusEffect(StatType.Fortitude, 2, EffectDescriptor.Poison, PassiveIds.RadixToxinResilience, StatModifier.BonusType.Racial)
                 })
             )},
 
@@ -1035,7 +1036,7 @@ public static class PassiveDatabase
                 desc:    "+2 species bonus on Focus saves against psionic powers and effects.",
                 effect:  new SimpleEffectSource(new List<StatusEffect>
                 {
-                    new StatBonusEffect(StatType.Willpower, 2, PassiveIds.RadixPsionicResilience, StatModifier.BonusType.Racial)
+                    new ConditionalSaveBonusEffect(StatType.Willpower, 2, EffectDescriptor.Psionic, PassiveIds.RadixPsionicResilience, StatModifier.BonusType.Racial)
                 })
             )},
 
@@ -1300,6 +1301,178 @@ public static class PassiveDatabase
                     new StatBonusEffect(StatType.SkillTreatInjury, 5,
                         PassiveIds.FPMedicalSpecialist5, StatModifier.BonusType.Competence)
                 })
+            )},
+
+            // --- Phytonian Species Traits ---
+            { PassiveIds.PhytonianPsionicAwareness, new PassiveDefinition(
+                passive: PassiveIds.PhytonianPsionicAwareness,
+                name:    "Psionic Awareness",
+                desc:    "+2 species bonus on Focus saves against mind-affecting psionic powers.",
+                effect:  new SimpleEffectSource(new List<StatusEffect>
+                {
+                    new ConditionalSaveBonusEffect(StatType.Willpower, 2, EffectDescriptor.MindAffecting | EffectDescriptor.Psionic,
+                        PassiveIds.PhytonianPsionicAwareness, StatModifier.BonusType.Racial)
+                })
+            )},
+
+            { PassiveIds.PhytonianEmpathicSenses, new PassiveDefinition(
+                passive: PassiveIds.PhytonianEmpathicSenses,
+                name:    "Empathic Senses",
+                desc:    "+2 species bonus on Perception and SenseMotive checks.",
+                effect:  new SimpleEffectSource(new List<StatusEffect>
+                {
+                    new StatBonusEffect(StatType.SkillPerception,  2, PassiveIds.PhytonianEmpathicSenses, StatModifier.BonusType.Racial),
+                    new StatBonusEffect(StatType.SkillSenseMotive, 2, PassiveIds.PhytonianEmpathicSenses, StatModifier.BonusType.Racial),
+                })
+            )},
+
+            { PassiveIds.PhytonianSleepImmunity, new PassiveDefinition(
+                passive: PassiveIds.PhytonianSleepImmunity,
+                name:    "Sleep Immunity",
+                desc:    "Immune to sleep effects and forced unconsciousness. Phytonians enter a passive cognitive rest state rather than sleeping.",
+                effect:  new SimpleEffectSource(new List<StatusEffect> { new PhytonianSleepImmunityEffect() })
+            )},
+
+            { PassiveIds.PhytonianConcealedPassage, new PassiveDefinition(
+                passive: PassiveIds.PhytonianConcealedPassage,
+                name:    "Concealed Passage",
+                desc:    "Automatically makes a free Perception or Investigate check when passing within 5 ft of a " +
+                         "concealed door, hatch, or hidden passage.",
+                effect:  null // Triggered by movement resolver — no stat effect (same stub status as CryptianConcealedDetection)
+            )},
+
+            { PassiveIds.TelepathCombatManifestation, new PassiveDefinition(
+                passive: PassiveIds.TelepathCombatManifestation,
+                name:    "Combat Manifestation",
+                desc:    "+4 bonus on concentration checks made to manifest defensively.",
+                effect:  null // Checked by ConcentrationManager.RequestDefensiveCheck
+            )},
+
+            { PassiveIds.TelepathMaximizePower, new PassiveDefinition(
+                passive: PassiveIds.TelepathMaximizePower,
+                name:    "Maximize Power",
+                desc:    "Spend 6 additional power points to manifest a power at maximum effect: every variable " +
+                         "die rolls its highest value. The extra cost counts toward the manifestation limit.",
+                effect:  null // Toggled per action (CombatAction.maximize); checked by ActionValidator
+            )},
+
+            { PassiveIds.EmpathCrowdRead, new PassiveDefinition(
+                passive: PassiveIds.EmpathCrowdRead,
+                name:    "Crowd Read",
+                desc:    "Every opposing unit Anyha can see is fully assessed: Full awareness at encounter start " +
+                         "and on first detection, with no knowledge check.",
+                effect:  null // Checked by AwarenessManager.Evaluate
+            )},
+
+            { PassiveIds.EmpathResonance, new PassiveDefinition(
+                passive: PassiveIds.EmpathResonance,
+                name:    "Resonance",
+                desc:    "Successful Charm Person and Suggestion durations are extended by 1 round per Presence modifier.",
+                effect:  null // Deferred: Charm Person / Suggestion are stubs; completed in the full power pass
+            )},
+
+            { PassiveIds.EmpathEmotionalAnchor, new PassiveDefinition(
+                passive: PassiveIds.EmpathEmotionalAnchor,
+                name:    "Emotional Anchor",
+                desc:    "Mind-affecting powers Anyha manifests cannot be dispelled or ended by damage to the target.",
+                effect:  null // Deferred: no damage-ends-effect or dispel hooks yet (Negate Psionics is a stub).
+                              // When added, those hooks skip MindAffecting effects whose source has this passive
+            )},
+
+            { PassiveIds.EmpathPerfectRead, new PassiveDefinition(
+                passive: PassiveIds.EmpathPerfectRead,
+                name:    "Perfect Read",
+                desc:    "Anyha cannot be surprised and always acts in surprise rounds.",
+                effect:  null // Deferred: surprise rounds are player-only; checked when enemy ambushes are added
+            )},
+
+            { PassiveIds.EmpathApotheosis, new PassiveDefinition(
+                passive: PassiveIds.EmpathApotheosis,
+                name:    "Empath Apotheosis",
+                desc:    "Anyha has Full awareness of every opposing unit within 60 ft., refreshed every round, " +
+                         "including exact HP and emotional state.",
+                effect:  null // Applied by AwarenessManager.ApplyApotheosis; HP/emotion display deferred to UI
+            )},
+
+            { PassiveIds.EmpathAuraOfCalm, new PassiveDefinition(
+                passive: PassiveIds.EmpathAuraOfCalm,
+                name:    "Aura of Calm",
+                desc:    "While Anyha is conscious, fear conditions (Shaken, Frightened, Panicked) on her and allies " +
+                         "within 30 ft. are suppressed. Their durations keep running; any that remain return when " +
+                         "the ally leaves the aura or Anyha falls unconscious.",
+                effect:  null // Resolved by AuraOfCalm.Suppresses (Unit.IsSuppressed)
+            )},
+            
+            { PassiveIds.InquisitorDeepScan, new PassiveDefinition(
+                passive: PassiveIds.InquisitorDeepScan,
+                name:    "Deep Scan",
+                desc:    "Detect Thoughts reveals three layers of thought at once: surface thoughts, recent memory and intent.",
+                effect:  null // Deferred: Detect Thoughts information layers come with the full power pass
+            )},
+
+            { PassiveIds.InquisitorRemoteAwareness, new PassiveDefinition(
+                passive: PassiveIds.InquisitorRemoteAwareness,
+                name:    "Remote Awareness",
+                desc:    "Clairaudience/Clairvoyance range doubles and needs no concentration to maintain.",
+                effect:  null // Deferred: Clairaudience/Clairvoyance behavior comes with the full power pass
+            )},
+
+            { PassiveIds.InquisitorMindwipeUpgrade, new PassiveDefinition(
+                passive: PassiveIds.InquisitorMindwipeUpgrade,
+                name:    "Mindwipe Mastery",
+                desc:    "Mindwipe removes up to 24 hours of memory (instead of 1 hour) and its save DC improves.",
+                effect:  null // Deferred: Mindwipe memory removal and the DC increase come with the full power pass
+            )},
+
+            { PassiveIds.InquisitorStrategicIntelligence, new PassiveDefinition(
+                passive: PassiveIds.InquisitorStrategicIntelligence,
+                name:    "Strategic Intelligence",
+                desc:    "A full round of Clairaudience/Clairvoyance viewing reveals a target's attributes, equipped " +
+                         "items and known powers.",
+                effect:  null // Deferred: likely an AwarenessManager raise once Clairaudience/Clairvoyance exists
+            )},
+
+            { PassiveIds.InquisitorApotheosis, new PassiveDefinition(
+                passive: PassiveIds.InquisitorApotheosis,
+                name:    "Inquisitor Apotheosis",
+                desc:    "Anyha permanently maintains one Detect Thoughts and one Clairaudience/Clairvoyance at once, " +
+                         "with no power point cost.",
+                effect:  null // Deferred: free, permanent maintenance comes with the full power pass
+            )},
+
+            { PassiveIds.DominatorCascadingDomination, new PassiveDefinition(
+                passive: PassiveIds.DominatorCascadingDomination,
+                name:    "Cascading Domination",
+                desc:    "When Anyha dominates a target, its allies within 15 ft. must make a Focus save or become Shaken.",
+                effect:  null // Deferred: needs Domination behavior (full power pass)
+            )},
+
+            { PassiveIds.DominatorPsionicPuppeteer, new PassiveDefinition(
+                passive: PassiveIds.DominatorPsionicPuppeteer,
+                name:    "Psionic Puppeteer",
+                desc:    "Dominated targets can be directed to take any action, not only attacks.",
+                effect:  null // Deferred: needs Domination behavior (full power pass)
+            )},
+
+            { PassiveIds.DominatorIndomitableWill, new PassiveDefinition(
+                passive: PassiveIds.DominatorIndomitableWill,
+                name:    "Indomitable Will",
+                desc:    "Anyha's mind-affecting powers ignore the first 5 points of power resistance.",
+                effect:  null // Deferred: needs a penetration bonus hook in PsionicResistanceCalculator
+            )},
+
+            { PassiveIds.DominatorPermanentSuggestion, new PassiveDefinition(
+                passive: PassiveIds.DominatorPermanentSuggestion,
+                name:    "Permanent Suggestion",
+                desc:    "Once per combat, a Suggestion lasts indefinitely, until the target acts against it.",
+                effect:  null // Deferred: needs Suggestion behavior (full power pass)
+            )},
+
+            { PassiveIds.DominatorApotheosis, new PassiveDefinition(
+                passive: PassiveIds.DominatorApotheosis,
+                name:    "Dominator Apotheosis",
+                desc:    "Once per combat, Domination costs 0 power points and the target gets no saving throw.",
+                effect:  null // Deferred: needs Domination behavior (full power pass)
             )},
         };
 

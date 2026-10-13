@@ -21,103 +21,67 @@ public static class RogDarrel
         data.level = 1;
 
         // Ability Scores
-        // 25-point buy, post-Pentian modifiers applied:
-        // Power 16 (+6 racial) = 22   |  Agility 10 (-2 racial) = 8
-        // Endurance 14 (+2 racial) = 16 |  Cognition 9 (-2 racial) = 7
-        // Insight 13 = 13              |  Presence 9 (-2 racial) = 7
-        data.power = 22;
-        data.agility = 8;
-        data.endurance = 16;
-        data.cognition = 7;
+        // 25-point buy, before species modifiers (applied by SpeciesDefinition)
+        data.power = 16;
+        data.agility = 10;
+        data.endurance = 14;
+        data.cognition = 9;
         data.insight = 13;
-        data.presence = 7;
+        data.presence = 9;
 
-        // Class Skills
-        // Helix Warrior base list; Gladiator adds SenseMotive as new class skill.
-        // Intimidate and Athletics already on class list — background grants +1 competence.
-        data.classSkills = new List<SkillType>
+        // Background selections
+        // Gladiator (choose 1): Intimidate is already a class skill → +1 competence.
+        data.backgroundFeatChoice = FeatIds.Brawl;
+        data.backgroundSkillChoices = new List<SkillType>
         {
-            SkillType.Athletics,
             SkillType.Intimidate,
-            SkillType.Survival,
-            SkillType.Perception,
-            SkillType.SenseMotive,
-            SkillType.ZeroGOperations,
         };
 
-        // Background skill bonuses: Intimidate and Athletics already class skills
-        data.backgroundSkillBonuses = new List<StatModifier>
-        {
-            new StatModifier(
-                StatType.SkillIntimidate,
-                1, 1f,
-                BackgroundIds.Gladiator + "_Intimidate",
-                StatModifier.BonusType.Competence),
-            new StatModifier(
-                StatType.SkillAthletics,
-                1, 1f,
-                BackgroundIds.Gladiator + "_Athletics",
-                StatModifier.BonusType.Competence),
-        };
-
-        // Skill Ranks
-        // Level 1: max(1, 3 + (-2)) = 1 rank (COG 7, mod -2, floor at 1)
-        data.skillRanks = new Dictionary<SkillType, int>
-        {
-            { SkillType.Intimidate, 1 },
-        };
-
-        // Level 1 Unlocks
-        // AdaptivePhysiology delivered by class level table at level 1.
-        // Mutations purchased at level-up; none active at level 1 yet.
-        // RapidHealing purchased from the 2 MP budget at character creation.
-        data.unlockedActions = new List<string>
-        {
-            ActionIds.MeleeAttack,
-        };
-
-        // Feats
-        // Level 1 universal (cadence 1): Power Attack
-        // Level 1 background bonus: Brawl
-        data.equippedFeatIds = new List<string>
-        {
-            FeatIds.PowerAttack,
-            FeatIds.Brawl,
-        };
-
-        // Intended Progression
-        // Records full planned path so LevelUp() makes correct choices automatically.
-        data.intendedChoiceOptions = new List<string>
-        {
-            ChoiceNodeIds.HelixWarriorBerserker,
-            ChoiceNodeIds.HelixEnhancedMutationRapidHealing,
-            ChoiceNodeIds.HelixImprovedMutationMusculature,
-            ChoiceNodeIds.HelixGreaterMutationRapidHealing,
-        };
-
-        data.intendedFeatProgression = new List<string>
-        {
-            // Universal cadence: 1, 4, 7, 10, 13, 16, 19
-            FeatIds.PowerAttack,               // Level 1
-            FeatIds.Cleave,                    // Level 4
-            FeatIds.GreatCleave,               // Level 7
-            FeatIds.ImprovedCombatMartialArts, // Level 10
-            FeatIds.ImprovedKnockoutPunch,     // Level 13
-            FeatIds.AdvancedCombatMartialArts, // Level 16
-            FeatIds.BlindFight,                // Level 19
-
-            // Class cadence: 2, 6, 9, 13, 16, 19
-            FeatIds.ImprovedBrawl,             // Level 2
-            FeatIds.CombatMartialArts,         // Level 6
-            FeatIds.KnockoutPunch,             // Level 9
-            FeatIds.ImprovedGrapple,           // Level 13
-            FeatIds.CombatReflexes,            // Level 16
-            FeatIds.Streetfighting,            // Level 19
-
-            // Background bonus
-            FeatIds.Brawl,                     // Level 1
-        };
+        CharacterBuilder.BuildToLevel(data, 1);
 
         return data;
+    }
+
+    // Pre-written level-up route (debug bypass, see PregenProgression)
+    public static Dictionary<int, PregenLevelPlan> BuildRoute()
+    {
+        var route = PregenLevelPlan.CreateRoute();
+
+        // Feats: universal 1, 4, 7, 10, 13, 16, 19 | Helix Warrior 2, 6, 9, 13, 16, 19
+        route[1].feats.Add(FeatIds.PowerAttack);
+        route[1].feats.Add(FeatIds.Brawl);                        // background grant
+        route[1].feats.Add(FeatIds.SimpleWeaponsProficiency);     // species grant
+        route[2].feats.Add(FeatIds.ImprovedBrawl);                // class
+        route[4].feats.Add(FeatIds.Cleave);
+        route[6].feats.Add(FeatIds.CombatMartialArts);            // class
+        route[7].feats.Add(FeatIds.GreatCleave);
+        route[9].feats.Add(FeatIds.KnockoutPunch);                // class
+        route[10].feats.Add(FeatIds.ImprovedCombatMartialArts);
+        route[13].feats.Add(FeatIds.ImprovedKnockoutPunch);
+        route[13].feats.Add(FeatIds.ImprovedGrapple);             // class
+        route[16].feats.Add(FeatIds.AdvancedCombatMartialArts);
+        route[16].feats.Add(FeatIds.CombatReflexes);              // class
+        route[19].feats.Add(FeatIds.BlindFight);
+        route[19].feats.Add(FeatIds.Streetfighting);              // class
+
+        // Ability score increases: all Power
+        route[4].asi = StatType.Power;
+        route[8].asi = StatType.Power;
+        route[12].asi = StatType.Power;
+        route[16].asi = StatType.Power;
+        route[20].asi = StatType.Power;
+
+        // Mutations and path
+        route[3].choiceOptions.Add(ChoiceNodeIds.HelixEnhancedMutationRapidHealing);
+        route[5].choiceOptions.Add(ChoiceNodeIds.HelixImprovedMutationMusculature);
+        route[8].choiceOptions.Add(ChoiceNodeIds.HelixGreaterMutationRapidHealing);
+        route[10].choiceOptions.Add(ChoiceNodeIds.HelixWarriorBerserker);
+        route[15].choiceOptions.Add(ChoiceNodeIds.HelixEnhancedMutationMusculature);   // Berserker
+        route[18].choiceOptions.Add(ChoiceNodeIds.HelixImprovedMutationRapidHealing);  // Berserker
+
+        // Skill ranks: 1 per level
+        PregenLevelPlan.FillSkillsAtCap(route, 1, 20, SkillType.Intimidate);
+
+        return route;
     }
 }

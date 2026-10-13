@@ -31,6 +31,7 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
 
     private EncounterData currentEncounter;
     private MissionState missionState;
+    public CreditBalance enemyMaterialPool = new CreditBalance();
 
     private EscalationHandler escalationHandler;
 
@@ -46,11 +47,76 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
 
     private void HandleUnitDeath(Unit unit)
     {
+        ProcessDefeat(unit);
+
         if (unit.sourceCharacterData == null) return;
         if (unit.sourceCharacterData.deathRound >= 0) return; // Already stamped — guard against double-fire
 
         unit.sourceCharacterData.deathRound = turnManager.turnCount;
         CombatLog.Add($"{unit.unitName} died on round {turnManager.turnCount}.");
+    }
+
+    //Removes a defeated unit from the encounter: incapacitation and snapshot rollback for squad members,
+    //loot for enemies. Runs once per unit, whatever caused the defeat (damage, bleed-out, Kill()).
+    public void ProcessDefeat(Unit unit)
+    {
+        if (unit.defeatProcessed) return;
+        unit.defeatProcessed = true;
+
+        if (!unit.isEnemy)
+            SquadManager.Instance.SetIncapacitated(unit);
+        else
+            StageLoot(unit);
+
+        ThreatZoneManager.UnregisterUnit(unit);
+        GridManager.Instance.RemoveUnit(unit);
+
+        CombatLog.Add($"{unit.unitName} has been defeated");
+        AudioEventBus.Fire(AudioEventIds.Combat.UnitDeath);
+    }
+
+    //Out of the fight for good without dying (Microcosm). Squad members are unavailable until the Hub,
+    //with no snapshot rollback. Enemies removed this way count as defeated.
+    public void RemoveFromEncounter(Unit unit)
+    {
+        if (unit.isEnemy)
+        {
+            unit.Kill();
+            return;
+        }
+
+        if (unit.defeatProcessed) return;
+        unit.defeatProcessed = true;
+        unit.removedFromEncounter = true;
+        unit.EndConcentration("removed from the encounter");
+
+        SquadManager.Instance.SetIncapacitated(unit, rollback: false);
+
+        ThreatZoneManager.UnregisterUnit(unit);
+        GridManager.Instance.RemoveUnit(unit);
+
+        CombatLog.Add($"{unit.unitName} is unable to continue");
+    }
+
+    //Enemy drops: equipped items always, plus the loot table
+    void StageLoot(Unit unit)
+    {
+        List<ItemInstance> lootQueue = new List<ItemInstance>();
+
+        if (unit.sourceCharacterData != null)
+        {
+            foreach (var kvp in unit.sourceCharacterData.equippedItemIds)
+                lootQueue.Add(kvp.Value);
+
+            if (!string.IsNullOrEmpty(unit.sourceCharacterData.lootTableId))
+                lootQueue.AddRange(LootResolver.ResolveLoot(unit.sourceCharacterData.lootTableId));
+        }
+
+        //Stage drops for post-combat loot screen
+        LootQueue.Enqueue(lootQueue);
+
+        if (lootQueue.Count > 0)
+            CombatLog.Add($"[Loot] {unit.unitName} dropped {lootQueue.Count} item(s)");
     }
 
     public ActionDefinition GetPendingAction()
@@ -95,7 +161,7 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
 
         foreach (Unit unit in enemyUnits)
         {
-            if (!unit.IsDead() && !unit.IsDying() && !unit.IsStabilized())
+            if (unit.CanAct())
             {
                 currentUnit = unit;
 
@@ -154,6 +220,10 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
 
         if (endState == CombatEndState.InProgress)
         {
+            //Round start: Read the Room repeats Sweep; Empath Apotheosis refreshes
+            SweepResolver.Run(GetAllUnits(), encounterStart: false);
+            AwarenessManager.ApplyApotheosis(GetAllUnits());
+
             StartPlayerTurn();
             return;
         }
@@ -216,7 +286,7 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         currentUnit = unit;
 
         //skip dead, dying and stabilized units, they cannot act
-        if (unit.IsDead() || unit.IsDying() || unit.IsStabilized())
+        if (!unit.CanAct())
         {
             turnManager.AdvanceUnit();
             PromptNextUnit();
@@ -265,7 +335,7 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         foreach (Unit unit in enemyUnits)
         {
             unit.ProcessEffects();
-            unit.ReduceCooldowns();
+            unit.ReduceCooldowns();            
         }
 
         DetectionStateManager.TickAlertCountDowns();
@@ -299,6 +369,9 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         {
             if (unit.oaState != null)
                 unit.oaState.ResetRound();
+
+            unit.armedReaction = null; //an unfired reaction expires with the round
+            unit.triggerAttemptsThisRound.Clear();
         }
 
         CombatLog.Add($"--- End Phase Complete ---");
@@ -313,6 +386,9 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         }
         
         currentEncounter = encounter;
+        //Encounter material pool: shared by every enemy (escalation waves included) for material components
+        enemyMaterialPool = new CreditBalance();
+        enemyMaterialPool.Add(encounter.materialPoolCredits);
         escalationHandler = new EscalationHandler(encounter);
         extractionManager = encounter.extractionConfig != null
             ? new ExtractionMissionManager(
@@ -397,9 +473,11 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
             List<ActionDefinition> keys = new List<ActionDefinition>(unit.cooldowns.Keys);
             foreach (var action in keys)
             {
-                if (unit.cooldowns[action] == Unit.-1)
+                if (unit.cooldowns[action] == Unit.CombatCooldown)
                     unit.cooldowns.Remove(action);
             }
+
+            unit.combatUses.Clear();
 
             // Reset per-combat effect flags
             foreach (var effect in unit.activeEffects)
@@ -434,6 +512,11 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         }
 
         DetectionStateManager.Initialize(GetAllUnits(), surpriseRound ? playerUnits : null);
+
+        AwarenessManager.Initialize(GetAllUnits());
+        AwarenessManager.ApplyApotheosis(GetAllUnits());
+        AuraOfCalm.Initialize(GetAllUnits());
+        SweepResolver.Run(GetAllUnits(), encounterStart: true);
 
         if (surpriseRound)
             StartSurpriseRound();
@@ -881,6 +964,7 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
             unit.oaState = new OAState(1);
             ThreatZoneManager.RegisterUnit(unit);
             enemyUnits.Add(unit);
+            AuraOfCalm.Register(unit);
         }
     }
 

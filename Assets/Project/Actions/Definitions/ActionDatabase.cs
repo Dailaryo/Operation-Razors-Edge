@@ -651,7 +651,7 @@ public static class ActionDatabase
                         (attacker, target) =>
                         {
                             if (DistanceUtility.IsAdjacent(attacker.position, target.position))
-                                return new StatBonusEffect(StatType.Evasion, -2, "FrenziedStrike", StatModifier.BonusType.Untyped);
+                                return new StatBonusEffect(StatType.Defense, -2, "FrenziedStrike", StatModifier.BonusType.Untyped);
                             return null;
                         })
                 },
@@ -1387,6 +1387,126 @@ public static class ActionDatabase
                 attackType:     ActionDefinition.AttackType.None,
                 requiresLoS:    false
             )},
+            //Suggestion against every enemy in a 20-ft. radius. 1/combat.
+            //Deferred: Suggestion behavior is a stub; effects, area targeting and saves come with the full power pass
+            { ActionIds.EmpathGroupSuggestion, new ActionDefinition(
+                actionID:       ActionIds.EmpathGroupSuggestion,
+                targetType:     TargetType.Enemy,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       5,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects:        new List<IActionEffect>(),
+                attackType:     ActionDefinition.AttackType.None
+            ) { usesPerCombat = 1 } },
+            //Move one harmful condition from an ally within 60 ft. to the target enemy. Focus save negates. 2/combat.
+            { ActionIds.EmpathSympatheticLink, new ActionDefinition(
+                actionID:       ActionIds.EmpathSympatheticLink,
+                targetType:     TargetType.Enemy,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       SympatheticLinkEffect.Range,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects:        new List<IActionEffect>
+                {
+                    new SympatheticLinkEffect()
+                },
+                attackType:     ActionDefinition.AttackType.None
+            ) { usesPerCombat = 2 } },
+            //Touch: reveal a specific memory segment Anyha chooses. Focus save negates.
+            //Deferred: memory content and the save come with the full power pass
+            { ActionIds.InquisitorTraceMemory, new ActionDefinition(
+                actionID:       ActionIds.InquisitorTraceMemory,
+                targetType:     TargetType.Enemy,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       1,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects:        new List<IActionEffect>(),
+                attackType:     ActionDefinition.AttackType.None
+            )},
+
+            //Tap any active communication within 100 ft. and read it as a free action.
+            //Deferred: there is no communication system yet
+            { ActionIds.InquisitorPsionicIntercept, new ActionDefinition(
+                actionID:       ActionIds.InquisitorPsionicIntercept,
+                targetType:     TargetType.None,
+                requiresTarget: false,
+                minRange:       0,
+                maxRange:       20,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.None,
+                category:       ActionDefinition.ActionCategory.Free,
+                effects:        new List<IActionEffect>(),
+                attackType:     ActionDefinition.AttackType.None
+            )},
+
+            //Mindprobe with no PP cost; the target can't use power resistance. 1/combat.
+            //Deferred: Mindprobe behavior comes with the full power pass. Range is a placeholder (Close at minimum)
+            { ActionIds.InquisitorCompleteProbe, new ActionDefinition(
+                actionID:       ActionIds.InquisitorCompleteProbe,
+                targetType:     TargetType.Enemy,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       5,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects:        new List<IActionEffect>(),
+                attackType:     ActionDefinition.AttackType.None
+            ) { usesPerCombat = 1 } },
+
+            //Force a dominated target to make one melee attack against a target Anyha designates.
+            //Deferred: needs Domination behavior and a second target. Range is a placeholder
+            { ActionIds.DominatorDirectedStrike, new ActionDefinition(
+                actionID:       ActionIds.DominatorDirectedStrike,
+                targetType:     TargetType.Enemy,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       20,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects:        new List<IActionEffect>(),
+                attackType:     ActionDefinition.AttackType.None
+            )},
+
+            //Brain Lock on every enemy in a 15-ft. radius, at double Brain Lock's PP cost. 1/combat.
+            //Deferred: area targeting and PP cost (ActionDefinition costs the class resource, not PP).
+            //Range is a placeholder (Medium at minimum)
+            { ActionIds.DominatorMassBrainLock, new ActionDefinition(
+                actionID:       ActionIds.DominatorMassBrainLock,
+                targetType:     TargetType.Enemy,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       20,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Standard,
+                effects:        new List<IActionEffect>(),
+                attackType:     ActionDefinition.AttackType.None
+            ) { usesPerCombat = 1 } },
+
+            //After a successful Domination, attempt a second Domination on an adjacent target as a free action. 1/combat.
+            //Deferred: needs Domination behavior; likely becomes a trigger rather than a planned action
+            { ActionIds.DominatorChainDomination, new ActionDefinition(
+                actionID:       ActionIds.DominatorChainDomination,
+                targetType:     TargetType.Enemy,
+                requiresTarget: true,
+                minRange:       1,
+                maxRange:       1,
+                dealsDamage:    false,
+                targetingMode:  ActionDefinition.TargetingMode.Tile,
+                category:       ActionDefinition.ActionCategory.Free,
+                effects:        new List<IActionEffect>(),
+                attackType:     ActionDefinition.AttackType.None
+            ) { usesPerCombat = 1 } },
         };
 
     public static ActionDefinition Get(string id)

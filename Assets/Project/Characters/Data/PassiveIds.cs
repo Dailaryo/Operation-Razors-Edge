@@ -205,4 +205,36 @@ public static class PassiveIds
     public const string FPPharmacologicalMastery  = "fm_fp_pharmacological_mastery";
     public const string FPMedicalSpecialist4      = "fm_fp_medical_specialist_4";
     public const string FPMedicalSpecialist5      = "fm_fp_medical_specialist_5";
+
+    // Phytonian species traits
+    public const string PhytonianPsionicAwareness = "phytonian_psionic_awareness";
+    public const string PhytonianEmpathicSenses = "phytonian_empathic_senses";
+    public const string PhytonianSleepImmunity = "phytonian_sleep_immunity";
+    public const string PhytonianConcealedPassage = "phytonian_concealed_passage";
+
+    //Telepath
+    public const string TelepathCombatManifestation = "telepath_combat_manifestation";
+    public const string TelepathMaximizePower = "telepath_maximize_power";
+
+    //Empath (Telepath path)
+    public const string EmpathCrowdRead = "empath_crowd_read";
+    public const string EmpathResonance = "empath_resonance";
+    public const string EmpathEmotionalAnchor = "empath_emotional_anchor";
+    public const string EmpathPerfectRead = "empath_perfect_read";
+    public const string EmpathApotheosis = "empath_apotheosis";
+    public const string EmpathAuraOfCalm = "empath_aura_of_calm";
+
+    //Inquisitor (Telepath path)
+    public const string InquisitorDeepScan = "inquisitor_deep_scan";
+    public const string InquisitorRemoteAwareness = "inquisitor_remote_awareness";
+    public const string InquisitorMindwipeUpgrade = "inquisitor_mindwipe_upgrade";
+    public const string InquisitorStrategicIntelligence = "inquisitor_strategic_intelligence";
+    public const string InquisitorApotheosis = "inquisitor_apotheosis";
+
+    //Dominator (Telepath path)
+    public const string DominatorCascadingDomination = "dominator_cascading_domination";
+    public const string DominatorPsionicPuppeteer = "dominator_psionic_puppeteer";
+    public const string DominatorIndomitableWill = "dominator_indomitable_will";
+    public const string DominatorPermanentSuggestion = "dominator_permanent_suggestion";
+    public const string DominatorApotheosis = "dominator_apotheosis";
 }

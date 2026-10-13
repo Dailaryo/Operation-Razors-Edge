@@ -11,6 +11,7 @@ public static class ClassDatabase
         { ClassIds.Infiltrator, InfiltratorClass.Create() },
         { ClassIds.Dreadnought, DreadnoughtClass.Create() },
         { ClassIds.FieldMedic, FieldMedicClass.Create() },
+        { ClassIds.Telepath, TelepathClass.Create() },
     };
 
     public static ClassDefinition Get(string id)

@@ -154,9 +154,9 @@ public class CombatUIController : MonoBehaviour
             }
             else
             {
-                int cd = unit.cooldowns[action];
+                int cd = unit.cooldowns.TryGetValue(action, out int c) ? c : 0;
                 label.text = action.actionID;
-                cooldown.text = cd.ToString();
+                cooldown.text = cd > 0 ? cd.ToString() : "-";
                 button.interactable = false;
             }
 

@@ -74,6 +74,12 @@ public static class DetectionStateManager
                 AudioEventBus.Fire(AudioEventIds.Stealth.EnemyAlerted);
             }
         }
+
+        //Awareness: first sight of a target triggers a knowledge check
+        bool wasSeen = previous == DetectionState.Detected || previous == DetectionState.Exposed;
+        bool nowSeen = state == DetectionState.Detected || state == DetectionState.Exposed;
+        if (!wasSeen && nowSeen)
+            AwarenessManager.OnDetected(observer, target);
     }
 
     //Targeting gate

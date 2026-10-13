@@ -17,6 +17,13 @@ public class ChoiceNodeDefinition
 
     public List<ChoiceOption> options;
 
+    public System.Func<CharacterData, int> pickCount;
+
+    public int GetPickCount(CharacterData data)
+    {
+        return pickCount != null ? Mathf.Max(1, pickCount(data)) : 1;
+    }
+
     public class ChoiceOption
     {
         public string optionId;
@@ -34,6 +41,9 @@ public class ChoiceNodeDefinition
         //Passive effect support
         public IEffectSource effectSource;
 
+        //Character-data gate (e.g. "power is known"); null = no requirement
+        public System.Func<CharacterData, bool> requirement;
+
         public ChoiceOption(
             string optionId,
             string displayName,
@@ -42,7 +52,8 @@ public class ChoiceNodeDefinition
             List<string> actionUnlockIds = null,
             List<string> passiveUnlockIds = null,
             List<string> passiveRemoveIds = null,
-            IEffectSource effectSource= null)
+            IEffectSource effectSource = null,
+            System.Func<CharacterData, bool> requirement = null)
         {
             this.optionId = optionId;
             this.displayName = displayName;
@@ -52,6 +63,7 @@ public class ChoiceNodeDefinition
             this.passiveUnlockIds = passiveUnlockIds ?? new List<string>();
             this.passiveRemoveIds = passiveRemoveIds ?? new List<string>();
             this.effectSource = effectSource;
+            this.requirement = requirement;
         }
     }
 
@@ -60,17 +72,19 @@ public class ChoiceNodeDefinition
         string displayName,
         NodeType nodeType,
         List<ChoiceOption> options,
-        string treeId = null)
+        string treeId = null,
+        System.Func<CharacterData, int> pickCount = null)
     {
         this.nodeId = nodeId;
         this.displayName = displayName;
         this.nodeType = nodeType;
         this.options = options;
         this.treeId = treeId;
+        this.pickCount = pickCount;
     }
 
     //Returns which options are currently selectable given what the character has already taken
-    public List<ChoiceOption> GetAvailableOptions(List<string> takenOptionIds)
+    public List<ChoiceOption> GetAvailableOptions(List<string> takenOptionIds, CharacterData data = null)
     {
         var available = new List<ChoiceOption>();
 
@@ -81,6 +95,9 @@ public class ChoiceNodeDefinition
 
             //Has prerequisite: check it's been taken
             if (option.prerequisiteOptionId != null && !takenOptionIds.Contains(option.prerequisiteOptionId)) continue;
+
+            //Character requirement (checked when the caller supplies the character)
+            if (option.requirement != null && data != null && !option.requirement(data)) continue;
 
             //TreeBranch enforcement: if any option in this tree is already
             //taken, only options from the same tree are available

@@ -255,6 +255,17 @@ public static class FieldMedicClass
 
         // No class resource — Field Medic uses no per-combat resource pool
 
+        // Bonus feats (d20 Modern Field Medic list; vehicle feats dropped)
+        // Adapted: Studious added (prerequisite for Educated in this project)
+        def.bonusFeatIds = new List<string>
+        {
+            FeatIds.ArmorProficiencyLight, FeatIds.ArmorProficiencyMedium, FeatIds.Cautious,
+            FeatIds.DefensiveMartialArts, FeatIds.Dodge, FeatIds.Educated, FeatIds.ImprovedInitiative,
+            FeatIds.MedicalExpert, FeatIds.PersonalFirearmsProficiency,
+            // Adaptations
+            FeatIds.Studious,
+        };
+
         return def;
     }
 }

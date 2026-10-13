@@ -132,4 +132,18 @@ public static class ActionIds
     public const string FPStimInjection        = "FPStimInjection";
     public const string FPFieldSynthesis       = "FPFieldSynthesis";
     public const string FPPharmacistApotheosis = "FPPharmacistApotheosis";
+
+    // Telepath — Empath Path
+    public const string EmpathGroupSuggestion = "EmpathGroupSuggestion";
+    public const string EmpathSympatheticLink = "EmpathSympatheticLink";
+
+    // Telepath — Inquisitor Path
+    public const string InquisitorTraceMemory = "InquisitorTraceMemory";
+    public const string InquisitorPsionicIntercept = "InquisitorPsionicIntercept";
+    public const string InquisitorCompleteProbe = "InquisitorCompleteProbe";
+
+    // Telepath — Dominator Path
+    public const string DominatorDirectedStrike = "DominatorDirectedStrike";
+    public const string DominatorMassBrainLock = "DominatorMassBrainLock";
+    public const string DominatorChainDomination = "DominatorChainDomination";
 }

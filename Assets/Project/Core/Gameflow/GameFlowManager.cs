@@ -359,6 +359,7 @@ public class GameFlowManager : MonoBehaviour
     public void EnterPlanetSide()
     {
         currentState = GameState.PlanetSide;
+        SquadManager.Instance.CreateRuntimeSquad();
 
         HideAllPanels();
         // PlanetSide zone navigation panel hookup deferred
@@ -409,7 +410,6 @@ public class GameFlowManager : MonoBehaviour
 
         CombatLog.Add($"[GameFlow] Zone combat launched: {selectedEncounter.encounterName}");
 
-        SquadManager.Instance.CreateRuntimeSquad();
         StartCombat(surpriseRound);
     }
 }

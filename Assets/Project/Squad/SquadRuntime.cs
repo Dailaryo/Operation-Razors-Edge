@@ -5,8 +5,16 @@ public class SquadRuntime
 {
     public CharacterData source;
 
-    public int currentHP;
+    public int hpDamage;
 
+    public int powerPointsSpent;
+
+    public int zeroLevelUsesSpent;
+
+    //Reserved for exploration-phase time pressure: effects that outlast an encounter
+    //(minute/hour durations) will carry between encounters here. Unused until the
+    //objective-implementation milestone; until then long-duration powers end at encounter end.
+    //HealToFull already clears it on Hub return.
     public List<StatusEffect> persistentEffects = new List<StatusEffect>();
 
     public bool isIncapacitated = false;
@@ -16,19 +24,22 @@ public class SquadRuntime
     public SquadRuntime(CharacterData source)
     {
         this.source = source;
-        this.currentHP = source.currentHP;
+        this.hpDamage = source.hpDamage;
+        this.powerPointsSpent = source.powerPointsSpent;
+        this.isIncapacitated=source.isIncapacitated;
+        this.zeroLevelUsesSpent = source.zeroLevelUsesSpent;
     }
 
     public void ApplyDamage(int amount)
     {
-        currentHP -= amount;
-
-        if (currentHP < 0) currentHP = 0;
+        hpDamage += amount;
     }
 
     public void HealToFull()
     {
-        currentHP = source.baseMaxHP;
+        hpDamage = 0;
         persistentEffects.Clear();
+        powerPointsSpent = 0;
+        zeroLevelUsesSpent=0;
     }
 }

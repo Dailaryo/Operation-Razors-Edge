@@ -34,7 +34,7 @@ public class TSMassTriageEffect : IActionEffect
                 if (unit == ctx.attacker) continue;
                 if (unit.isEnemy) continue;
                 if (unit.IsDead()) continue;
-                if (unit.currentHP >= unit.maxHP) continue;
+                if (unit.currentHP >= unit.GetMaxHP()) continue;
                 if (!DistanceUtility.IsAdjacent(ctx.attacker.position, unit.position)) continue;
 
                 targets.Add(unit);
@@ -100,7 +100,7 @@ public class TSMassTriageEffect : IActionEffect
                 {
                     foreach (Unit target in targets)
                     {
-                        target.currentHP = Mathf.Min(target.currentHP + total, target.maxHP);
+                        target.currentHP = Mathf.Min(target.currentHP + total, target.GetMaxHP());
                         target.OnHealthChanged?.Invoke(target);
 
                         if (target.IsDying() || target.IsDisabled())

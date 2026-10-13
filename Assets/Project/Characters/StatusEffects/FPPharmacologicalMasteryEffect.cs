@@ -5,7 +5,8 @@ public class FPPharmacologicalMasteryEffect : StatusEffect
         isPersistent = false;
     }
 
-    // Passive flag — grants immunity to all poison, drug, and toxin status effects.
-    // Checked during AddEffect() in Unit — same pattern as DreadnoughtFearless blocks fear effects.
-    // Toxin immunity hook deferred until toxin status effects are authored.
+    public override bool BlocksDescriptors(EffectDescriptor incoming, int sourceLevel, Unit bearer)
+    {
+        return (incoming & EffectDescriptor.Poison) != 0;
+    }
 }

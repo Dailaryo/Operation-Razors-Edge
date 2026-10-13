@@ -18,106 +18,69 @@ public static class AlexandraIvanova
         data.classId = ClassIds.Technosavant;
         data.backgroundId = BackgroundIds.Academic;
         data.isEnemy = false;
-        data.level = 1;
 
         //Ability Scores
-        // 25-point buy, post-genotype modifiers applied
-        // Power 10 (+2 racial) = 12  |  Agility 10 (-2 racial) = 8
-        // Endurance 12 = 12          |  Cognition 16 (+4 racial) = 20
-        // Insight 10 (-4 racial) = 6 |  Presence 10 = 10
-        data.power = 12;
-        data.agility = 8;
+        // 25-point buy, before species modifiers (applied by SpeciesDefinition)
+        data.power = 10;
+        data.agility = 10;
         data.endurance = 12;
-        data.cognition = 20;
-        data.insight = 6;
+        data.cognition = 16;
+        data.insight = 10;
         data.presence = 10;
 
-        //Class Skills
-        // Technosavant base list; Academic background adds Knowledge and Investigate.
-        // ComputerUse was already a class skill so background grants +1 competence instead.
-        data.classSkills = new List<SkillType>
+        // Background selections
+        // Academic grants all 3; ComputerUse, Investigate and Knowledge are already
+        // Technosavant class skills, so each becomes +1 competence.
+        data.backgroundSkillChoices = new List<SkillType>
         {
             SkillType.ComputerUse,
-            SkillType.Repair,
-            SkillType.DisableDevice,
-            SkillType.Demolitions,
-            SkillType.Knowledge,
             SkillType.Investigate,
-            SkillType.Perception,
-            SkillType.SenseMotive,
-            SkillType.TreatInjury,
-            SkillType.Xenology,
+            SkillType.Knowledge,
         };
 
-        // Academic background overlap: ComputerUse already a class skill → +1 competence
-        data.backgroundSkillBonuses = new List<StatModifier>
-        {
-            new StatModifier(
-                StatType.SkillComputerUse,
-                1,
-                1f,
-                BackgroundIds.Academic + "_ComputerUse",
-                StatModifier.BonusType.Competence)
-        };
-
-        //Skill Ranks
-        // Level 1: 7 (class) + 5 (COG mod) = 12 ranks
-        data.skillRanks = new Dictionary<SkillType, int>
-        {
-            { SkillType.ComputerUse,   4 },
-            { SkillType.Knowledge,     2 },
-            { SkillType.Investigate,   2 },
-            { SkillType.Perception,    2 },
-            { SkillType.DisableDevice, 2 },
-        };
-
-        //Level 1 Unlocks
-        // Set directly — bypasses LevelUp() to avoid triggering feat cadence
-        data.unlockedActions = new List<string>
-        {
-            ActionIds.RangedAttack,
-            ActionIds.Overcharge,
-        };
-
-        data.unlockedPassiveIds = new List<string>
-        {
-            PassiveIds.NeuralAcuity1,
-        };
-
-        //Feats
-        // Level 1 universal cadence: Cybertaker
-        data.equippedFeatIds = new List<string>
-        {
-            FeatIds.Cybertaker,
-        };
-
-        //Intended Progression
-        // Records the full intended path for this pregen so LevelUp() makes
-        // the right choices automatically as she advances through play.
-        // Path selection at level 10: Vanguard
-        // Feat selections follow the design doc cadence.
-        data.intendedChoiceOptions = new List<string>
-        {
-            ChoiceNodeIds.TechnosavantVanguard,
-        };
-
-        data.intendedFeatProgression = new List<string>
-        {
-            // Universal cadence: 1, 4, 7, 10, 13, 16, 19
-            FeatIds.Cybertaker,           // Level 1  — already in equippedFeatIds
-            FeatIds.PreciseShot,          // Level 4
-            FeatIds.IronWill,             // Level 7
-            FeatIds.OverwatchSpecialist,  // Level 10
-            FeatIds.TacticalRelay,        // Level 13
-            FeatIds.Resilience,           // Level 16
-            // Level 19 TBD — deferred until higher level content is authored
-
-            // Class cadence: 5, 10, 15, 20
-            FeatIds.SensorLink,           // Level 5
-            FeatIds.CyberneticMastery,    // Level 10
-            // Level 15 and 20 delivered as Vanguard path passives
-        };
+        // Class skills, level-1 unlocks, feats and skill ranks come from
+        // CharacterBuilder + BuildRoute(), the same path respec uses.
+        CharacterBuilder.BuildToLevel(data, 1);
 
         return data;
+    }
+
+    // Pre-written level-up route (debug bypass, see PregenProgression)
+    public static Dictionary<int, PregenLevelPlan> BuildRoute()
+    {
+        var route = PregenLevelPlan.CreateRoute();
+
+        // Feats: universal 1, 4, 7, 10, 13, 16, 19 | Technosavant 5, 10, 15, 20
+        route[1].feats.Add(FeatIds.Cybertaker);
+        route[4].feats.Add(FeatIds.PointBlankShot);       // prerequisite for Precise Shot
+        route[5].feats.Add(FeatIds.SensorLink);           // class
+        route[7].feats.Add(FeatIds.IronWill);
+        route[10].feats.Add(FeatIds.OverwatchSpecialist);
+        route[10].feats.Add(FeatIds.CyberneticMastery);   // class
+        route[13].feats.Add(FeatIds.Studious);
+        route[15].feats.Add(FeatIds.Educated);            // class; requires Studious
+        route[16].feats.Add(FeatIds.Resilience);
+        route[19].feats.Add(FeatIds.PreciseShot);
+        route[20].feats.Add(FeatIds.TacticalRelay);       // class
+
+        // Ability score increases: all Cognition (retroactive skill ranks at 8 and 16)
+        route[4].asi = StatType.Cognition;
+        route[8].asi = StatType.Cognition;
+        route[12].asi = StatType.Cognition;
+        route[16].asi = StatType.Cognition;
+        route[20].asi = StatType.Cognition;
+
+        // Path
+        route[10].choiceOptions.Add(ChoiceNodeIds.TechnosavantVanguard);
+
+        // Skill ranks: every chosen skill kept at the cap
+        PregenLevelPlan.FillSkillsAtCap(route, 1, 20,
+            SkillType.ComputerUse, SkillType.Repair, SkillType.DisableDevice, SkillType.Demolitions,
+            SkillType.Knowledge, SkillType.Investigate, SkillType.Perception, SkillType.SenseMotive,
+            SkillType.TreatInjury, SkillType.Xenology, SkillType.ZeroGOperations, SkillType.Stealth);
+        PregenLevelPlan.FillSkillsAtCap(route, 8, 20, SkillType.Athletics);    // COG 22 at L8
+        PregenLevelPlan.FillSkillsAtCap(route, 16, 20, SkillType.Acrobatics);  // COG 24 at L16
+
+        return route;
     }
 }

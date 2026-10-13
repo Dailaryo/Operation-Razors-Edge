@@ -11,6 +11,9 @@ public class EncounterData
     public int xpReward;
     public int encounterLevel;
 
+    //Credits enemies draw on for material components this encounter. Authored per encounter for balance
+    public int materialPoolCredits = 0;
+
     public int enemyCount;
     public string enemyTypeName;
 

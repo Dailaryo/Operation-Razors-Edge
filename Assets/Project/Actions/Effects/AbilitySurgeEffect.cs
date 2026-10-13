@@ -19,7 +19,7 @@ public class AbilitySurgeEffect : StatusEffect
         return new List<StatModifier>
         {
             new StatModifier(StatType.Power,  powBonus,       1f, "ability_surge", StatModifier.BonusType.Untyped),
-            new StatModifier(StatType.Evasion, defensePenalty, 1f, "ability_surge", StatModifier.BonusType.Untyped)
+            new StatModifier(StatType.Defense, defensePenalty, 1f, "ability_surge", StatModifier.BonusType.Untyped)
         };
     }
 

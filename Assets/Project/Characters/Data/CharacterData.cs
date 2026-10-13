@@ -18,13 +18,15 @@ public class CharacterData
     public int baseAttack;
     public int baseInitiative;
     public int moveSpeed = 6;
-    public int currentHP;
+    public int hpDamage = 0;
     public int level = 1;
     public int xp = 0;
     public int xpToNextLevel = 1000;
     public int featPointsAvailable = 0;
     public int skillRanksAvailable = 0;
     public int manifesterLevel = 0;
+    public int powerPointsSpent = 0;
+    public int zeroLevelUsesSpent = 0;
     public int psionicResistance = 0;
     public int respecCount = 0;
     public int cyberneticCapacityBonus = 0;
@@ -39,22 +41,22 @@ public class CharacterData
 
     public bool levelUpPending = false;
     public bool isIncapacitated = false;
+    public bool incapacitatedWithoutRollback = false; //Microcosm: Hub restore skips the snapshot rollback
+    public bool defensiveManifesting = false; //Stance: while threatened, manifest defensively (concentration
+                                              //check instead of provoking). Toggle UI deferred
     public bool isEnemy = false;
     public bool isFlatFooted = false;
-    public bool IsMindless => cognition < 3;
+    public bool IsMindless => GetAttributeScore(StatType.Cognition) < 3;
 
     public List<string> unlockedActions = new List<string>();
     public List<string> baseActionIds = new List<string>();
     public List<string> equippedFeatIds = new List<string>();
     public List<string> unlockedFeatIds = new List<string>();
     public List<string> takenChoiceOptionIds = new List<string>();
-    public List<string> pendingChoiceNodeIds = new List<string>(); public List<string> knownPowerIds = new List<string>();
+    public List<string> pendingChoiceNodeIds = new List<string>(); 
+    public List<string> knownPowerIds = new List<string>();
     public List<string> preparedPowerIds = new List<string>();
     public List<string> unlockedPassiveIds = new List<string>();
-
-    // Pregen intended progression — used by LevelUp() to auto-select choices
-    public List<string> intendedChoiceOptions = new List<string>();
-    public List<string> intendedFeatProgression = new List<string>();
 
     public List<SkillType> classSkills = new List<SkillType>();
 
@@ -77,7 +79,6 @@ public class CharacterData
         this.baseMaxHP = hp;
         this.baseAttack = attack;
         this.baseInitiative = initiative;
-        this.currentHP = hp; //Start full
         baseActionIds = new List<string>(ActionIds.Universal);
     }
 
@@ -133,6 +134,9 @@ public class CharacterData
         if (!isEnemy)
             levelUpPending = true;
 
+        // DEBUG BYPASS: pregens auto-apply their pre-written route (see PregenProgression)
+        PregenProgression.ApplyPlannedLevel(this, level);
+
         CombatLog.Add($"{name} leveled up to {level}");
     }
 
@@ -145,13 +149,13 @@ public class CharacterData
 
     public int GetSkillRanksPerLevel(ClassDefinition classDef)
     {
-        int cogMod = (cognition - 10) / 2;
+        int cogMod = CharacterProgression.GetAbilityModifier(GetAttributeScore(StatType.Cognition));
         return Mathf.Max(1, classDef.skillRanksPerLevel + cogMod);
     }
 
     public int GetCyberneticCapacity()
     {
-        int enduranceMod = (endurance - 10) / 2;
+        int enduranceMod = CharacterProgression.GetAbilityModifier(GetAttributeScore(StatType.Endurance));
         return Mathf.Max(1, 2 + enduranceMod + cyberneticCapacityBonus);
     }
 
@@ -184,7 +188,7 @@ public class CharacterData
         // Approximates Table 4-11 (d20 Modern Core, p.121) medium load capacity
         // Anchored at STR 10 = 66 lb, doubling every 5 STR points
         // Max error vs. table: 13 lb at extreme low STR, <3 lb for STR 5-20
-        int str = Mathf.Max(1, power);
+        int str = Mathf.Max(1, GetAttributeScore(StatType.Power));
         return Mathf.Round(66f * Mathf.Pow(2f, (str - 10f) / 5f));
     }
 
@@ -203,6 +207,12 @@ public class CharacterData
         if (item == null)
         {
             reason = $"{instance.definitionId} not found in ItemDatabase";
+            return false;
+        }
+
+        if (!string.IsNullOrEmpty(instance.ownerCharacterId) && instance.ownerCharacterId != characterId)
+        {
+            reason = $"'{item.displayName}' is attuned to another character";
             return false;
         }
 
@@ -263,18 +273,31 @@ public class CharacterData
             case StatType.Presence: base_ = presence; break;
         }
         abilityScoreIncreases.TryGetValue(attribute, out int asi);
-        return base_ + asi;
+
+        //Species modifiers are part of the score; pregen and creation values are stored before them
+        int racial = 0;
+        if (!string.IsNullOrEmpty(speciesId))
+        {
+            var species = SpeciesDatabase.Get(speciesId);
+            if (species != null)
+                racial = species.GetAttributeBonus(attribute);
+        }
+
+        return base_ + racial + asi;
     }
 
     public void ResetToLevelOne()
     {
+        //Any field added here must also be added to CharacterSaveData, SnapshotSaveData and CharacterSnapshot
         level = 0;
         baseMaxHP = 0;
-        currentHP = 0;
+        hpDamage = 0;
 
         featPointsAvailable = 0;
         skillRanksAvailable = 0;
         manifesterLevel = 0;
+        powerPointsSpent = 0;
+        zeroLevelUsesSpent = 0;
         psionicResistance = 0;
         cyberneticCapacityBonus = 0;
 
@@ -292,9 +315,6 @@ public class CharacterData
         preparedPowerIds.Clear();
         classSkills.Clear();
         backgroundSkillBonuses.Clear();
-
-        intendedChoiceOptions.Clear();
-        intendedFeatProgression.Clear();
 
         levelUpPending = false;
     }

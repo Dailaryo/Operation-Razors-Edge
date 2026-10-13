@@ -3,7 +3,9 @@ using System.Collections.Generic;
 
 public class LoseNextActionEffect : StatusEffect
 {
-    public LoseNextActionEffect() : base("LoseNextAction", 1) { }
+    public override bool BlocksActions => true;
+
+    public LoseNextActionEffect() : base("LoseNextAction", 1) { isHarmful = true; }
 
     public override List<StatModifier> GetStatModifiers(Unit unit)
     {

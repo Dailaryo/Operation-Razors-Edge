@@ -9,7 +9,7 @@ public class OverdriveProtocolActionEffect : IActionEffect
             // Grant an additional Standard action this turn
             // Implemented as unlocking a second RangedAttack via a temporary effect
             ctx.attacker.AddEffect(new OverdriveEffect());
-            ctx.attacker.SetCooldown(ctx.definition, Unit.-1);
+            ctx.attacker.SetCooldown(ctx.definition, Unit.CombatCooldown);
             CombatLog.Add($"{ctx.attacker.unitName} enters Overdrive.");
         }
     }

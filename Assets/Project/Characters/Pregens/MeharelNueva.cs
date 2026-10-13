@@ -21,131 +21,74 @@ public static class MeharelNueva
         data.level        = 1;
 
         // Ability Scores
-        // 25-point buy, post-Cryptian modifiers applied:
-        // Power  9                   =  9  |  Agility  16 (+2 racial) = 18
-        // Endurance 10 (-2 racial)   =  8  |  Cognition 14 (+2 racial) = 16
-        // Insight 10                 = 10  |  Presence  12 (+2 racial) = 14
+        // 25-point buy, before species modifiers (applied by SpeciesDefinition)
         data.power     =  9;
-        data.agility   = 18;
-        data.endurance =  8;
-        data.cognition = 16;
+        data.agility   = 16;
+        data.endurance = 10;
+        data.cognition = 14;
         data.insight   = 10;
-        data.presence  = 14;
+        data.presence  = 12;
 
-        // Class Skills
-        // Infiltrator base list: Acrobatics, Athletics, Bluff, DisableDevice,
-        // Investigate, Knowledge, Perception, SenseMotive, Stealth.
-        // Criminal background: Stealth and DisableDevice already class skills → +1 competence each.
-        // Knowledge already a class skill → +1 competence.
-        // Bluff already on class list — no new skill added, +1 competence only.
-        data.classSkills = new List<SkillType>
+        // Background selections
+        // Criminal (choose 2): Stealth and DisableDevice are already class skills → +1 competence each.
+        data.backgroundFeatChoice = FeatIds.PersonalFirearmsProficiency;
+        data.backgroundSkillChoices = new List<SkillType>
         {
-            SkillType.Acrobatics,
-            SkillType.Athletics,
-            SkillType.Bluff,
-            SkillType.DisableDevice,
-            SkillType.Investigate,
-            SkillType.Knowledge,
-            SkillType.Perception,
-            SkillType.SenseMotive,
             SkillType.Stealth,
+            SkillType.DisableDevice,
         };
 
-        // Background skill bonuses
-        // Stealth, DisableDevice, Knowledge, Bluff all already on class list → +1 competence each
-        data.backgroundSkillBonuses = new List<StatModifier>
-        {
-            new StatModifier(
-                StatType.SkillStealth, 1, 1f,
-                BackgroundIds.Criminal + "_Stealth",
-                StatModifier.BonusType.Competence),
-            new StatModifier(
-                StatType.SkillDisableDevice, 1, 1f,
-                BackgroundIds.Criminal + "_DisableDevice",
-                StatModifier.BonusType.Competence),
-            new StatModifier(
-                StatType.SkillBluff, 1, 1f,
-                BackgroundIds.Criminal + "_Bluff",
-                StatModifier.BonusType.Competence),
-            new StatModifier(
-                StatType.SkillKnowledge, 1, 1f,
-                BackgroundIds.Criminal + "_Knowledge",
-                StatModifier.BonusType.Competence),
-        };
-
-        // Skill Ranks
-        // Level 1: 7 (class) + 3 (COG mod) = 10 ranks
-        data.skillRanks = new Dictionary<SkillType, int>
-        {
-            { SkillType.Stealth,       4 },
-            { SkillType.Perception,    2 },
-            { SkillType.DisableDevice, 2 },
-            { SkillType.Acrobatics,    2 },
-        };
-
-        // Level 1 Unlocks
-        // Set directly — bypasses LevelUp() to avoid triggering feat cadence.
-        // RangedAttack not in Universal list; must be set explicitly.
-        // Sweep is a passive delivered by the class at level 1.
-        data.unlockedActions = new List<string>
-        {
-            ActionIds.RangedAttack,
-        };
-
-        data.unlockedPassiveIds = new List<string>
-        {
-            PassiveIds.InfiltratorSweep,
-            PassiveIds.CryptianEmpathicSense,
-            PassiveIds.CryptianSleepImmunity,
-            PassiveIds.CryptianFocusSaveBonus,
-            PassiveIds.CryptianConcealedDetection,
-            PassiveIds.CryptianLightSensitivity,
-        };
-
-        // Feats
-        // Level 1 universal cadence: Stealthy
-        // Level 1 background bonus: PersonalFirearmsProficiency
-        data.equippedFeatIds = new List<string>
-        {
-            FeatIds.Stealthy,
-            FeatIds.PersonalFirearmsProficiency,
-        };
-
-        // Intended Progression
-        // Full planned path so LevelUp() makes correct choices automatically.
-        // Skill Mastery selections at level 5: Stealth, DisableDevice, Acrobatics.
-        // Path selection at level 10: Ghost.
-        data.intendedChoiceOptions = new List<string>
-        {
-            ChoiceNodeIds.InfiltratorSkillMasteryStealth,
-            ChoiceNodeIds.InfiltratorSkillMasteryDisableDevice,
-            ChoiceNodeIds.InfiltratorSkillMasteryAcrobatics,
-            ChoiceNodeIds.InfiltratorGhost,
-        };
-
-        data.intendedFeatProgression = new List<string>
-        {
-            // Universal cadence: 1, 4, 7, 10, 13, 16, 19
-            FeatIds.Stealthy,                   // Level 1  — already in equippedFeatIds
-            FeatIds.PointBlankShot,             // Level 4
-            FeatIds.DeadAim,                    // Level 7
-            FeatIds.ImprovedInitiative,         // Level 10
-            FeatIds.Dodge,                      // Level 13
-            FeatIds.DoubleTap,                  // Level 16
-            FeatIds.ImprovedInitiative,         // Level 19 — placeholder; Dead Aim (Improved) deferred
-
-            // Class cadence: 3, 6, 9, 13, 16, 19
-            FeatIds.AdvancedFirearmsProficiency, // Level 3
-            FeatIds.FarShot,                    // Level 6
-            FeatIds.PreciseShot,                // Level 9
-            FeatIds.Alertness,                  // Level 13 (Ghost path bonus)
-            FeatIds.Stealthy,                   // Level 16 (Ghost path bonus — second take)
-            FeatIds.Meticulous,                 // Level 19 (Ghost path bonus)
-
-            // Background bonus
-            FeatIds.PersonalFirearmsProficiency, // Level 1 — already in equippedFeatIds
-        };
+        CharacterBuilder.BuildToLevel(data, 1);
 
         return data;
+    }
+
+    // Pre-written level-up route (debug bypass, see PregenProgression)
+    public static Dictionary<int, PregenLevelPlan> BuildRoute()
+    {
+        var route = PregenLevelPlan.CreateRoute();
+
+        // Feats: universal 1, 4, 7, 10, 13, 16, 19 | Infiltrator 3, 6, 9, 13, 16, 19
+        // Ranged line runs through universal slots; class slots use the Infiltrator list.
+        route[1].feats.Add(FeatIds.Stealthy);
+        route[1].feats.Add(FeatIds.PersonalFirearmsProficiency);  // background grant
+        route[3].feats.Add(FeatIds.Dodge);                        // class
+        route[4].feats.Add(FeatIds.PointBlankShot);
+        route[6].feats.Add(FeatIds.DefensiveMartialArts);         // class
+        route[7].feats.Add(FeatIds.FarShot);
+        route[9].feats.Add(FeatIds.Cautious);                     // class
+        route[10].feats.Add(FeatIds.DeadAim);
+        route[13].feats.Add(FeatIds.PreciseShot);
+        route[13].feats.Add(FeatIds.Alertness);                   // class
+        route[16].feats.Add(FeatIds.DoubleTap);
+        route[16].feats.Add(FeatIds.Attentive);                   // class
+        route[19].feats.Add(FeatIds.AdvancedFirearmsProficiency);
+        route[19].feats.Add(FeatIds.Meticulous);                  // class
+
+        // Ability score increases: all Agility
+        route[4].asi = StatType.Agility;
+        route[8].asi = StatType.Agility;
+        route[12].asi = StatType.Agility;
+        route[16].asi = StatType.Agility;
+        route[20].asi = StatType.Agility;
+
+        // Skill Mastery: 3 + COG mod = 6 picks at level 5
+        route[5].choiceOptions.Add(ChoiceNodeIds.InfiltratorSkillMasteryStealth);
+        route[5].choiceOptions.Add(ChoiceNodeIds.InfiltratorSkillMasteryDisableDevice);
+        route[5].choiceOptions.Add(ChoiceNodeIds.InfiltratorSkillMasteryAcrobatics);
+        route[5].choiceOptions.Add(ChoiceNodeIds.InfiltratorSkillMasteryPerception);
+        route[5].choiceOptions.Add(ChoiceNodeIds.InfiltratorSkillMasterySenseMotive);
+        route[5].choiceOptions.Add(ChoiceNodeIds.InfiltratorSkillMasteryAthletics);
+
+        // Path
+        route[10].choiceOptions.Add(ChoiceNodeIds.InfiltratorGhost);
+
+        // Skill ranks: every chosen skill kept at the cap
+        PregenLevelPlan.FillSkillsAtCap(route, 1, 20,
+            SkillType.Acrobatics, SkillType.Athletics, SkillType.Bluff, SkillType.DisableDevice,
+            SkillType.Investigate, SkillType.Knowledge, SkillType.Perception, SkillType.SenseMotive,
+            SkillType.Stealth, SkillType.ZeroGOperations);
+
+        return route;
     }
 }

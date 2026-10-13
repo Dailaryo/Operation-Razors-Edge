@@ -235,6 +235,25 @@ public static class DreadnoughtClass
 
         def.resource = new DreadnoughtResourceDefinition();
 
+        // Bonus feats (d20 Future Dreadnought list; vehicle/crafting feats dropped)
+        def.bonusFeatIds = new List<string>
+        {
+            FeatIds.ActionBoost, FeatIds.AdvancedCombatMartialArts, FeatIds.AdvancedFirearmsProficiency,
+            FeatIds.AdvancedTwoWeaponFighting, FeatIds.ArmorProficiencyLight, FeatIds.ArmorProficiencyMedium,
+            FeatIds.ArmorProficiencyHeavy, FeatIds.ArmorProficiencyPowered, FeatIds.Athletic, FeatIds.Brawl,
+            FeatIds.BurstFire, FeatIds.Cleave, FeatIds.CombatExpertise, FeatIds.CombatMartialArts,
+            FeatIds.CombatReflexes, FeatIds.Endurance, FeatIds.FrightfulPresence, FeatIds.GreatCleave,
+            FeatIds.ImprovedBrawl, FeatIds.ImprovedBullRush, FeatIds.ImprovedCombatMartialArts,
+            FeatIds.ImprovedCombatThrow, FeatIds.ImprovedDisarm, FeatIds.ImprovedKnockoutPunch,
+            FeatIds.ImprovedTrip, FeatIds.ImprovedTwoWeaponFighting, FeatIds.KnockoutPunch, FeatIds.Mobility,
+            FeatIds.PowerAttack, FeatIds.Run, FeatIds.SpringAttack, FeatIds.Strafe, FeatIds.Streetfighting,
+            FeatIds.Sunder, FeatIds.Toughness, FeatIds.TwoWeaponFighting, FeatIds.UltraImmuneSystem,
+        };
+        def.pathBonusFeatIds = new Dictionary<string, List<string>>
+        {
+            { ChoiceNodeIds.DreadnoughtBastion, new List<string> { FeatIds.ImprovedDamageThreshold } },
+        };
+
         return def;
     }
 

@@ -22,7 +22,7 @@ public class SnapshotComparisonData
         result.Add("Level", snapshot.level.ToString(), current.level.ToString());
         result.Add("XP", snapshot.xp.ToString(), current.xp.ToString());
         result.Add("MaxHP", snapshot.baseMaxHP.ToString(), current.baseMaxHP.ToString());
-        result.Add("CurrentHP", snapshot.currentHP.ToString(), current.currentHP.ToString());
+        result.Add("HP Damage", snapshot.hpDamage.ToString(), current.hpDamage.ToString());
 
         //Attributes (ASI totals)
         StatType[] attrs = new StatType[]

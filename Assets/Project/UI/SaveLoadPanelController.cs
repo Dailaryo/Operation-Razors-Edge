@@ -102,8 +102,11 @@ public class SaveLoadPanelController : MonoBehaviour
     {
         bool slotSelected = selectedSlot >= 0;
 
-        if (saveButton != null) saveButton.interactable = slotSelected;
-        if (loadButton != null) loadButton.interactable = slotSelected;
+        bool inCombat = GameFlowManager.Instance != null &&
+                GameFlowManager.Instance.currentState == GameFlowManager.GameState.Combat;
+
+        if (saveButton != null) saveButton.interactable = slotSelected && !inCombat;
+        if (loadButton != null) loadButton.interactable = slotSelected && !inCombat;
         if (deleteButton != null) deleteButton.interactable = slotSelected;
     }
 

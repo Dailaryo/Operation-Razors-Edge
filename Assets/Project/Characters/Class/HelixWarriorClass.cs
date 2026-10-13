@@ -224,6 +224,28 @@ public static class HelixWarriorClass
 
         def.resource = new HelixWarriorResourceDefinition();
 
+        // Bonus feats (d20 Future Helix Warrior list; Surface Vehicle Operation dropped)
+        // Adapted: unarmed entry tier (Brawl, Combat Martial Arts, Improved Brawl, Knockout Punch)
+        // added so the list's Improved/Advanced Combat Martial Arts are reachable.
+        def.bonusFeatIds = new List<string>
+        {
+            FeatIds.AdvancedCombatMartialArts, FeatIds.AdvancedFirearmsProficiency, FeatIds.ArmorProficiencyLight,
+            FeatIds.ArmorProficiencyMedium, FeatIds.ArmorProficiencyHeavy, FeatIds.ArmorProficiencyPowered,
+            FeatIds.Athletic, FeatIds.BlindFight, FeatIds.CombatExpertise, FeatIds.CombatReflexes,
+            FeatIds.CombatThrow, FeatIds.DeadAim, FeatIds.DefensiveMartialArts, FeatIds.ElusiveTarget,
+            FeatIds.ExoticFirearmsProficiency, FeatIds.FarShot, FeatIds.GreatFortitude,
+            FeatIds.ImprovedCombatMartialArts, FeatIds.ImprovedCombatThrow, FeatIds.ImprovedDisarm,
+            FeatIds.ImprovedTrip, FeatIds.IronWill, FeatIds.LightningReflexes, FeatIds.NervePinch,
+            FeatIds.UltraImmuneSystem, FeatIds.WeaponFocus, FeatIds.WhirlwindAttack, FeatIds.ZeroGTraining,
+            // Adaptations
+            FeatIds.Brawl, FeatIds.CombatMartialArts, FeatIds.ImprovedBrawl, FeatIds.KnockoutPunch,
+        };
+        def.pathBonusFeatIds = new Dictionary<string, List<string>>
+        {
+            { ChoiceNodeIds.HelixWarriorBerserker, new List<string>
+                { FeatIds.ImprovedKnockoutPunch, FeatIds.ImprovedGrapple, FeatIds.Streetfighting } },
+        };
+
         return def;
     }
 

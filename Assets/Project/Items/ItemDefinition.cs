@@ -42,6 +42,9 @@ public class ItemDefinition
     public int damageDiceSides; //sides per die 2d(6)
     public int damageBonus;  //flat bonus added after rolling
 
+    //Power points this item stores (Power Crystal). The current charge lives on ItemInstance.charges
+    public int storedPowerPoints;
+
     public string TierLabel => TechTierProfile.GetDiegeticLabel(techCategory, techTier);
 
     //Constructor

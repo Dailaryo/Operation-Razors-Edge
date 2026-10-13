@@ -19,4 +19,7 @@ public static class ItemIds
 
     // Trade Goods
     // public const string RawOre = "RawOre";
+
+    // Class feature items
+    public const string PowerCrystal = "power_crystal";
 }

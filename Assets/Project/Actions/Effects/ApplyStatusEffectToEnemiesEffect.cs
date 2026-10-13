@@ -29,11 +29,10 @@ public class ApplyStatusEffectToEnemiesEffect :IActionEffect
 
             if (effect == null) continue;
 
-            effect.OnApply(unit);
-
             if (!resolver.IsSimulation)
             {
-                unit.AddEffect(effect);
+                var applied = unit.AddEffect(effect);
+                if (applied != null) ctx.appliedEffects.Add(applied);
             }
         }
     }

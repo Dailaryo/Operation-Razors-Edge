@@ -35,7 +35,7 @@ public class DreadnoughtMasterDefenderEffect : StatusEffect
 
         return new List<StatModifier>
         {
-            new StatModifier(StatType.Evasion, bonus, 1f,
+            new StatModifier(StatType.Defense, bonus, 1f,
                 "master_defender", StatModifier.BonusType.Competence)
         };
     }

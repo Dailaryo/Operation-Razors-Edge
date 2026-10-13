@@ -13,7 +13,7 @@ public class SensorLinkFeatEffect : StatusEffect
         return new List<StatModifier>
         {
             new StatModifier(StatType.SkillPerception, 1, 1f, "SensorLink",
-                StatModifier.BonusType.Competence)
+                StatModifier.BonusType.Untyped)
         };
     }
 

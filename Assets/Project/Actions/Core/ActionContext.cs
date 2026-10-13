@@ -27,6 +27,9 @@ public class ActionContext
 
     public List<StatusEffect> temporaryEffects = new List<StatusEffect>();
 
+    // Effects actually added to units by this action (populated by the status-effect appliers)
+    public List<StatusEffect> appliedEffects = new List<StatusEffect>();
+
     public CombatAction action;
 
     // Forced movement — populated by ForcedMovementActionEffect
@@ -36,4 +39,6 @@ public class ActionContext
 
     // Set by effects (e.g. ArtilleristIndirectFire) to bypass LoS requirements at targeting/validation
     public bool ignoresLoS = false;
+    // Maximize Power: variable dice in this action's effects roll their maximum
+    public bool isMaximized = false;
 }

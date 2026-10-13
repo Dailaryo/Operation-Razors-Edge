@@ -7,9 +7,8 @@ public class DreadnoughtFearlessEffect : StatusEffect
         isPersistent = true;
     }
 
-    public bool BlocksFearEffect(StatusEffect incomingEffect)
+    public override bool BlocksDescriptors(EffectDescriptor incoming, int sourceLevel, Unit bearer)
     {
-        return incomingEffect is ShakenEffect;
-        // Extend as Frightened, Panicked are added
+        return (incoming & EffectDescriptor.Fear) != 0;
     }
 }
