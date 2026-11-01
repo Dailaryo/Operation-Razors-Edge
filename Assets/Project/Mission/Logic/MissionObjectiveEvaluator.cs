@@ -105,6 +105,11 @@ public static class MissionObjectiveEvaluator
         {
             state.currentEndState = CombatEndState.PartialVictory;
         }
+        else if (primaryComplete && encounter.endsWhenPrimaryComplete && !allPlayersDead)
+        {
+            //G19: Survival-type primary met; the encounter ends with enemies still standing
+            state.currentEndState = CombatEndState.FullVictory;
+        }
         else if (allPlayersDead && state.extractedUnits.Count > 0)
         {
             state.currentEndState = CombatEndState.Retreat;

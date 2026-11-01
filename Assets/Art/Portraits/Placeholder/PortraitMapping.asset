@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ff438f251c283848a8d6add8ae4e0a9, type: 3}
+  m_Name: PortraitMapping
+  m_EditorClassIdentifier: Assembly-CSharp::PortraitMapping
+  portraits:
+  - id: alexandra_ivanova
+    sprite: {fileID: -607316883218800305, guid: ba189e1fa5400ad418ebb779effa7540, type: 3}
+  - id: rog_darrel
+    sprite: {fileID: -6224259179435202893, guid: 4f3d8ae46e75d3c4e9c7f1d46e9b61a9, type: 3}
+  - id: meharel_nueva
+    sprite: {fileID: 6637168242600584396, guid: 2786ba90d9747f34e8a2b112f54d8308, type: 3}
+  - id: grok_baird
+    sprite: {fileID: 3544395696141783924, guid: fd1f9ab506925d54b950fceea80d9a28, type: 3}
+  - id: harvey_jones
+    sprite: {fileID: -8993196133616880991, guid: f2be4f678cfabcd4394c2c43ca40d32e, type: 3}
+  - id: anyha_mcrae
+    sprite: {fileID: 8741466176644101096, guid: 019c888e94913464ab3509d8a31a3f57, type: 3}
+  fallbackAlly: {fileID: -1713648763331287605, guid: 334d1cae78c305141a4090677fc42502, type: 3}

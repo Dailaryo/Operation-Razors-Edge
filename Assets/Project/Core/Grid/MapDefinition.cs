@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class MapDefinition
@@ -17,6 +18,10 @@ public class MapDefinition
     }
 
     public EntryZone squadEntryZone = EntryZone.West;
+
+    //Authored enemy spawn tiles, registered as GridManager.EnemySpawnZoneId on load. Tried before the
+    //opposite-edge fill; escalation waves can target them with SpawnPattern.SpecificLocation.
+    public List<Vector2Int> enemySpawnTiles = new List<Vector2Int>();
 
     public MapDefinition(string mapId, int width, int height)
     {

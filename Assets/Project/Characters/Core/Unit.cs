@@ -15,7 +15,6 @@ public class Unit
     public int maxHP;
     public int currentHP;
     public int initiativeRoll;
-    public int attackRating;
     public int xpValue;
 
     public List<StatusEffect> activeEffects = new List<StatusEffect>();
@@ -26,6 +25,10 @@ public class Unit
     public HashSet<string> triggerAttemptsThisRound = new HashSet<string>(); //Trigger Power: one attempt per power per round
     public bool defeatProcessed = false;     //Removal from the encounter has run (once per unit)
     public bool removedFromEncounter = false; //Out of the fight without dying (Microcosm): counts as dead
+    public bool isInvulnerableTarget = false;   //Training target (D6-B): set by EnemyFactory from EnemyDefinition
+    private int invulnerableDamageThisRound = 0; //Running total for the damage log, cleared in the end phase
+    public List<PatternStep> attackPattern;     //Scripted enemy pattern (D4): set by EnemyFactory, null/empty = utility planner
+    public int patternStepIndex = 0;            //Current step; advanced by EnemyPlanner each round, wraps
     public List<IActionSource> actionSources = new List<IActionSource>();
     public List<IEffectSource> effectSources = new List<IEffectSource>();
 
@@ -96,13 +99,12 @@ public class Unit
     //see the unmodified score while attribute modifiers are being collected
     private bool collectingAttributeModifiers = false;
 
-    public Unit(string name, bool enemy, int hp, int attackRating, int initScore)
+    public Unit(string name, bool enemy, int hp, int initScore)
     {
         unitName = name;
         isEnemy = enemy;
         maxHP = hp;
         currentHP = hp;
-        this.attackRating = attackRating;
         this.initiativeRoll = initScore;
     }
     public void TakeDamage(int damage)
@@ -127,6 +129,7 @@ public class Unit
         //Maintained concentration powers: any damage forces a check
         if (finalDamage > 0)
             CheckConcentrationOnDamage(finalDamage);
+        int beforeTempHP = finalDamage; //training target log: separates Kinetic Absorption from temp HP
         finalDamage = AbsorbWithTemporaryHP(finalDamage);
 
         // Resilience — once per combat survival
@@ -157,6 +160,22 @@ public class Unit
                 }
                 break;
             }
+        }
+
+
+        //Invulnerable training target (D6-B): the full chain above has resolved. Log every stage,
+        //then hold at 1 HP so later hits this round still resolve; the end phase restores full HP.
+        if (isInvulnerableTarget)
+        {
+            invulnerableDamageThisRound += finalDamage;
+
+            CombatLog.Add($"[Target] {unitName}: raw {damage} | DR -{minimumDamage - afterDR} " +
+                          $"| absorbed -{afterDR - beforeTempHP} | temp HP -{beforeTempHP - finalDamage} " +
+                          $"| applied {finalDamage} | round total {invulnerableDamageThisRound}");
+
+            currentHP = Mathf.Max(1, currentHP - finalDamage);
+            OnHealthChanged?.Invoke(this);
+            return;
         }
 
         currentHP -= finalDamage;
@@ -311,9 +330,29 @@ public class Unit
     //Immediate death (e.g. negative levels >= character level)
     public void Kill()
     {
+        //Invulnerable training target (D6-B): report the death effect, never die
+        if (isInvulnerableTarget)
+        {
+            CombatLog.Add($"[Target] {unitName}: would be killed outright (death effect) — ignored, training target.");
+            return;
+        }
+
         currentHP = GetDeathThreshold();
         OnHealthChanged?.Invoke(this);
         OnDeath?.Invoke(this);
+    }
+
+    //End phase: an invulnerable training target returns to full HP and clears its round total
+    public void ResetInvulnerableTarget()
+    {
+        if (!isInvulnerableTarget) return;
+
+        if (invulnerableDamageThisRound > 0)
+            CombatLog.Add($"[Target] {unitName}: took {invulnerableDamageThisRound} damage this round. HP reset to {GetMaxHP()}.");
+
+        currentHP = GetMaxHP();
+        invulnerableDamageThisRound = 0;
+        OnHealthChanged?.Invoke(this);
     }
 
     //Manifester level after penalties (negative levels). 0 for non-manifesters
@@ -1183,6 +1222,22 @@ public class Unit
     public int GetBAB()
     {
         return GetSkillModifierBonus(StatType.BaseAttackBonus);
+    }
+
+    //Average base damage of the main-hand weapon (dice + bonus), mirroring CombatResolver.RollBaseDamage; unarmed 1d4 = 2.5.
+    //Shared estimate for simulations (EnemyPlanner, ActionValidator, GridHighlighter); replaces the retired attackRating.
+    public float GetExpectedBaseDamage()
+    {
+        if (sourceCharacterData != null && sourceCharacterData.HasItemEquipped(EquipmentSlot.MainHand))
+        {
+            ItemInstance instance = sourceCharacterData.GetEquippedItem(EquipmentSlot.MainHand);
+            var weapon = instance != null ? ItemDatabase.Get(instance.definitionId) : null;
+
+            if (weapon != null)
+                return weapon.damageDiceCount * (weapon.damageDiceSides + 1) / 2f + weapon.damageBonus;
+        }
+
+        return 2.5f;
     }
 
     //Highest miss chance from active effects and effect sources (miss chances don't stack)

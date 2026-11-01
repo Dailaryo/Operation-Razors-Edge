@@ -25,6 +25,35 @@ public static class PlanetDatabase
                     ZoneIds.OuterRimCommandPost
                 }
             }},
+            
+            // Training planet (Milestone 28): debug-only drills. Not listed in any Act, so
+            // CampaignManager.BuildCampaign never includes it and act progress is unaffected.
+            { PlanetIds.Training, new PlanetData(
+                PlanetIds.Training,
+                "Training Grounds",
+                1
+            )
+            {
+                encounterIds = new List<string>
+                {
+                    EncounterIds.TrainingTargetRange,
+                    EncounterIds.TrainingSaveGauntlet,
+                    EncounterIds.TrainingMindLab,
+                    EncounterIds.TrainingSparringRing,
+                    EncounterIds.TrainingFiringLine,
+                    EncounterIds.TrainingTriage,
+                    EncounterIds.TrainingCrowdControl,
+                    EncounterIds.TrainingEscalation,
+                    EncounterIds.TrainingLargeTarget
+                },
+                zoneIds = new List<string>
+                {
+                    ZoneIds.TrainingBasics,
+                    ZoneIds.TrainingSaves,
+                    ZoneIds.TrainingCombat,
+                    ZoneIds.TrainingLargeScale
+                }
+            }},
         };
 
     public static PlanetData Get(string id)

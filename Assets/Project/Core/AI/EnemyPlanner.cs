@@ -6,7 +6,16 @@ public class EnemyPlanner
 {
     public List<CombatAction> Plan(Unit unit, List<Unit> enemies, CombatManager manager)
     {
-        List<ActionPlan> plans = GeneratePlans(unit, enemies, manager);
+        //Scripted pattern first (D4). A step that can't be used falls back to the utility planner for this round.
+        bool allowMovement = true;
+
+        if (unit.attackPattern != null && unit.attackPattern.Count > 0)
+        {
+            if (TryPlanPattern(unit, enemies, manager, out List<CombatAction> patterned, out allowMovement))
+                return patterned;
+        }
+
+        List<ActionPlan> plans = GeneratePlans(unit, enemies, manager, allowMovement);
 
         if (plans.Count == 0) return new List<CombatAction>();
 
@@ -16,14 +25,16 @@ public class EnemyPlanner
         return plans[0].actions;
     }
 
-    List<ActionPlan> GeneratePlans(Unit unit, List<Unit> enemies, CombatManager manager)
+    List<ActionPlan> GeneratePlans(Unit unit, List<Unit> enemies, CombatManager manager, bool allowMovement = true)
     {
         List<ActionPlan> plans = new List<ActionPlan>();
 
         //Generate single-action plans
-        var actions = GenerateValidActions(unit, enemies, manager, null);
+        var actions = GenerateValidActions(unit, enemies, manager, null, allowMovement);
 
-        var moveFirst = GenerateMoveOptions(unit, new CombatResolver(manager, true), manager);
+        var moveFirst = allowMovement
+            ? GenerateMoveOptions(unit, new CombatResolver(manager, true), manager)
+            : new List<CombatAction>();
 
         foreach (var move in moveFirst)
         {
@@ -60,7 +71,7 @@ public class EnemyPlanner
             }
 
             //Generate two-action sequences
-            var followups = GenerateValidActions(unit, enemies, manager, plan);
+            var followups = GenerateValidActions(unit, enemies, manager, plan, allowMovement);
 
             foreach (var next in followups)
             {
@@ -87,7 +98,7 @@ public class EnemyPlanner
         public float score;
     }
 
-    List<CombatAction> GenerateValidActions(Unit unit, List <Unit> enemies, CombatManager manager, ActionPlan existingPlan)
+    List<CombatAction> GenerateValidActions(Unit unit, List<Unit> enemies, CombatManager manager, ActionPlan existingPlan, bool allowMovement = true)
     {
         List<CombatAction> results = new List<CombatAction>();
 
@@ -102,8 +113,8 @@ public class EnemyPlanner
                     attacker = prior.source,
                     originalTarget = prior.target,
                     finalTarget = prior.target,
-                    baseDamage = prior.source.attackRating,
-                    modifiedDamage = prior.source.attackRating,
+                    baseDamage = Mathf.RoundToInt(ExpectedBaseDamage(prior.source)),
+                    modifiedDamage = Mathf.RoundToInt(ExpectedBaseDamage(prior.source)),
                     definition = prior.definition,
                     action = prior,
                     temporaryEffects = prior.temporaryEffects
@@ -130,6 +141,7 @@ public class EnemyPlanner
         foreach (var action in unit.GetAllActions())
         {
             if (!unit.IsActionAvailable(action)) continue;
+            if (!allowMovement && action.IsMove()) continue;
 
             var def = action;
 
@@ -170,10 +182,13 @@ public class EnemyPlanner
             }
         }
 
-        //Add movemenet options
-        foreach (var move in GenerateMoveOptions(unit, resolver, manager))
+        //Add movement options (not for a patterned unit falling back from a fixed step)
+        if (allowMovement)
         {
-            results.Add(move);
+            foreach (var move in GenerateMoveOptions(unit, resolver, manager))
+            {
+                results.Add(move);
+            }
         }
 
         return results;
@@ -211,8 +226,8 @@ public class EnemyPlanner
                 attacker = action.source,
                 originalTarget = action.target,
                 finalTarget = action.target,
-                baseDamage = action.source.attackRating,
-                modifiedDamage = action.source.attackRating,
+                baseDamage = Mathf.RoundToInt(ExpectedBaseDamage(action.source)),
+                modifiedDamage = Mathf.RoundToInt(ExpectedBaseDamage(action.source)),
                 definition = action.definition,
                 action = action,
                 temporaryEffects = action.temporaryEffects
@@ -260,10 +275,13 @@ public class EnemyPlanner
             if (def.dealsDamage && action.target != null)
             {
                 contextMap.TryGetValue(action, out ActionContext simCtx);
-                
-                int estimatedDamage = simCtx.simulatedDamage > 0 ? simCtx.simulatedDamage : unit.attackRating;
 
-                score += estimatedDamage * 2f;
+                int estimatedDamage = simCtx.simulatedDamage > 0
+                    ? simCtx.simulatedDamage
+                    : Mathf.RoundToInt(ExpectedBaseDamage(unit));
+
+                //d20 expectation: weight by the chance to hit this target
+                score += estimatedDamage * EstimateHitChance(unit, action.target, def.attackType) * 2f;
 
                 //Kill bonus
                 if (action.target.currentHP <= estimatedDamage) score += 20;
@@ -331,10 +349,9 @@ public class EnemyPlanner
                             if (threatener.oaState == null) continue;
                             if (!threatener.oaState.CanTakeOA()) continue;
 
-                            float hitChance = Mathf.Clamp01(
-                                (threatener.attackRating + 10f) / (unit.GetDefense() + 20f));
+                            float hitChance = EstimateHitChance(threatener, unit, ActionDefinition.AttackType.Melee);
 
-                            float expectedDamage = threatener.attackRating * hitChance;
+                            float expectedDamage = ExpectedBaseDamage(threatener) * hitChance;
 
                             score -= expectedDamage;
                         }
@@ -411,5 +428,202 @@ public class EnemyPlanner
 
         return true;
 
+    }
+
+    //Scripted pattern (D4/D5)
+
+    //Plans this round from the unit's attack pattern. Returns false (reason logged) when the step can't be used;
+    //Plan() then falls back to the utility planner, with movement only if the step itself allowed movement.
+    bool TryPlanPattern(Unit unit, List<Unit> enemies, CombatManager manager,
+        out List<CombatAction> actions, out bool allowFallbackMovement)
+    {
+        actions = new List<CombatAction>();
+
+        int stepIndex = unit.patternStepIndex % unit.attackPattern.Count;
+        PatternStep step = unit.attackPattern[stepIndex];
+
+        //Advance one round whether or not the step works, so the cycle never stalls on one step
+        unit.patternStepIndex = (stepIndex + 1) % unit.attackPattern.Count;
+
+        allowFallbackMovement = step.approach || step.actionId == ActionIds.Move;
+
+        //Enemy step: deliberately do nothing this round
+        if (string.IsNullOrEmpty(step.actionId))
+        {
+            Debug.Log($"[Pattern] {unit.unitName} step {stepIndex}: idle.");
+            return true;
+        }
+
+        ActionDefinition def = unit.GetAllActions().Find(a => a.actionID == step.actionId);
+        if (def == null)
+            return PatternFallback(unit, stepIndex, $"'{step.actionId}' is not one of this unit's actions");
+
+        if (!unit.IsActionAvailable(def))
+            return PatternFallback(unit, stepIndex, $"'{step.actionId}' is on cooldown or out of uses");
+
+        Unit target = ResolvePatternTarget(unit, step, enemies);
+        CombatResolver resolver = new CombatResolver(manager, true);
+
+        //Move step: step toward the target as far as this round's movement allows
+        if (def.IsMove())
+        {
+            if (target == null)
+                return PatternFallback(unit, stepIndex, $"Move step has no living target for rule {step.targetRule}");
+
+            CombatAction move = BestApproachMove(unit, target, resolver, manager);
+            if (move == null)
+                return PatternFallback(unit, stepIndex, $"no reachable tile closer to {target.unitName}");
+
+            actions.Add(move);
+            Debug.Log($"[Pattern] {unit.unitName} step {stepIndex}: Move toward {target.unitName}.");
+            return true;
+        }
+
+        if (def.requiresTarget && target == null)
+            return PatternFallback(unit, stepIndex, $"no living target for rule {step.targetRule}");
+
+        CombatAction action = new CombatAction(unit, def.requiresTarget ? target : null, def, manager);
+
+        //Usable from where the unit stands
+        if (ActionValidator.IsValid(action, resolver))
+        {
+            actions.Add(action);
+            Debug.Log($"[Pattern] {unit.unitName} step {stepIndex}: {def.actionID} -> {(target != null ? target.unitName : "no target")}.");
+            return true;
+        }
+
+        //Approach: only steps flagged approach move first to bring the target into range
+        if (step.approach && target != null)
+        {
+            CombatAction move = BestApproachMove(unit, target, resolver, manager);
+
+            if (move != null)
+            {
+                var plan = new ActionPlan();
+                plan.actions.Add(move);
+                plan.actions.Add(action);
+
+                CombatResolver afterMove = new CombatResolver(manager, true);
+                SimulateMove(move, afterMove);
+
+                if (CanExecutePlan(plan, unit) && ActionValidator.IsValid(action, afterMove))
+                {
+                    actions.AddRange(plan.actions);
+                    Debug.Log($"[Pattern] {unit.unitName} step {stepIndex}: approach, then {def.actionID} -> {target.unitName}.");
+                    return true;
+                }
+
+                //Can't reach this round: close the distance and try again next round
+                actions.Add(move);
+                Debug.Log($"[Pattern] {unit.unitName} step {stepIndex}: approaching {target.unitName} (out of reach for {def.actionID}).");
+                return true;
+            }
+        }
+
+        return PatternFallback(unit, stepIndex,
+            $"'{def.actionID}' is not valid against {(target != null ? target.unitName : "no target")} (range, line of sight or action economy)");
+    }
+
+    bool PatternFallback(Unit unit, int stepIndex, string reason)
+    {
+        Debug.LogWarning($"[Pattern] {unit.unitName} step {stepIndex}: {reason}. Using the utility planner this round.");
+        return false;
+    }
+
+    //Living opponent chosen by the step's rule (Self = the unit itself, None = no target)
+    Unit ResolvePatternTarget(Unit unit, PatternStep step, List<Unit> enemies)
+    {
+        if (step.targetRule == PatternStep.TargetRule.Self) return unit;
+        if (step.targetRule == PatternStep.TargetRule.None) return null;
+
+        Unit best = null;
+
+        foreach (Unit candidate in enemies)
+        {
+            if (candidate == null || candidate.IsDead()) continue;
+
+            switch (step.targetRule)
+            {
+                case PatternStep.TargetRule.Nearest:
+                    if (best == null ||
+                        DistanceUtility.Chebyshev(unit.position, candidate.position) <
+                        DistanceUtility.Chebyshev(unit.position, best.position))
+                        best = candidate;
+                    break;
+
+                case PatternStep.TargetRule.LowestHP:
+                    if (best == null || candidate.currentHP < best.currentHP) best = candidate;
+                    break;
+
+                case PatternStep.TargetRule.HighestHP:
+                    if (best == null || candidate.currentHP > best.currentHP) best = candidate;
+                    break;
+
+                case PatternStep.TargetRule.SpecificCharacterId:
+                    if (candidate.sourceCharacterData != null &&
+                        candidate.sourceCharacterData.characterId == step.specificCharacterId)
+                        return candidate;
+                    break;
+            }
+        }
+
+        return best;
+    }
+
+    //Reachable tile that ends closest to the target; null if no tile is closer than standing still
+    CombatAction BestApproachMove(Unit unit, Unit target, CombatResolver resolver, CombatManager manager)
+    {
+        Vector2Int targetPos = resolver.GetPosition(target);
+        int bestDist = DistanceUtility.Chebyshev(resolver.GetPosition(unit), targetPos);
+        CombatAction best = null;
+
+        foreach (CombatAction move in GenerateMoveOptions(unit, resolver, manager))
+        {
+            int d = DistanceUtility.Chebyshev(move.movePosition.Value, targetPos);
+
+            if (d < bestDist)
+            {
+                bestDist = d;
+                best = move;
+            }
+        }
+
+        return best;
+    }
+
+    //Applies a planned move to a simulation resolver so later validation sees the new position
+    void SimulateMove(CombatAction move, CombatResolver resolver)
+    {
+        ActionContext ctx = new ActionContext
+        {
+            attacker = move.source,
+            definition = move.definition,
+            action = move,
+            temporaryEffects = move.temporaryEffects
+        };
+
+        new GenericAction(move.definition).Execute(ctx, resolver);
+
+        if (ctx.isMovement)
+            resolver.ResolveMove(ctx);
+    }
+
+    //d20 estimates (replace the retired attackRating)
+
+    //Average base damage of the main-hand weapon (dice + bonus), mirroring CombatResolver.RollBaseDamage; unarmed 1d4 = 2.5
+    float ExpectedBaseDamage(Unit unit)
+    {
+        return unit.GetExpectedBaseDamage();
+    }
+
+    //Chance a d20 attack hits: (21 + ability mod + BAB - Defense) / 20, clamped 5%-95%.
+    //Damage with no attack roll (saves, automatic) counts as a certain hit.
+    float EstimateHitChance(Unit attacker, Unit target, ActionDefinition.AttackType attackType)
+    {
+        if (attackType == ActionDefinition.AttackType.None) return 1f;
+
+        int attackBonus = attacker.GetAccuracy(attackType == ActionDefinition.AttackType.Melee) + attacker.GetBAB();
+
+        return Mathf.Clamp((21f + attackBonus - target.GetDefense()) / 20f, 0.05f, 0.95f);
     }
 }

@@ -9,7 +9,6 @@ public static class AnyhaMcRae
             id: PregenIds.AnyhaMcRae,
             name: "Anyha McRae",
             hp: 5,    // d6 (6) + END mod (-1)
-            attack: 0,    // +0 BAB at level 1
             initiative: 2     // AGI mod +2; Improved Initiative adds +4
         );
 

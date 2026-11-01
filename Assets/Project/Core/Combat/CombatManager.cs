@@ -65,8 +65,8 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
 
         if (!unit.isEnemy)
             SquadManager.Instance.SetIncapacitated(unit);
-        else
-            StageLoot(unit);
+        else if (currentEncounter == null || !currentEncounter.isTraining)
+            StageLoot(unit); //D8: no loot from drills
 
         ThreatZoneManager.UnregisterUnit(unit);
         GridManager.Instance.RemoveUnit(unit);
@@ -335,7 +335,8 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         foreach (Unit unit in enemyUnits)
         {
             unit.ProcessEffects();
-            unit.ReduceCooldowns();            
+            unit.ReduceCooldowns();
+            unit.ResetInvulnerableTarget(); //training targets only; no-op for everything else
         }
 
         DetectionStateManager.TickAlertCountDowns();
@@ -378,7 +379,7 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         CombatLog.Add($"Turn {turnManager.turnCount} complete");
     }
 
-    public void StartCombat(EncounterData encounter, List<Unit> playerUnitsInput, List<Unit> enemyUnitsInput, int bonusAttack, bool surpriseRound = false)
+    public void StartCombat(EncounterData encounter, List<Unit> playerUnitsInput, List<Unit> enemyUnitsInput, bool surpriseRound = false)
     {
         if (missionUI != null)
         {
@@ -411,37 +412,19 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         RollInitiative(playerUnits);
         RollInitiative(enemyUnits);
 
-        //TEMP: Apply bonus attack
-        foreach (var unit in playerUnits)
-        {
-            unit.attackRating += bonusAttack;
-        }
-
         GridManager grid = gridManager;
 
-        //Player side (left)
-        Vector2Int[] playerPositions = new Vector2Int[]
-        {
-            new Vector2Int(0, 2),
-            new Vector2Int(0, 3),
-            new Vector2Int(0, 1)
-        };
-
-        for (int i = 0; i < playerUnits.Count && i < playerPositions.Length; i++)
-        {
-            grid.TryPlaceUnit(playerUnits[i], playerPositions[i]);
-        }
+        //Player side: spawn from the map's entry edge, filling inward
+        PlaceUnitsAtEdge(playerUnits, grid.squadEntryZone, "player");
 
         if (playerUnits.Count == 0)
         {
             Debug.LogError("No player units available for combat!");
         }
 
-        //Enemy side (right)
-        for (int i = 0; i < enemyUnits.Count; i++)
-        {
-            grid.TryPlaceUnit(enemyUnits[i], new Vector2Int(7, i + 1));
-        }
+        //Enemy side: spawn from the edge opposite the squad's entry, filling inward
+        PlaceUnitsAtEdge(enemyUnits, grid.EnemyEntryZone, "enemy",
+            grid.GetZoneTiles(GridManager.EnemySpawnZoneId)); //authored spawn tiles first, if the map has any
 
         foreach (Unit unit in playerUnits)
         {
@@ -938,6 +921,40 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
     public MissionState GetMissionState()
     {
         return missionState;
+    }
+
+    // Places each unit on the first free spawn tile along the given edge.
+    // Units that cannot be placed are removed from the encounter with a warning,
+    // so they never get a view, a turn, or become targetable off-grid.
+    void PlaceUnitsAtEdge(List<Unit> units, MapDefinition.EntryZone edge, string side, List<Vector2Int> preferredTiles = null)
+    {
+        //Authored tiles first (e.g. the map's enemy spawn zone), then the edge fill for any overflow
+        List<Vector2Int> spawnTiles = new List<Vector2Int>();
+        if (preferredTiles != null) spawnTiles.AddRange(preferredTiles);
+        spawnTiles.AddRange(gridManager.GetSpawnTiles(edge));
+        List<Unit> unplaced = new List<Unit>();
+
+        foreach (Unit unit in units)
+        {
+            bool placed = false;
+
+            foreach (Vector2Int tile in spawnTiles)
+            {
+                if (gridManager.TryPlaceUnit(unit, tile))
+                {
+                    placed = true;
+                    break;
+                }
+            }
+
+            if (!placed) unplaced.Add(unit);
+        }
+
+        foreach (Unit unit in unplaced)
+        {
+            Debug.LogWarning($"[CombatManager] No free {side} spawn tile for '{unit.unitName}' on the {edge} edge. Unit removed from this encounter.");
+            units.Remove(unit);
+        }
     }
 
     void PlaceReinforcements(EscalationHandler.EscalationResult result)

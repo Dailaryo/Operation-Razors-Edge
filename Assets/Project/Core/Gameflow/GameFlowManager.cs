@@ -6,8 +6,6 @@ public class GameFlowManager : MonoBehaviour
 {
     public static GameFlowManager Instance;
     
-    int playerBonusAttack =0;
-    
     //Controls high-level game flow between hub, missions and combat
     public enum GameState
     {
@@ -111,22 +109,28 @@ public class GameFlowManager : MonoBehaviour
         GridManager.Instance.GenerateExtractionZone(
             mapDef != null ? mapDef.squadEntryZone : MapDefinition.EntryZone.West);
 
+        //G20: redraw tiles at this map's size (Rebuild also applies terrain colors)
         if (GridVisualizer.Instance != null)
-            GridVisualizer.Instance.RefreshTerrainColors();
+            GridVisualizer.Instance.Rebuild();
 
         CombatLog.Add("Combat Started");
 
         if (combatManager != null)
         {
             var playerUnits = SquadManager.Instance.CreateCombatUnits();
-            int planetTier = campaignManager.GetPlanetTierForEncounter(selectedEncounter);
+            //Training encounters live on no campaign planet; tier 1 without the lookup warning
+            int planetTier = selectedEncounter.isTraining
+                ? 1
+                : campaignManager.GetPlanetTierForEncounter(selectedEncounter);
             var enemyUnits = new List<Unit>();
 
             if (activeZoneEvent != null && activeZoneEvent.enemySpawnEntries.Count > 0)
             {
                 foreach (var entry in activeZoneEvent.enemySpawnEntries)
                 {
-                    var spawned = EnemyFactory.CreateGroup(entry.enemyId, entry.count, entry.spawnLevel, planetTier);
+                    //spawnLevel 0 = match the squad (highest squad level), so drills follow the debug level control
+                    int level = entry.spawnLevel > 0 ? entry.spawnLevel : SquadManager.Instance.GetHighestLevel();
+                    var spawned = EnemyFactory.CreateGroup(entry.enemyId, entry.count, level, planetTier);
                     enemyUnits.AddRange(spawned);
                 }
             }
@@ -136,7 +140,7 @@ public class GameFlowManager : MonoBehaviour
                 enemyUnits = EnemyFactory.CreateGroup(EnemyIds.BasicDrone, selectedEncounter.enemyCount, 1, planetTier);
             }
 
-            combatManager.StartCombat(selectedEncounter, playerUnits, enemyUnits, playerBonusAttack, surpriseRound);
+            combatManager.StartCombat(selectedEncounter, playerUnits, enemyUnits, surpriseRound);
         }
         else
         {
@@ -153,7 +157,11 @@ public class GameFlowManager : MonoBehaviour
 
         currentState = GameState.MissionResult;
 
-        campaignManager.RecordEncounterOutcome(lastEncounter, endState);
+        //D8: drills leave flags, journal, act progress and the save file untouched
+        if (!lastEncounter.isTraining)
+            campaignManager.RecordEncounterOutcome(lastEncounter, endState);
+        else
+            CombatLog.Add($"[Training] {lastEncounter.encounterName} ended ({endState}): campaign state unchanged.");
 
         gridRoot.SetActive(false);
 
@@ -185,7 +193,8 @@ public class GameFlowManager : MonoBehaviour
 
             bool success = endState != CombatEndState.Defeat;
 
-            if (ExplorationController.Instance != null)
+            //D8: drills don't mark completion, stamp zone flags or save planet state
+            if (ExplorationController.Instance != null && !lastEncounter.isTraining)
                 ExplorationController.Instance.CompleteEncounter(activeEncounterId, success);
 
             ReturnToPlanetSide();
@@ -210,6 +219,13 @@ public class GameFlowManager : MonoBehaviour
     void HandleCombatEnded(List<Unit> playerUnits)
     {
         SquadManager.Instance.ApplyCombatResults(playerUnits);
+
+        //Drills grant no XP and resolve no objective rewards
+        if (lastEncounter.isTraining)
+        {
+            CombatLog.Add("[Training] Drill ended: no XP or rewards granted.");
+            return;
+        }
 
         int baseXP = lastEncounter.xpReward > 0 ? lastEncounter.xpReward : 100;
         int encounterLevel = lastEncounter.encounterLevel > 0 ? lastEncounter.encounterLevel : 1;

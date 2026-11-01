@@ -9,7 +9,6 @@ public static class MeharelNueva
             id:         PregenIds.MeharelNueva,
             name:       "Meharel Nueva",
             hp:         7,
-            attack:     0,
             initiative: 4
         );
 

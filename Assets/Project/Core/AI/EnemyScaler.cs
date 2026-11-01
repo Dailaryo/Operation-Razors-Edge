@@ -3,7 +3,6 @@ using UnityEngine;
 public static class EnemyScaler
 {
     public const float HPScalePerLevel = 0.1f;
-    public const int AttackScalePerLevel = 1;
     public const float AttributeScalePerLevel = 0.5f;
 
     public static ScaledStatBlock ScaleStatBlock(EnemyDefinition def, int spawnLevel, int planetTier)
@@ -12,7 +11,6 @@ public static class EnemyScaler
 
         //Pass 1: Level scaling
         int hp = Mathf.Max(1, Mathf.RoundToInt(def.baseMaxHP * (1f +  levelDelta * HPScalePerLevel)));
-        int attack = Mathf.Max(1, def.baseAttack + (levelDelta * AttackScalePerLevel));
         int flatAttributeBonus = Mathf.FloorToInt(levelDelta * AttributeScalePerLevel);
 
         int power = Mathf.Max(1, def.power + flatAttributeBonus);
@@ -22,11 +20,13 @@ public static class EnemyScaler
         int insight = Mathf.Max(1, def.insight + flatAttributeBonus);
         int presence = Mathf.Max(1, def.presence + flatAttributeBonus);
 
-        //Pass 2: Difficulty multiplier
-        float multiplier = DifficultySettings.GetEnemyStatMultiplier(planetTier);
+        //Pass 2: Difficulty multiplier. Training targets opt out (D3) so drill numbers never depend on the setting;
+        //a multiplier of 1 also neutralises the classed pipeline's post-build multiplier (it reads difficultyModifier)
+        float multiplier = def.ignoreDifficultyScaling
+            ? 1f
+            : DifficultySettings.GetEnemyStatMultiplier(planetTier);
 
         hp = Mathf.Max(1, Mathf.RoundToInt(hp * multiplier));
-        attack = Mathf.Max(1, Mathf.RoundToInt(attack * multiplier));
         power = Mathf.Max(1, Mathf.RoundToInt(power * multiplier));
         agility = Mathf.Max(1, Mathf.RoundToInt(agility * multiplier));
         endurance = Mathf.Max(1, Mathf.RoundToInt(endurance * multiplier));
@@ -42,7 +42,6 @@ public static class EnemyScaler
         return new ScaledStatBlock
         {
             maxHP = hp,
-            attackRating = attack,
             power = power,
             agility = agility,
             endurance = endurance,

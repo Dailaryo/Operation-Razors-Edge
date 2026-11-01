@@ -13,6 +13,10 @@ public class SquadPortraitUI : MonoBehaviour
     [SerializeField] private Button portraitButton;
     [SerializeField] private Button levelUpButton;
 
+    [Header("Portrait")]
+    [SerializeField] private Image portraitImage;            //D12: PortraitButton's own Image, so the portrait is the click target
+    [SerializeField] private PortraitMapping portraitMapping;
+
     private CharacterData boundCharacter;
     public CharacterData BoundCharacter => boundCharacter;
 
@@ -40,8 +44,19 @@ public class SquadPortraitUI : MonoBehaviour
     {
         if (boundCharacter == null) return;
 
+        //Card text: name, level and class display name, plus incapacitated state
         if (nameLabel != null)
-            nameLabel.text = boundCharacter.name;
+        {
+            string text = $"{boundCharacter.name}\nLevel {boundCharacter.level} {GetClassDisplayName(boundCharacter.classId)}";
+
+            if (boundCharacter.isIncapacitated)
+                text += "\n<color=#E05050>Incapacitated</color>";
+
+            nameLabel.text = text;
+        }
+        //D12: portrait from the mapping; unmapped ids show the fallback sprite
+        if (portraitImage != null && portraitMapping != null)
+            portraitImage.sprite = portraitMapping.GetPortrait(boundCharacter.characterId);
 
         if (hpLabel != null)
         {
@@ -66,9 +81,18 @@ public class SquadPortraitUI : MonoBehaviour
     public void OnPortraitPressed()
     {
         if (boundCharacter == null) return;
-        UIManager.Instance.PushOverlay(ScreenId.CharacterDetail);
-        // CharacterDetailPanel will need to know which character was selected.
-        // That wiring happens when CharacterDetailPanel is implemented.
+
+        //Keep the Hub selection in sync: EquipmentPanel and CharacterDetailPanel.OnEnable both read it
+        if (HubUIController.Instance != null)
+            HubUIController.Instance.OnCharacterSelected(boundCharacter);
+
+        //Open once; if it's already open, just repopulate (no duplicate overlay stack entries)
+        if (!UIManager.Instance.IsOverlayActive(ScreenId.CharacterDetail))
+            UIManager.Instance.PushOverlay(ScreenId.CharacterDetail);
+
+        //G16: hand the clicked character over. PushOverlay activated the panel, so its Awake has set Instance
+        if (CharacterDetailPanel.Instance != null)
+            CharacterDetailPanel.Instance.Populate(boundCharacter);
     }
 
     //Called by levelUpButton onClick in the Inspector
@@ -79,6 +103,15 @@ public class SquadPortraitUI : MonoBehaviour
 
         LevelUpUIController.Instance.BeginLevelUp(boundCharacter);
         UIManager.Instance.PushOverlay(ScreenId.LevelUp);
+    }
+
+    //ClassDatabase.Get throws on a null key, so guard before the lookup
+    static string GetClassDisplayName(string classId)
+    {
+        if (string.IsNullOrEmpty(classId)) return "No class";
+
+        var classDef = ClassDatabase.Get(classId);
+        return classDef != null ? classDef.displayName : classId;
     }
 
     void HandleCharacterChanged()

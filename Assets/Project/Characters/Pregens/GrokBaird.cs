@@ -9,7 +9,6 @@ public static class GrokBaird
             id:         PregenIds.GrokBaird,
             name:       "Grok Baird",
             hp:         15,
-            attack:     0,
             initiative: 0
         );
 

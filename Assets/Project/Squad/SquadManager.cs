@@ -204,6 +204,16 @@ public class SquadManager : MonoBehaviour
         return squad;
     }
 
+    //Highest character level in the squad (1 if empty). Drills use it for spawnLevel 0 = "match the squad";
+    //after a debug rebuild every member shares one level.
+    public int GetHighestLevel()
+    {
+        int highest = 1;
+        foreach (var character in squad)
+            highest = Mathf.Max(highest, character.level);
+        return highest;
+    }
+
     public Dictionary<string, CharacterSnapshot> GetSnapshots()
     {
         var result = new Dictionary<string, CharacterSnapshot>();
@@ -305,6 +315,32 @@ public class SquadManager : MonoBehaviour
     public void UpdateSquadInventoryCapacity()
     {
         squadInventory.maxCarryWeight = GetTotalFieldCapacity();
+    }
+
+    // DEBUG (D11): rebuilds every squad member to targetLevel through CharacterBuilder.BuildToLevel,
+    // the same path pregen Build() and respec use. Pregens follow their PregenProgression route.
+    // Hub only. Recreates the runtime squad so incapacitation snapshots match the new level.
+    public void DebugRebuildSquadToLevel(int targetLevel)
+    {
+        if (GameFlowManager.Instance == null ||
+            GameFlowManager.Instance.currentState != GameFlowManager.GameState.Hub)
+        {
+            Debug.LogWarning("[SquadManager] Debug squad level can only be set at the Hub.");
+            return;
+        }
+
+        targetLevel = Mathf.Clamp(targetLevel, 1, 20);
+
+        foreach (var character in squad)
+        {
+            character.xp = 0; //fresh start at the new level; BuildToLevel preserves in-level progress
+            CharacterBuilder.BuildToLevel(character, targetLevel);
+            character.NotifyChanged();
+        }
+
+        CreateRuntimeSquad();
+
+        CombatLog.Add($"[Debug] Squad rebuilt to level {targetLevel}.");
     }
 
     public void AddCredits(int amount)

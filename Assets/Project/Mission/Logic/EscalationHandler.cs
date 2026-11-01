@@ -79,7 +79,9 @@ public class EscalationHandler
 
         foreach (var entry in wave.enemyComposition)
         {
-            var spawned = EnemyFactory.CreateGroup(entry.enemyId, entry.count, wave.spawnLevel, wave.planetTier);
+            //spawnLevel 0 = match the squad (highest squad level), same rule as zone event spawn entries
+            int level = wave.spawnLevel > 0 ? wave.spawnLevel : SquadManager.Instance.GetHighestLevel();
+            var spawned = EnemyFactory.CreateGroup(entry.enemyId, entry.count, level, wave.planetTier);
             units.AddRange(spawned);
         }
 

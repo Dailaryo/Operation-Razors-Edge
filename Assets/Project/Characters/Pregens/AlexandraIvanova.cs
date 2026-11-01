@@ -9,7 +9,6 @@ public static class AlexandraIvanova
             id: PregenIds.AlexandraIvanova,
             name: "Alexandra Ivanova",
             hp: 7,
-            attack: 0,
             initiative: -1
         );
 

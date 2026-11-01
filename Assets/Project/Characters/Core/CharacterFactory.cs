@@ -13,12 +13,10 @@ public static class CharacterFactory
             data.name,
             false,
             data.baseMaxHP,
-            data.baseAttack,
             data.baseInitiative
         );
 
         unit.sourceCharacterData = data;
-        unit.attackRating = data.baseAttack;
 
         //Step 1: Base Universal actions
         if (data.baseActionIds.Count > 0)

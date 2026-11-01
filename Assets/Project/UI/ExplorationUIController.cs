@@ -124,9 +124,79 @@ public class ExplorationUIController : MonoBehaviour
             return;
         }
 
-        // For now auto-trigger the first available event.
-        // A full zone event picker UI can be added in a later pass.
-        ExplorationController.Instance.TriggerEncounter(events[0].zoneEventId);
+        ShowEncounterPrompt(ZoneDatabase.Get(zoneId), events);
+    }
+
+    //Zone event picker (G11): one option per available event, plus Back. Replaces the old events[0] auto-trigger.
+    void ShowEncounterPrompt(ZoneDefinition zone, List<ZoneEventDefinition> events)
+    {
+        if (encounterPromptPanel == null || encounterOptionContainer == null || encounterOptionPrefab == null)
+        {
+            Debug.LogWarning("[ExplorationUI] Encounter prompt is not wired; triggering the first event.");
+            ExplorationController.Instance.TriggerEncounter(events[0].zoneEventId);
+            return;
+        }
+
+        ClearContainer(encounterOptionContainer);
+
+        if (encounterNameText != null)
+            encounterNameText.text = zone != null ? zone.displayName : "Choose an event";
+
+        if (encounterDescriptionText != null)
+            encounterDescriptionText.text = events.Count == 1
+                ? "1 event available."
+                : $"{events.Count} events available.";
+
+        foreach (var zoneEvent in events)
+        {
+            string capturedId = zoneEvent.zoneEventId;
+            AddEncounterOption(zoneEvent.displayName + GetEventSummary(zoneEvent),
+                () => OnEncounterOptionSelected(capturedId));
+        }
+
+        AddEncounterOption("Back", HideEncounterPrompt);
+
+        encounterPromptPanel.SetActive(true);
+    }
+
+    void AddEncounterOption(string text, UnityEngine.Events.UnityAction onClick)
+    {
+        GameObject obj = Instantiate(encounterOptionPrefab, encounterOptionContainer);
+
+        TMP_Text label = obj.GetComponentInChildren<TMP_Text>();
+        if (label != null)
+            label.text = text;
+
+        var button = obj.GetComponent<Button>();
+        if (button != null)
+            button.onClick.AddListener(onClick);
+    }
+
+    //Combat events append their encounter's description (e.g. a drill's goal) after the name
+    string GetEventSummary(ZoneEventDefinition zoneEvent)
+    {
+        if (zoneEvent.zoneEventType != ZoneEventDefinition.ZoneEventType.Combat) return "";
+        if (string.IsNullOrEmpty(zoneEvent.combatEncounterId)) return "";
+
+        var encounter = EncounterDatabase.Get(zoneEvent.combatEncounterId);
+
+        return encounter != null && !string.IsNullOrEmpty(encounter.description)
+            ? $" — {encounter.description}"
+            : "";
+    }
+
+    void OnEncounterOptionSelected(string zoneEventId)
+    {
+        HideEncounterPrompt();
+
+        if (ExplorationController.Instance != null)
+            ExplorationController.Instance.TriggerEncounter(zoneEventId);
+    }
+
+    void HideEncounterPrompt()
+    {
+        if (encounterPromptPanel != null)
+            encounterPromptPanel.SetActive(false);
     }
 
     void OnStealthToggled(bool value)

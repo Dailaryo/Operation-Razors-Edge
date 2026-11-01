@@ -125,7 +125,13 @@ public class ClassDefinition
     //BAB Calculation
     public int GetBAB(int level)
     {
-        switch (babProgression)
+        return CalculateBAB(babProgression, level);
+    }
+
+    //Shared BAB curve: also used by EnemyFactory progression profiles (no ClassDefinition instance)
+    public static int CalculateBAB(BABProgression progression, int level)
+    {
+        switch (progression)
         {
             case BABProgression.Full: return level;
             case BABProgression.ThreeQuarters: return Mathf.FloorToInt(level * 0.75f);
@@ -210,6 +216,12 @@ public class ClassDefinition
     }
 
     public int GetSaveBonus(SaveProgression progression, int level)
+    {
+        return CalculateSaveBonus(progression, level);
+    }
+
+    //Shared save curve: also used by EnemyFactory progression profiles (no ClassDefinition instance)
+    public static int CalculateSaveBonus(SaveProgression progression, int level)
     {
         switch (progression)
         {

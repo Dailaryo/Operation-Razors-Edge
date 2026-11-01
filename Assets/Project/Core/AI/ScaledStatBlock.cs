@@ -3,7 +3,6 @@ using UnityEngine;
 public struct ScaledStatBlock
 {
     public int maxHP;
-    public int attackRating;
     public int power;
     public int agility;
     public int endurance;

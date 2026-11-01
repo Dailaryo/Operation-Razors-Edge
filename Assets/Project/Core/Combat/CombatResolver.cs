@@ -407,6 +407,12 @@ public class CombatResolver
             return;
         }
 
+        if (target.isInvulnerableTarget)
+        {
+            CombatLog.Add($"[Target] {target.unitName}: would drop to -1 HP and dying — ignored, training target.");
+            return;
+        }
+
         if (target.currentHP <= -1) return;
 
         target.currentHP = -1;
@@ -565,8 +571,15 @@ public class CombatResolver
 
             if (saveRoll < 15 && !target.IsDead())
             {
-                target.currentHP = 0;
-                CombatLog.Add($"{target.unitName} fails massive damage save — disabled!");
+                if (target.isInvulnerableTarget)
+                {
+                    CombatLog.Add($"[Target] {target.unitName}: fails massive damage save — would be disabled (ignored, training target).");
+                }
+                else
+                {
+                    target.currentHP = 0;
+                    CombatLog.Add($"{target.unitName} fails massive damage save — disabled!");
+                }
             }
         }
 
@@ -664,13 +677,14 @@ public class CombatResolver
             }
         }
 
-        int attackRating = ctx.attacker.attackRating;
+        //BAB from class progression (players) or progression profile + statBonuses (enemies), same source Volley Fire uses
+        int bab = ctx.attacker.GetBAB();
 
-        int attackTotal = roll + accuracy + attackRating + ctx.attackRollModifier;
+        int attackTotal = roll + accuracy + bab + ctx.attackRollModifier;
 
         int defense = ctx.finalTarget.GetDefense();
 
-        Debug.Log($"Attack Roll: {roll} + {accuracy} = {attackTotal} vs {defense}");
+        Debug.Log($"Attack Roll: {roll} + acc {accuracy} + BAB {bab} + mod {ctx.attackRollModifier} = {attackTotal} vs {defense}");
 
         bool hit = attackTotal >= defense;
 

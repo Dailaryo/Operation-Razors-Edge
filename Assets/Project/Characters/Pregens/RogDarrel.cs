@@ -9,7 +9,6 @@ public static class RogDarrel
             id: PregenIds.RogDarrel,
             name: "Rog Darrel",
             hp: 13,
-            attack: 0,
             initiative: -1
         );
 

@@ -37,8 +37,8 @@ public class GridHighlighter : MonoBehaviour
                 attacker = prior.source,
                 originalTarget = prior.target,
                 finalTarget = prior.target,
-                baseDamage = prior.source.attackRating,
-                modifiedDamage = prior.source.attackRating,
+                baseDamage = Mathf.RoundToInt(prior.source.GetExpectedBaseDamage()),
+                modifiedDamage = Mathf.RoundToInt(prior.source.GetExpectedBaseDamage()),
                 action = prior,
                 temporaryEffects = prior.temporaryEffects
             };

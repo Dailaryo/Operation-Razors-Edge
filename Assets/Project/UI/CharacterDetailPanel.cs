@@ -1,5 +1,5 @@
-using UnityEngine;
 using TMPro;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class CharacterDetailPanel : MonoBehaviour
@@ -9,6 +9,8 @@ public class CharacterDetailPanel : MonoBehaviour
     [Header("Identity")]
     [SerializeField] private TMP_Text nameText;
     [SerializeField] private TMP_Text classLevelText;
+    [SerializeField] private Image portraitImage;
+    [SerializeField] private PortraitMapping portraitMapping;
     [SerializeField] private TMP_Text speciesBackgroundText;
 
     [Header("Attributes")]
@@ -68,20 +70,25 @@ public class CharacterDetailPanel : MonoBehaviour
         currentCharacter = character;
         if (character == null) return;
 
+        //One temporary Unit for every computed value (HP and derived stats)
+        var tempUnit = CharacterFactory.CreatePlayerUnit(character);
+
         if (nameText != null)
             nameText.text = character.name;
 
+        //D12: portrait from the mapping; unmapped ids show the fallback
+        if (portraitImage != null && portraitMapping != null)
+            portraitImage.sprite = portraitMapping.GetPortrait(character.characterId);
+
+        //G16: display names instead of raw ids
         if (classLevelText != null)
-            classLevelText.text = $"{character.classId} — Level {character.level}";
+            classLevelText.text = $"{ClassName(character.classId)} — Level {character.level}";
 
         if (speciesBackgroundText != null)
-            speciesBackgroundText.text = $"{character.speciesId} / {character.backgroundId}";
+            speciesBackgroundText.text = $"{SpeciesName(character.speciesId)} / {BackgroundName(character.backgroundId)}";
 
         if (hpText != null)
-        {
-            var tempUnit = CharacterFactory.CreatePlayerUnit(character);
             hpText.text = $"HP: {tempUnit.currentHP} / {tempUnit.GetMaxHP()}";
-        }
 
         // Attributes block
         if (attributesText != null)
@@ -95,21 +102,17 @@ public class CharacterDetailPanel : MonoBehaviour
                 $"PRE {character.GetAttributeScore(StatType.Presence)} ({Mod(character.GetAttributeScore(StatType.Presence))})";
         }
 
-        // Derived stats — built without a live Unit, so pull directly from CharacterData
+        // Derived stats from the same temporary Unit as HP, so species, class, feats and equipment all count
+        // and the numbers match what combat uses
         if (derivedStatsText != null)
         {
-            var classDef = ClassDatabase.Get(character.classId);
-            int bab = classDef != null ? classDef.GetBAB(character.level) : 0;
-            int fortitude = classDef != null ? classDef.GetSaveBonus(classDef.resolveSave, character.level) : 0;
-            int response = classDef != null ? classDef.GetSaveBonus(classDef.responseSave, character.level) : 0;
-            int focus = classDef != null ? classDef.GetSaveBonus(classDef.focusSave, character.level) : 0;
-
             derivedStatsText.text =
-                $"BAB: +{bab}\n" +
-                $"Fortitude: +{fortitude}\n" +
-                $"Response: +{response}\n" +
-                $"Focus: +{focus}\n" +
-                $"Initiative: {Mod(character.GetAttributeScore(StatType.Agility))}";
+                $"BAB: {Signed(tempUnit.GetBAB())}\n" +
+                $"Defense: {tempUnit.GetDefense()}\n" +
+                $"Resolve: {Signed(tempUnit.GetSaveValue(Unit.SaveType.Resolve))}\n" +
+                $"Response: {Signed(tempUnit.GetSaveValue(Unit.SaveType.Response))}\n" +
+                $"Focus: {Signed(tempUnit.GetSaveValue(Unit.SaveType.Focus))}\n" +
+                $"Initiative: {Signed(tempUnit.GetDerivedStat(StatType.Initiative))}";
         }
 
         // Skills
@@ -158,6 +161,30 @@ public class CharacterDetailPanel : MonoBehaviour
     {
         UIManager.Instance.PushOverlay(ScreenId.Inventory);
     }
+
+    //Display names for ids; each database Get throws on a null key, so guard first
+    static string ClassName(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return "No class";
+        var def = ClassDatabase.Get(id);
+        return def != null ? def.displayName : id;
+    }
+
+    static string SpeciesName(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return "Unknown species";
+        var def = SpeciesDatabase.Get(id);
+        return def != null ? def.displayName : id;
+    }
+
+    static string BackgroundName(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return "No background";
+        var def = BackgroundDatabase.Get(id);
+        return def != null ? def.displayName : id;
+    }
+
+    string Signed(int value) => value >= 0 ? $"+{value}" : $"{value}";
 
     string Mod(int score)
     {

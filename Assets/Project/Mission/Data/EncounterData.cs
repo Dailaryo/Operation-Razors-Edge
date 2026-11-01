@@ -20,6 +20,13 @@ public class EncounterData
     public bool isRequired;
     public bool isFinalEncounter;
 
+    //Training drill (D8): no campaign record, XP, rewards, loot or saves. Debug content only.
+    public bool isTraining = false;
+
+    //G19: true = combat ends (FullVictory) as soon as the primary objective completes, even with enemies alive.
+    //Needed for Survival-type primaries; default false keeps "end when one side is wiped out".
+    public bool endsWhenPrimaryComplete = false;
+
     //Faction association: narrative only, no mechanical effect (yet, maybe)
     public string factionId;
     public string factionContext;

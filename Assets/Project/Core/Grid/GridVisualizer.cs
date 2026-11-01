@@ -13,7 +13,9 @@ public class GridVisualizer : MonoBehaviour
 
     private void Start()
     {
-        DrawGrid();
+        //Skip if GameFlowManager already rebuilt the grid for a combat this frame
+        if (tiles.Count == 0)
+            DrawGrid();
     }
 
     void DrawGrid()
@@ -74,6 +76,19 @@ public class GridVisualizer : MonoBehaviour
             if (tileData != null)
                 kvp.Value.SetTerrainColor(tileData.terrain);
         }
+    }
+
+    //maps differ in size, so the tile grid is redrawn for each combat's map
+    public void Rebuild()
+    {
+        foreach (var kvp in tiles)
+        {
+            if (kvp.Value != null)
+                Destroy(kvp.Value.gameObject);
+        }
+
+        tiles.Clear();
+        DrawGrid(); //also applies terrain colors
     }
 
     void Awake()

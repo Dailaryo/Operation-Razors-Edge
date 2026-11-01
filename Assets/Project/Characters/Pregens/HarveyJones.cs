@@ -9,7 +9,6 @@ public static class HarveyJones
             id:         PregenIds.HarveyJones,
             name:       "Harvey Jones",
             hp:         10,   // 1d8 average (8) + END mod (+2)
-            attack:     0,    // +0 BAB at level 1
             initiative: 0     // AGI mod 0; Improved Initiative feat adds +4 at level 3
         );
 

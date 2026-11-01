@@ -10,11 +10,11 @@ public class CharacterCreationManager : MonoBehaviour
         Instance = this;
     }
 
-    //Called by GameFlowManager.NewGame() to populate the roster
+    //Called by GameFlowManager.NewGame() and EnterHub() (empty squad) to populate the roster with the six pregens
     public void StartNewGame()
     {
         SquadManager.Instance.ClearRoster();
-        LoadDebugSquad();
+        LoadPregenSquad();
     }
 
     //Creates a replacement character at current minimum squad level
@@ -47,39 +47,17 @@ public class CharacterCreationManager : MonoBehaviour
         return min == int.MaxValue ? 1 : min;
     }
 
-    // TEMP: Replaces GetDebugSquad() from SquadManager
-    // Remove once pre-gen characters and CharacterCreationUI are implemented
-    void LoadDebugSquad()
+    // Populates the roster with the six pregens, in PregenIds order.
+    // Each Build() returns a fresh CharacterData, so XP and level-ups never
+    // mutate the reference copies held in PregenDatabase.Definitions.
+    // Do not use PregenDatabase.Get() here — it returns the shared static instance.
+    void LoadPregenSquad()
     {
-        SquadManager.Instance.AddCharacter(CreateTestCharacter("Unit A"));
-        SquadManager.Instance.AddCharacter(CreateTestCharacter("Unit B"));
-        SquadManager.Instance.AddCharacter(CreateTestCharacter("Unit C"));
-        SquadManager.Instance.AddCharacter(CreateTestCharacter("Unit D"));
-        SquadManager.Instance.AddCharacter(CreateTestCharacter("Unit E"));
-        SquadManager.Instance.AddCharacter(CreateTestCharacter("Unit F"));
+        SquadManager.Instance.AddCharacter(AlexandraIvanova.Build());
+        SquadManager.Instance.AddCharacter(RogDarrel.Build());
+        SquadManager.Instance.AddCharacter(MeharelNueva.Build());
+        SquadManager.Instance.AddCharacter(GrokBaird.Build());
+        SquadManager.Instance.AddCharacter(HarveyJones.Build());
+        SquadManager.Instance.AddCharacter(AnyhaMcRae.Build());
     }
-
-    CharacterData CreateTestCharacter(string name)
-    {
-        var c = new CharacterData(name.ToLower(), name, 100, 10, 5);
-        c.classId = ClassIds.Soldier;
-
-        if (name == "Unit A")
-        {
-            c.equippedFeatIds.Add(FeatIds.PowerAttack);
-            c.equippedFeatIds.Add(FeatIds.Toughness);
-        }
-
-        return c;
-    }
-
-    // TODO: Pre-generated character factory methods
-    // Implement once class and background content is authored
-    // Each method should call SquadManager.Instance.AddCharacter()
-    // Alexandra — Delphin genotype, squad commander
-    // Rog       — Pentian genotype, melee DPS
-    // Grok      — Osteo genotype, tank
-    // Meharel   — Cryptian genotype, sniper
-    // Harley    — Radix genotype, medic
-    // Anyha     — Phytonian, psionic specialist
 }

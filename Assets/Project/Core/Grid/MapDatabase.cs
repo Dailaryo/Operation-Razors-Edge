@@ -8,6 +8,7 @@ public static class MapDatabase
         {
             { MapIds.Default, BuildDefaultMap() },
             { MapIds.TestRoom, BuildTestRoomMap() },
+            { MapIds.TrainingRange, BuildTrainingRangeMap() },
         };
 
     // Flat open 8x5 — matches the original hardcoded grid
@@ -60,6 +61,34 @@ public static class MapDatabase
         map.SetEastEdge(5, 1, EdgeData.EdgeType.Wall);
         map.SetEastEdge(5, 2, EdgeData.EdgeType.Window);
         map.SetEastEdge(5, 3, EdgeData.EdgeType.Wall);
+
+        // Firing Line (TR-05) authored enemy spawns: one Marksman inside the room, one covering from high ground
+        map.enemySpawnTiles = new List<Vector2Int>
+        {
+            new Vector2Int(3, 2),
+            new Vector2Int(7, 4)
+        };
+
+        return map;
+    }
+
+    // 12x8 open range for the larger drills (Crowd Control, Escalation, Large Target): six pregens plus
+    // four or more enemies, room for ranged bands (RangedAttack 2-5) and area effects. No walls.
+    static MapDefinition BuildTrainingRangeMap()
+    {
+        var map = new MapDefinition(MapIds.TrainingRange, 12, 8);
+
+        // Difficult terrain mid-field: approach costs and forced-movement checks
+        map.SetTerrain(5, 2, TileData.TerrainType.Difficult);
+        map.SetTerrain(5, 3, TileData.TerrainType.Difficult);
+        map.SetTerrain(6, 4, TileData.TerrainType.Difficult);
+        map.SetTerrain(6, 5, TileData.TerrainType.Difficult);
+
+        // High ground on the enemy side: range and elevation checks
+        map.SetTerrain(9, 6, TileData.TerrainType.HighGround);
+        map.SetTerrain(9, 7, TileData.TerrainType.HighGround);
+        map.SetTerrain(10, 6, TileData.TerrainType.HighGround);
+        map.SetTerrain(10, 7, TileData.TerrainType.HighGround);
 
         return map;
     }

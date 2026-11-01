@@ -15,7 +15,6 @@ public class CharacterData
     public List<SkillType> backgroundSkillChoices = new List<SkillType>();
 
     public int baseMaxHP;
-    public int baseAttack;
     public int baseInitiative;
     public int moveSpeed = 6;
     public int hpDamage = 0;
@@ -72,12 +71,11 @@ public class CharacterData
 
     public event System.Action OnCharacterChanged;
 
-    public CharacterData(string id, string name, int hp, int attack, int initiative)
+    public CharacterData(string id, string name, int hp, int initiative)
     {
         this.characterId = id;
         this.name = name;
         this.baseMaxHP = hp;
-        this.baseAttack = attack;
         this.baseInitiative = initiative;
         baseActionIds = new List<string>(ActionIds.Universal);
     }

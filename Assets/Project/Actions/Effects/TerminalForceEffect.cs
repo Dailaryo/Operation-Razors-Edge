@@ -19,7 +19,7 @@ public class TerminalForceEffect : IActionEffect
 
             int roll = Random.Range(1, 21);
             int accuracy = ctx.attacker.GetAccuracy(false);
-            int attackTotal = roll + accuracy + ctx.attacker.attackRating;
+            int attackTotal = roll + accuracy + ctx.attacker.GetBAB(); //d20 to-hit, same as ResolveHit and Volley Fire
             int defense = ctx.finalTarget.GetDefense();
 
             if (attackTotal >= defense)

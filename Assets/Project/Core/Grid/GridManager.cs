@@ -5,14 +5,34 @@ public class GridManager : MonoBehaviour
 {
     public static GridManager Instance;
 
-    public int width = 8;
-    public int height = 5;
+    public int width = 10;
+    public int height = 8;
+    // Entry edge of the currently loaded map. Set by LoadMap; West when no map is given.
+    public MapDefinition.EntryZone squadEntryZone = MapDefinition.EntryZone.West;
+
+
+    // Enemies spawn on the edge opposite the squad's entry. Defaults to East (opposite West).
+    public MapDefinition.EntryZone EnemyEntryZone
+    {
+        get
+        {
+            switch (squadEntryZone)
+            {
+                case MapDefinition.EntryZone.East: return MapDefinition.EntryZone.West;
+                case MapDefinition.EntryZone.South: return MapDefinition.EntryZone.North;
+                case MapDefinition.EntryZone.North: return MapDefinition.EntryZone.South;
+                case MapDefinition.EntryZone.West:
+                default: return MapDefinition.EntryZone.East;
+            }
+        }
+    }
 
     private Dictionary<Vector2Int, Unit> grid = new Dictionary<Vector2Int, Unit>();
 
     private TileData[,] tileData;
 
     public const string EmergencyExtractionZoneId = "emergency_extraction_zone";
+    public const string EnemySpawnZoneId = "enemy_spawn";
 
     private void Awake()
     {
@@ -106,6 +126,14 @@ public class GridManager : MonoBehaviour
             width = map.width;
             height = map.height;
         }
+
+        squadEntryZone = map != null ? map.squadEntryZone : MapDefinition.EntryZone.West;
+
+        //Zones belong to the map that registered them: clear the registry, then register this map's own zones.
+        //(The emergency extraction zone is generated after LoadMap by GameFlowManager.StartCombat.)
+        zones.Clear();
+        if (map != null && map.enemySpawnTiles.Count > 0)
+            RegisterZone(EnemySpawnZoneId, new List<Vector2Int>(map.enemySpawnTiles));
 
         tileData = new TileData[width, height];
 
@@ -291,6 +319,50 @@ public class GridManager : MonoBehaviour
         RegisterZone(EmergencyExtractionZoneId, tiles);
         CombatLog.Add($"[Extraction] Emergency extraction zone generated at {EntryZone} edge ({tiles.Count} tiles).");
         return EmergencyExtractionZoneId;
+    }
+
+    // Spawn tiles for a map edge, ordered from the edge inward one line at a time.
+    // Within each line, tiles run from the centre outward: centre, +1, -1, +2, -2...
+    // Impassable tiles are skipped. Occupancy and footprint are not checked here;
+    // TryPlaceUnit handles both, so callers just try each tile in order
+    public List<Vector2Int> GetSpawnTiles(MapDefinition.EntryZone edge)
+    {
+        List<Vector2Int> tiles = new List<Vector2Int>();
+
+        bool verticalEdge = edge != MapDefinition.EntryZone.South && edge != MapDefinition.EntryZone.North; // anything not South/North is treated as West/East
+        int depthCount = verticalEdge ? width : height; //how many lines from the edge inward
+        int lineLength = verticalEdge ? height : width; //how many tiles along each line
+        int center = lineLength / 2;
+
+        for (int depth = 0; depth < depthCount; depth++)
+        {
+            for (int offset = 0; offset < lineLength; offset++)
+            {
+                for (int sign = 1; sign >= -1; sign -= 2)
+                {
+                    if (offset == 0 && sign == -1) continue; //center tile only once
+
+                    int along = center + (offset * sign);
+                    if (along < 0 || along >= lineLength) continue;
+
+                    Vector2Int pos;
+                    switch (edge)
+                    {
+                        case MapDefinition.EntryZone.East: pos = new Vector2Int(width - 1 - depth, along); break;
+                        case MapDefinition.EntryZone.South: pos = new Vector2Int(along, depth); break;
+                        case MapDefinition.EntryZone.North: pos = new Vector2Int(along, height - 1 - depth); break;
+                        case MapDefinition.EntryZone.West:
+                        default: pos = new Vector2Int(depth, along); break;
+                    }
+
+                    if (tileData[pos.x, pos.y].terrain == TileData.TerrainType.Impassable) continue;
+
+                    tiles.Add(pos);
+                }
+            }
+        }
+
+        return tiles;
     }
 
     private List<Vector2Int> GetFootprintTiles(Unit unit, Vector2Int anchor)
