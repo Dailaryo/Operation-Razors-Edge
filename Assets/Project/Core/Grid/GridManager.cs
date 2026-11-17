@@ -93,9 +93,13 @@ public class GridManager : MonoBehaviour
         }
 
         // Register new footprint
+        // Skip tiles held by another unit: the mover is only passing through (allies / large size difference)
+        // and must not overwrite the occupant, or the next step's clear loop would erase it from the grid.
         List<Vector2Int> newFootprint = GetFootprintTiles(unit, newAnchor);
         foreach (Vector2Int tile in newFootprint)
         {
+            if (grid.TryGetValue(tile, out Unit occupant) && occupant != unit) continue;
+            
             grid[tile] = unit;
             tileData[tile.x, tile.y].occupant = unit;
         }
@@ -322,9 +326,8 @@ public class GridManager : MonoBehaviour
     }
 
     // Spawn tiles for a map edge, ordered from the edge inward one line at a time.
-    // Within each line, tiles run from the centre outward: centre, +1, -1, +2, -2...
-    // Impassable tiles are skipped. Occupancy and footprint are not checked here;
-    // TryPlaceUnit handles both, so callers just try each tile in order
+    // Within each line, tiles run from the centre outward: centre, -1, +1, -2, +2...
+    // (On even-length lines lineLength / 2 is the upper of the two middle tiles, so stepping -1 first keeps the fill centred)
     public List<Vector2Int> GetSpawnTiles(MapDefinition.EntryZone edge)
     {
         List<Vector2Int> tiles = new List<Vector2Int>();
@@ -338,9 +341,9 @@ public class GridManager : MonoBehaviour
         {
             for (int offset = 0; offset < lineLength; offset++)
             {
-                for (int sign = 1; sign >= -1; sign -= 2)
+                for (int sign = -1; sign <= 1; sign += 2)
                 {
-                    if (offset == 0 && sign == -1) continue; //center tile only once
+                    if (offset == 0 && sign == 1) continue; //center tile only once
 
                     int along = center + (offset * sign);
                     if (along < 0 || along >= lineLength) continue;

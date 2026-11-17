@@ -51,8 +51,9 @@ public class MissionUIController : MonoBehaviour
 
         if (extractionDeadline > 0)
         {
-            int turnsRemaining = Mathf.Max(0, extractionDeadline - turnManager.turnCount);
-            text += $"\nExtraction: {turnsRemaining} turn(s)";
+            //Turns left including the current one (the deadline resolves at the end of its turn)
+            int turnsRemaining = Mathf.Max(0, extractionDeadline - turnManager.turnCount + 1);
+            text += $"\nExtraction: {turnsRemaining} turn(s) left";
         }
 
         progressText.text = text;

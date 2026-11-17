@@ -26,6 +26,20 @@ public class Unit
     public bool defeatProcessed = false;     //Removal from the encounter has run (once per unit)
     public bool removedFromEncounter = false; //Out of the fight without dying (Microcosm): counts as dead
     public bool isInvulnerableTarget = false;   //Training target (D6-B): set by EnemyFactory from EnemyDefinition
+    public bool usesDyingRules = true;          //Disabled/Dying at 0 HP and below (squad). False = dies at 0 HP (general enemies; set by EnemyFactory)
+    public bool actsInSurpriseRound = false;    //Set by CombatManager.StartCombat: surprising side, or AlwaysActsInSurpriseRound
+    public bool limitedToSingleAction = false;  //This round only: a single move OR standard action (surprise round). Set and cleared by CombatManager
+
+    //d20/Pathfinder flat-footed: from combat start until this unit first acts. No Agility bonus to Defense and no
+    //attacks of opportunity or reactions (unless Combat Reflexes). Set by CombatManager.StartCombat;
+    //cleared by CombatResolver when the unit acts, or in the end phase once its turn has come round
+    public bool IsFlatFooted { get; private set; } = false;
+
+    public void SetFlatFooted(bool value)
+    {
+        IsFlatFooted = value;
+        if (oaState != null) oaState.isFlatFooted = value;
+    }
     private int invulnerableDamageThisRound = 0; //Running total for the damage log, cleared in the end phase
     public List<PatternStep> attackPattern;     //Scripted enemy pattern (D4): set by EnemyFactory, null/empty = utility planner
     public int patternStepIndex = 0;            //Current step; advanced by EnemyPlanner each round, wraps
@@ -372,7 +386,7 @@ public class Unit
         var concentration = GetConcentration();
         if (concentration == null) return;
 
-        CombatLog.Add($"{unitName} stops concentrating on {concentration.power.actionID} ({reason}).");
+        CombatLog.Add($"{unitName} stops concentrating on {concentration.power.DisplayName} ({reason}).");
         RemoveEffect(concentration);
     }
 
@@ -447,7 +461,7 @@ public class Unit
 
     public bool IsDisabled()
     {
-        return currentHP == 0;
+        return currentHP == 0 && !IsDead();
     }
 
     public bool IsDying()
@@ -462,6 +476,9 @@ public class Unit
 
     public int GetDeathThreshold()
     {
+        //General enemies skip Disabled/Dying: dead at 0 HP
+        if (!usesDyingRules) return 0;
+        
         if (sourceCharacterData != null)
             return -sourceCharacterData.GetAttributeScore(StatType.Endurance);
 
@@ -480,13 +497,19 @@ public class Unit
         return cd == 0;
     }
 
+    //Actions from every source, without duplicates (Universal, class, feat or item can grant the same action).
+    //ActionDatabase entries are shared instances, so reference equality identifies duplicates.
     public List<ActionDefinition> GetAllActions()
     {
         List<ActionDefinition> result = new List<ActionDefinition>();
+        HashSet<ActionDefinition> seen = new HashSet<ActionDefinition>();
 
         foreach (var source in actionSources)
         {
-            result.AddRange(source.GetActions(this));
+            foreach (var action in source.GetActions(this))
+            {
+                if (seen.Add(action)) result.Add(action);
+            }
         }
 
         return result;
@@ -647,7 +670,7 @@ public class Unit
     {
         switch (type)
         {
-            case StatType.MeleePower: return GetModifier(StatType.Power);
+            case StatType.MeleePower: return GetModifier(StatType.Power) + GetStat(StatType.MeleePower);
             case StatType.Accuracy: return GetModifier(StatType.Agility);
             case StatType.Evasion: return GetModifier(StatType.Agility) + GetStat(StatType.Evasion, context);
             case StatType.Fortitude: return GetModifier(StatType.Endurance) + GetStat(StatType.Fortitude, context);
@@ -665,36 +688,89 @@ public class Unit
         }
     }
 
+    //Attack roll bonus: ability modifier (Power melee, Agility ranged or override) plus Accuracy modifiers
+    //(Shaken, Sickened, Fighting Defensively). BAB is added separately by the caller.
     public int GetAccuracy(bool isMelee, bool useAgilityOverride = false)
     {
-        if (useAgilityOverride) return GetModifier(StatType.Agility);
+        int ability = (useAgilityOverride || !isMelee)
+            ? GetModifier(StatType.Agility)
+            : GetModifier(StatType.Power);
 
-        return isMelee ? GetModifier(StatType.Power) : GetModifier(StatType.Agility);
+        int unarmed = (isMelee && IsUnarmed()) ? GetStat(StatType.UnarmedAccuracy) : 0;
+        int melee = isMelee ? GetStat(StatType.MeleeAccuracy) : 0;
+
+        return ability + GetStat(StatType.Accuracy) + melee + unarmed;
+    }
+
+    //Unarmed: no main-hand weapon, or one tagged Unarmed. Units without CharacterData use natural attacks, not unarmed strikes
+    public bool IsUnarmed()
+    {
+        if (sourceCharacterData == null) return false;
+        if (!sourceCharacterData.HasItemEquipped(EquipmentSlot.MainHand)) return true;
+
+        ItemInstance instance = sourceCharacterData.GetEquippedItem(EquipmentSlot.MainHand);
+        var weapon = instance != null ? ItemDatabase.Get(instance.definitionId) : null;
+        return weapon == null || weapon.weaponTag == WeaponTag.Unarmed;
+    }
+
+    //Debug breakdown of GetAccuracy, same terms: "POW +8, ImprovedCombatMartialArts +1 (unarmed), TacticalUplink +2"
+    public string DescribeAccuracy(bool isMelee, bool useAgilityOverride = false)
+    {
+        string Signed(int v) => v >= 0 ? $"+{v}" : v.ToString();
+
+        bool usesAgility = useAgilityOverride || !isMelee;
+        var parts = new List<string>
+        {
+            $"{(usesAgility ? "AGI" : "POW")} {Signed(GetModifier(usesAgility ? StatType.Agility : StatType.Power))}"
+        };
+
+        foreach (var mod in CollectStatModifiers(StatType.Accuracy))
+            parts.Add($"{mod.source} {Signed(mod.flatBonus)}");
+
+        if (isMelee)
+            foreach (var mod in CollectStatModifiers(StatType.MeleeAccuracy))
+                parts.Add($"{mod.source} {Signed(mod.flatBonus)} (melee)");
+
+        if (isMelee && IsUnarmed())
+            foreach (var mod in CollectStatModifiers(StatType.UnarmedAccuracy))
+                parts.Add($"{mod.source} {Signed(mod.flatBonus)} (unarmed)");
+
+        return string.Join(", ", parts);
+    }
+
+    //Unarmed strike die: 1d4 base, raised by the unarmed feat chain (highest wins)
+    public int GetUnarmedDamageDie()
+    {
+        var feats = sourceCharacterData?.equippedFeatIds;
+        if (feats == null) return 4;
+
+        if (feats.Contains(FeatIds.ImprovedBrawl)) return 8;
+        if (feats.Contains(FeatIds.Brawl)) return 6;
+        return 4;
+    }
+
+    //d20: an unarmed character threatens (and makes OAs) only with Combat Martial Arts.
+    //Units without CharacterData use natural attacks and always threaten. Gate is wired but commented out in ThreatZoneManager
+    public bool CanThreatenUnarmed()
+    {
+        if (!IsUnarmed()) return true;
+        return sourceCharacterData != null && sourceCharacterData.HasFeat(FeatIds.CombatMartialArts);
     }
 
     public int GetDefense()
     {
         int baseValue = 10;
 
-        int avoidance = GetDerivedStat(StatType.Defense);
+        //Flat-footed: loses a positive Agility bonus (penalties still apply).
+        //DEFERRED: dodge bonuses should also be lost while flat-footed; Uncanny Dodge would keep both
+        int agilityMod = GetModifier(StatType.Agility);
+        int avoidance = (IsFlatFooted ? Mathf.Min(0, agilityMod) : agilityMod) + GetStat(StatType.Defense);
 
         int protection = GetProtection();
         
         int naturalArmor = GetStat(StatType.NaturalArmor);
 
-        float multiplier = 1f;
-
-        foreach (var effect in activeEffects)
-        {
-            if (effect is DefenseBuffEffect defenseBuff)
-            {
-                multiplier += defenseBuff.GetDefenseMultiplier();
-            }
-        }
-
-        int total = Mathf.RoundToInt((baseValue + avoidance + protection + naturalArmor) * multiplier);
-
-        return total;
+        return baseValue + avoidance + protection + naturalArmor;
     }
 
     public int GetProtection()
@@ -818,13 +894,17 @@ public class Unit
                 foreach (var effect in feat.effectSource.GetEffects(this))
                 {
                     if (effect.isPersistent)
-                        AddEffect(effect);
+                    {
+                        StatusEffect instance = effect.CreateInstance();
+                        instance.isPassive = true;
+                        AddEffect(instance);
+                    }
                     else
                         effectSources.Add(new SimpleEffectSource(new List<StatusEffect> { effect }));
                 }
             }
-
-            Debug.Log($"{unitName}: Applied feat '{feat.displayName}'");
+            if (CharacterFactory.LogBuildDetails)
+                Debug.Log($"{unitName}: Applied feat '{feat.displayName}'");
         }
     }
 
@@ -938,10 +1018,12 @@ public class Unit
             if (passive.effectSource != null)
                 effectSources.Add(passive.effectSource);
 
-            Debug.Log($"{unitName}: Applied passive '{passive.displayName}'");
+            if (CharacterFactory.LogBuildDetails)
+                Debug.Log($"{unitName}: Applied passive '{passive.displayName}'");
         }
 
-        Debug.Log($"{unitName}: Applied class '{classDef.displayName}' at level {sourceCharacterData.level}");
+        if (CharacterFactory.LogBuildDetails)
+            Debug.Log($"{unitName}: Applied class '{classDef.displayName}' at level {sourceCharacterData.level}");
     }
 
     public void ApplyBackground()
@@ -996,7 +1078,8 @@ public class Unit
             effectSources.Add(new SimpleEffectSource(bonusEffects));
         }
 
-        Debug.Log($"{unitName}: Applied background '{background.displayName}'");
+        if (CharacterFactory.LogBuildDetails)
+            Debug.Log($"{unitName}: Applied background '{background.displayName}'");
     }
 
     public class ResourceState
@@ -1114,10 +1197,12 @@ public class Unit
                     }));
                 }
 
-                Debug.Log($"{unitName}: Applied mod '{mod.displayName}' from '{item.displayName}'");
+                if (CharacterFactory.LogBuildDetails)
+                    Debug.Log($"{unitName}: Applied mod '{mod.displayName}' from '{item.displayName}'");
             }
 
-            Debug.Log($"{unitName}: Applied item '{item.displayName}' in slot {kvp.Key}");
+            if (CharacterFactory.LogBuildDetails)
+                Debug.Log($"{unitName}: Applied item '{item.displayName}' in slot {kvp.Key}");
         }
     }
 
@@ -1188,10 +1273,12 @@ public class Unit
             if (passive.effectSource != null)
                 effectSources.Add(passive.effectSource);
 
-            Debug.Log($"{unitName}: Applied species passive '{passive.displayName}'");
+            if (CharacterFactory.LogBuildDetails)
+                Debug.Log($"{unitName}: Applied species passive '{passive.displayName}'");
         }
 
-        Debug.Log($"{unitName}: Applied species '{species.displayName}'");
+        if (CharacterFactory.LogBuildDetails)
+            Debug.Log($"{unitName}: Applied species '{species.displayName}'");
     }
 
     //planningBonus: speed from planned actions not yet resolved (Burst on self).
@@ -1200,7 +1287,7 @@ public class Unit
     {
         int speed = GetStat(StatType.MoveSpeed) + planningBonus;
 
-        if (activeEffects.Exists(e => e.HalvesSpeed && !IsSuppressed(e)))
+        if (IsDisabled() || activeEffects.Exists(e => e.HalvesSpeed && !IsSuppressed(e)))
             speed = Mathf.Max(1, speed / 2);
 
         return speed;
@@ -1367,10 +1454,23 @@ public class Unit
         return false;
     }
 
+    //Abilities that let this unit act in every surprise round (StatusEffect.ActsInSurpriseRound)
+    public bool AlwaysActsInSurpriseRound()
+    {
+        foreach (var effect in activeEffects)
+            if (effect.ActsInSurpriseRound && !IsSuppressed(effect)) return true;
+
+        foreach (var source in effectSources)
+            foreach (var effect in source.GetEffects(this))
+                if (effect.ActsInSurpriseRound) return true;
+
+        return false;
+    }
+
     //Dead, dying (unconscious) and stabilized units cannot act.
-    //Disabled (0 HP) units CAN act — one action per turn per d20.
+    //Disabled (0 HP) units CAN act: one move or standard action per round (ActionEconomyResolver).
     public bool CanAct()
     {
-        return !IsDead() && !IsDying() && !IsStabilized();
+        return !isExtracted && !IsDead() && !IsDying() && !IsStabilized();
     }
 }

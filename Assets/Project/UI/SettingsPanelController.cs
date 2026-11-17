@@ -67,7 +67,7 @@ public class SettingsPanelController : MonoBehaviour
             {
                 AudioManager.Instance.SetMasterVolume(v);
                 if (masterVolumeLabel != null)
-                    masterVolumeLabel.text = $"{Mathf.RoundToInt(v * 100)}%";
+                    masterVolumeLabel.text = $"Master Volume: {Mathf.RoundToInt(v * 100)}%";
             });
         }
 
@@ -80,7 +80,7 @@ public class SettingsPanelController : MonoBehaviour
             {
                 AudioManager.Instance.SetSFXVolume(v);
                 if (sfxVolumeLabel != null)
-                    sfxVolumeLabel.text = $"{Mathf.RoundToInt(v * 100)}%";
+                    sfxVolumeLabel.text = $"SFX Volume: {Mathf.RoundToInt(v * 100)}%";
             });
         }
 
@@ -93,7 +93,7 @@ public class SettingsPanelController : MonoBehaviour
             {
                 AudioManager.Instance.SetMusicVolume(v);
                 if (musicVolumeLabel != null)
-                    musicVolumeLabel.text = $"{Mathf.RoundToInt(v * 100)}%";
+                    musicVolumeLabel.text = $"Music Volume: {Mathf.RoundToInt(v * 100)}%";
             });
         }
     }

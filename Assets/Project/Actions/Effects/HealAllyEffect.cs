@@ -5,6 +5,9 @@ public class HealAllyEffect : IActionEffect
 {
     public void Execute(ActionContext ctx, CombatResolver resolver)
     {
+        //Rolls and results happen once, in the execution phase; planning replays (move highlights, validation) skip them
+        if (resolver.IsSimulation) return;
+
         if (ctx.attacker == null || ctx.finalTarget == null) return;
 
         // Only valid on living targets (disabled, dying, or stabilized — not dead)
@@ -132,7 +135,9 @@ public class HealAllyEffect : IActionEffect
 
                     if (hasSuppressiveCare)
                     {
-                        ctx.finalTarget.AddEffect(new DefenseBuffEffect(0f, 1));
+                        //+2 Defense for 1 round (the old DefenseBuffEffect(0f, 1) multiplier added nothing)
+                        ctx.finalTarget.AddEffect(new TimedStatModifierEffect("Suppressive Care", 1,
+                            new StatModifier(StatType.Defense, 2, 1f, "Suppressive Care", StatModifier.BonusType.Untyped)));
                         CombatLog.Add($"{ctx.finalTarget.unitName} gains +2 Defense from Suppressive Care.");
                     }
 

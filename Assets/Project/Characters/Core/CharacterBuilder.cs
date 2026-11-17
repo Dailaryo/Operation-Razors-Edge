@@ -14,7 +14,11 @@ public static class CharacterBuilder
         if (species != null) species.Apply(data);
 
         var classDef = ClassDatabase.Get(data.classId);
-        if (classDef != null) classDef.ApplyClassSkills(data);
+        if (classDef != null)
+        {
+            classDef.ApplyClassSkills(data);
+            classDef.ApplyClassFeats(data);
+        }
 
         var background = BackgroundDatabase.Get(data.backgroundId);
         if (background != null) background.Apply(data);

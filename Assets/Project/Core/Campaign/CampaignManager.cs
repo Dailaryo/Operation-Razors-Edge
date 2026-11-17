@@ -188,13 +188,14 @@ public class CampaignManager : MonoBehaviour
         return 1; // Default to tier 1 if not found
     }
 
-    void Start()
+    //Called once by GameFlowManager.Start after the squad exists and before EnterHub,
+    //so the Hub restore runs over the loaded state
+    public bool LoadSaveIfPresent()
     {
         //Load saved state over the freshly built campaign structure
-        if (SaveManager.SaveExists())
-        {
-            SaveManager.Load(campaign, squadManager.GetSquad());
-        }
+        if (!SaveManager.SaveExists()) return false;
+
+        return SaveManager.Load(campaign, squadManager.GetSquad());
     }
 
     public EndingData GetEnding()

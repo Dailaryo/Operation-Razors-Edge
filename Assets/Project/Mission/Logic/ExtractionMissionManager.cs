@@ -40,13 +40,16 @@ public class ExtractionMissionManager
             {
                 unit.isExtracted = true;
                 grid.RemoveUnit(unit);
+                ThreatZoneManager.UnregisterUnit(unit); //off the board: no threat zone, no OAs
                 state.extractedUnits.Add(unit);
                 CombatLog.Add($"[Extraction] {unit.unitName} extracted successfully.");
             }
             else
             {
-                unit.currentHP = 0;
                 CombatLog.Add($"[Extraction] {unit.unitName} did not reach the extraction zone in time.");
+
+                //Standard defeat path: OnDeath -> CombatManager.ProcessDefeat (incapacitated until the Hub, snapshot rollback)
+                unit.Kill();
             }
         }
     }

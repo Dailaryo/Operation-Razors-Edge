@@ -54,18 +54,23 @@ public class SquadPortraitUI : MonoBehaviour
 
             nameLabel.text = text;
         }
-        //D12: portrait from the mapping; unmapped ids show the fallback sprite
+        //Portrait from the mapping; unmapped ids show the fallback sprite
         if (portraitImage != null && portraitMapping != null)
             portraitImage.sprite = portraitMapping.GetPortrait(boundCharacter.characterId);
 
-        if (hpLabel != null)
+        //Live combat HP during combat, deployment damage between encounters
+        if (hpLabel != null && SquadManager.Instance != null)
         {
-            var tempUnit = CharacterFactory.CreatePlayerUnit(boundCharacter);
-            hpLabel.text = $"{tempUnit.currentHP} / {tempUnit.GetMaxHP()}";
+            SquadManager.Instance.GetCurrentHP(boundCharacter, out int current, out int max);
+            hpLabel.text = $"{current} / {max}";
         }
 
         if (flatFootedTag != null)
-            flatFootedTag.gameObject.SetActive(boundCharacter.isFlatFooted);
+        {
+            //Flat-footed only exists in combat: read it from the live Unit
+            Unit live = SquadManager.Instance != null ? SquadManager.Instance.GetLiveUnit(boundCharacter) : null;
+            flatFootedTag.gameObject.SetActive(live != null && live.IsFlatFooted);
+        }
 
         if (levelUpButton != null)
             levelUpButton.gameObject.SetActive(boundCharacter.levelUpPending);

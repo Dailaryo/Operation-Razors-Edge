@@ -110,38 +110,26 @@ public class EscalationHandler
         }
     }
 
-    //Pre-defined edge
+    //Pre-defined edge: the same centred, edge-inward fill as the initial placement (GridManager.GetSpawnTiles),
+    //skipping occupied tiles
     List<Vector2Int> GetEdgeSpawnPositions(EscalationWaveDefinition wave, int count)
     {
-        var positions = new List<Vector2Int>();
-        int grid_w = GridManager.Instance.width;
-        int grid_h = GridManager.Instance.height;
-
-        for (int i = 0; i < count; i++)
+        MapDefinition.EntryZone edge;
+        switch (wave.spawnEdge)
         {
-            Vector2Int pos;
+            case EscalationWaveDefinition.SpawnEdge.Left: edge = MapDefinition.EntryZone.West; break;
+            case EscalationWaveDefinition.SpawnEdge.Top: edge = MapDefinition.EntryZone.North; break;
+            case EscalationWaveDefinition.SpawnEdge.Bottom: edge = MapDefinition.EntryZone.South; break;
+            case EscalationWaveDefinition.SpawnEdge.Right:
+            default: edge = MapDefinition.EntryZone.East; break;
+        }
 
-            switch (wave.spawnEdge)
-            {
-                case EscalationWaveDefinition.SpawnEdge.Right:
-                    pos = new Vector2Int(grid_w - 1, i % grid_h);
-                    break;
-                case EscalationWaveDefinition.SpawnEdge.Left:
-                    pos = new Vector2Int(0, i % grid_h);
-                    break;
-                case EscalationWaveDefinition.SpawnEdge.Top:
-                    pos = new Vector2Int(i % grid_w, grid_h - 1);
-                    break;
-                case EscalationWaveDefinition.SpawnEdge.Bottom:
-                    pos = new Vector2Int(i % grid_w, 0);
-                    break;
-                default:
-                    pos = new Vector2Int(grid_w - 1, i % grid_h);
-                    break;
-            }
+        var positions = new List<Vector2Int>();
 
-            if (!GridManager.Instance.IsTileOccupied(pos))
-                positions.Add(pos);
+        foreach (Vector2Int pos in GridManager.Instance.GetSpawnTiles(edge))
+        {
+            if (positions.Count >= count) break;
+            if (!GridManager.Instance.IsTileOccupied(pos)) positions.Add(pos);
         }
 
         return positions;

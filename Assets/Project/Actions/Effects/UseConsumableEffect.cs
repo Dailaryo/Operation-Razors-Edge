@@ -5,6 +5,9 @@ public class UseConsumableEffect : IActionEffect
 {
     public void Execute(ActionContext ctx, CombatResolver resolver)
     {
+        //Planning simulations never consume items (and have no item choice to read)
+        if (resolver.IsSimulation) return;
+
         if (ctx.attacker == null) return;
 
         if (string.IsNullOrEmpty(ctx.consumableItemId))

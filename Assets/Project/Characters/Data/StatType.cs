@@ -47,5 +47,11 @@ public enum StatType
     SkillZeroGOperations,
     SkillAutohypnosis,
     SkillPsicraft,
-    MaxHP
+    MaxHP,
+
+    //Accuracy that applies only to unarmed attacks (Improved/Advanced Combat Martial Arts)
+    UnarmedAccuracy,
+
+    //Accuracy that applies only to melee attacks (Power Attack)
+    MeleeAccuracy
 }

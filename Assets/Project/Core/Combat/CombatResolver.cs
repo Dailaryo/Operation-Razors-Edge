@@ -99,16 +99,22 @@ public class CombatResolver
 
         int total = baseInitiative + actionPriority;
 
-        Debug.Log($"{action.source.unitName} initiative: {baseInitiative} + {actionPriority} = {total}");
-
         return total;
     }
+
+    //Defensive declarations (Total Defense, Fighting Defensively) take effect at the start of execution, whatever the
+    //unit's initiative: planning is simultaneous, so the stance is known before anyone acts. Their bonuses last until
+    //the end phase (duration 1), covering the whole round
+    const int DefensiveStanceSpeed = 1000;
 
     int GetActionSpeed(string type)
     {
         switch (type)
         {
-            case ActionIds.TotalDefense: return 1;
+            case ActionIds.TotalDefense:
+            case ActionIds.FightingDefensively:
+            case ActionIds.PowerAttack:
+                return DefensiveStanceSpeed;
 
             default: return 0;
         }
@@ -126,17 +132,19 @@ public class CombatResolver
     void SortActions(List<CombatAction> actions)
     {
         Dictionary<CombatAction, int> tieBreakers = new Dictionary<CombatAction, int>();
+        Dictionary<CombatAction, int> priorities = new Dictionary<CombatAction, int>();
 
-        //Assign random tie-breaker values once per turn
+        //Assign random tie-breakers and priorities once per turn (the sort compares each action many times)
         foreach (var action in actions)
         {
             tieBreakers[action] = Random.Range(0, 10000);
+            priorities[action] = GetActionPriority(action);
         }
 
         actions.Sort((a, b) =>
         {
-            int aPriority = GetActionPriority(a);
-            int bPriority = GetActionPriority(b);
+            int aPriority = priorities[a];
+            int bPriority = priorities[b];
 
             if (aPriority != bPriority)
                 return bPriority.CompareTo(aPriority);
@@ -148,10 +156,37 @@ public class CombatResolver
             //Stable tie-breaker
             return tieBreakers[b].CompareTo(tieBreakers[a]);
         });
+
+        //One line per action, in resolution order
+        foreach (var action in actions)
+            Debug.Log($"{action.source.unitName} action priority: initiative {action.source.initiativeRoll} " +
+                      $"+ speed {GetActionSpeed(action.definition.actionID)} = {priorities[action]} ({action.definition.DisplayName})");
     }
 
     IEnumerator ExecuteActions(List<CombatAction> actions)
     {
+        //Attack stances apply only when the unit also attacks this round: Fighting Defensively needs any attack,
+        //Power Attack a melee attack. Drop them otherwise
+        for (int i = actions.Count - 1; i >= 0; i--)
+        {
+            CombatAction stance = actions[i];
+            string id = stance.definition.actionID;
+
+            bool meleeOnly;
+            if (id == ActionIds.FightingDefensively) meleeOnly = false;
+            else if (id == ActionIds.PowerAttack) meleeOnly = true;
+            else continue;
+
+            if (actions.Exists(a => a.source == stance.source &&
+                (meleeOnly ? a.definition.attackType == ActionDefinition.AttackType.Melee
+                           : a.definition.attackType != ActionDefinition.AttackType.None))) continue;
+
+            if (!isSimulation)
+                CombatLog.Add($"{stance.source.unitName} isn't {(meleeOnly ? "making a melee attack" : "attacking")} " +
+                              $"this round: {stance.definition.DisplayName} has no effect.");
+            actions.RemoveAt(i);
+        }
+
         //Reactions are armed for the round and fire from their trigger, not in initiative order
         ArmReactions(actions);
 
@@ -193,7 +228,18 @@ public class CombatResolver
                 //Armed reactions resolve from their trigger (regen above still runs for the unit's first slot)
                 if (action.isReaction) continue;
 
+                bool wasDisabled = action.source.IsDisabled();
+
+                //Acting ends flat-footed: this unit's turn has come
+                if (!isSimulation && action.source.IsFlatFooted)
+                {
+                    action.source.SetFlatFooted(false);
+                    CombatLog.Add($"{action.source.unitName} is no longer flat-footed.");
+                }
+
                 ExecuteAction(action);
+
+                if (!isSimulation && wasDisabled) ApplyDisabledExertion(action);
 
                 //Refresh grid visuals after state changes
                 GridHighlighter.Instance.RefreshUnitHighlights(manager);
@@ -224,7 +270,7 @@ public class CombatResolver
         {
             if (ctx.attacker.IsManifestingBlocked())
             {
-                CombatLog.Add($"{ctx.attacker.unitName} cannot manifest {psionicPower.actionID}.");
+                CombatLog.Add($"{ctx.attacker.unitName} cannot manifest {psionicPower.DisplayName}.");
                 return;
             }
 
@@ -233,12 +279,12 @@ public class CombatResolver
 
             if (!cost.isValid)
             {
-                CombatLog.Add($"{ctx.attacker.unitName} fails to manifest {psionicPower.actionID}: {cost.failureReason}");
+                CombatLog.Add($"{ctx.attacker.unitName} fails to manifest {psionicPower.DisplayName}: {cost.failureReason}");
                 return;
             }
 
             if (ctx.isMaximized)
-                CombatLog.Add($"{ctx.attacker.unitName} maximizes {psionicPower.actionID}.");
+                CombatLog.Add($"{ctx.attacker.unitName} maximizes {psionicPower.DisplayName}.");
 
             //Catapsi: inside an opposing field, a paid manifestation costs double unless resisted
             int powerPointCost = cost.totalPowerPointCost;
@@ -250,7 +296,7 @@ public class CombatResolver
                     powerPointCost *= 2;
                     if (!ctx.attacker.powerPoints.CanAfford(powerPointCost))
                     {
-                        CombatLog.Add($"{ctx.attacker.unitName} fails to manifest {psionicPower.actionID}: " +
+                        CombatLog.Add($"{ctx.attacker.unitName} fails to manifest {psionicPower.DisplayName}: " +
                                       $"not enough power points inside the catapsi field");
                         return;
                     }
@@ -319,9 +365,6 @@ public class CombatResolver
             ctx.attacker.SpendResource(effectiveCost);
         }
 
-        //Post -process (centralized effects)
-        ApplyPostActionEffects(ctx);
-
         if (ctx.isMovement)
         {
             ResolveMove(ctx);
@@ -344,6 +387,9 @@ public class CombatResolver
             ApplyFinalResult(ctx);
 
             DetectionStateManager.EvaluateBreak(ctx.attacker, ctx.definition);
+
+            //After-hit triggers (Knockdown): run once the damage has been applied
+            ApplyPostActionEffects(ctx);
         }
         else if (ctx.isWindowBreak)
         {
@@ -416,6 +462,14 @@ public class CombatResolver
         if (target.currentHP <= -1) return;
 
         target.currentHP = -1;
+
+        //Units without dying rules (general enemies) are dead at -1: Kill() runs OnDeath -> ProcessDefeat
+        if (target.IsDead())
+        {
+            target.Kill();
+            return;
+        }
+
         if (!target.CanAct()) target.EndConcentration("incapacitated");
         target.OnHealthChanged?.Invoke(target);
         HandleUnitDying(target);
@@ -460,6 +514,24 @@ public class CombatResolver
         }
     }
 
+    //d20 Disabled: a standard (strenuous) action deals 1 damage after it completes, dropping the unit to -1 and dying.
+    //Moving alone is free. No damage if the unit is no longer at 0 HP (healed itself, or hit by an OA mid-action).
+    //Direct HP loss, not TakeDamage: DR and temp HP don't stop exertion.
+    void ApplyDisabledExertion(CombatAction action)
+    {
+        Unit unit = action.source;
+
+        if (!unit.IsDisabled()) return;
+        if (!action.definition.consumesCategories.Contains(ActionDefinition.ActionCategory.Standard)) return;
+
+        unit.currentHP -= 1;
+        CombatLog.Add($"{unit.unitName} strains while disabled and takes 1 damage. HP: {unit.currentHP}");
+
+        if (!unit.CanAct()) unit.EndConcentration("incapacitated");
+        unit.OnHealthChanged?.Invoke(unit);
+        HandleUnitDying(unit);
+    }
+
     public void ResolveMove(ActionContext ctx)
     {
         //Debug.Log($"Action: {ctx.actionId}, isMovement: {ctx.isMovement}");
@@ -492,8 +564,16 @@ public class CombatResolver
             return;
         }
 
-        MovementResolver.ExecuteMovePath(ctx.action.source, newPos, this);
-        CombatLog.Add(ctx.action.source.unitName + " moved to " + newPos);
+        Unit mover = ctx.action.source;
+        Vector2Int startPos = mover.position;
+        var walked = new List<Vector2Int>();
+
+        if (!MovementResolver.ExecuteMovePath(mover, newPos, this, walked))
+            CombatLog.Add($"{mover.unitName} can't reach {newPos} and stays at {mover.position}.");
+        else if (mover.position != newPos)
+            CombatLog.Add($"{mover.unitName} moved from {startPos} to {mover.position}, stopped before reaching {newPos} [path {string.Join(" → ", walked)}]");
+        else
+            CombatLog.Add($"{mover.unitName} moved from {startPos} to {newPos} [path {string.Join(" → ", walked)}]");
     }
 
     void ApplyPreActionEffects(ActionContext ctx)
@@ -510,7 +590,18 @@ public class CombatResolver
 
     void ApplyPostActionEffects(ActionContext ctx)
     {
-        //Future: cleanup, delayed effects, triggers
+        //Rolls happen once, in the execution phase only
+        if (isSimulation) return;
+
+        //Class passive effects are shared instances and can be collected from both attacker and target: run each once
+        var effects = new List<StatusEffect>(new HashSet<StatusEffect>(CollectEffects(ctx)));
+
+        effects.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+
+        foreach (var effect in effects)
+        {
+            effect.OnAfterAction(ctx);
+        }
     }
 
     ActionContext BuildContext(CombatAction action)
@@ -556,12 +647,21 @@ public class CombatResolver
         var target = ctx.finalTarget;
 
         int prev = target.currentHP;
+        int damageReduction = target.GetDamageReduction(); //read before the hit (it can discharge Inertial Barrier)
 
         target.TakeDamage(damage);
 
         int actual = prev - target.currentHP;
 
-        CombatLog.Add($"{target.unitName} takes {actual} damage. HP: {target.currentHP}");
+        //Say why a hit did less than rolled: DR, Kinetic Absorption or temporary HP (temp HP also logs its own line).
+        //Invulnerable training targets print their own breakdown.
+        string reduction = "";
+        if (actual < damage && !target.isInvulnerableTarget)
+            reduction = damageReduction > 0
+                ? $" ({damage} before DR {damageReduction})"
+                : $" ({damage} before reduction)";
+
+        CombatLog.Add($"{target.unitName} takes {actual} damage{reduction}. HP: {target.currentHP}");
 
         // Massive damage check: single hit >= MDT forces Resolve save or immediate disable
         if (actual >= target.GetMassiveDamageThreshold())
@@ -684,7 +784,10 @@ public class CombatResolver
 
         int defense = ctx.finalTarget.GetDefense();
 
-        Debug.Log($"Attack Roll: {roll} + acc {accuracy} + BAB {bab} + mod {ctx.attackRollModifier} = {attackTotal} vs {defense}");
+        bool isMeleeAttack = attackType == ActionDefinition.AttackType.Melee;
+        Debug.Log($"Attack Roll: {roll} + acc {accuracy} [{ctx.attacker.DescribeAccuracy(isMeleeAttack)}] + BAB {bab} " +
+                  $"+ mod {ctx.attackRollModifier} = {attackTotal} vs {defense}" +
+          (ctx.finalTarget.IsFlatFooted ? " (target flat-footed: no Agility bonus)" : ""));
 
         bool hit = attackTotal >= defense;
 
@@ -729,7 +832,7 @@ public class CombatResolver
        int baseDamage = RollBaseDamage(ctx);
 
         ctx.baseDamage = baseDamage;
-        ctx.modifiedDamage = baseDamage;
+        ctx.modifiedDamage += baseDamage;
     }
 
     int RollBaseDamage(ActionContext ctx)
@@ -749,13 +852,18 @@ public class CombatResolver
 
                 total += weapon.damageBonus;
 
-                CombatLog.Add($"{ctx.attacker.unitName} rolls {weapon.displayName}: {total}");
+                if (!isSimulation)
+                    CombatLog.Add($"{ctx.attacker.unitName} rolls {weapon.displayName}: {total}");
                 return total;
             }
         }
 
-        //Fallback: unarmed d4
-        return Random.Range(1, 5);
+        //Fallback: unarmed strike, die from the unarmed feat chain
+        int sides = ctx.attacker.GetUnarmedDamageDie();
+        int unarmedRoll = Random.Range(1, sides + 1);
+        if (!isSimulation)
+            CombatLog.Add($"{ctx.attacker.unitName} rolls unarmed (1d{sides}): {unarmedRoll}");
+        return unarmedRoll;
     }
 
     public Unit GetUnitAt(Vector2Int pos)
@@ -854,7 +962,7 @@ public class CombatResolver
 
             action.source.armedReaction = action;
             if (!action.source.isEnemy)
-                CombatLog.Add($"{action.source.unitName} readies {action.definition.actionID}.");
+                CombatLog.Add($"{action.source.unitName} readies {action.definition.DisplayName}.");
         }
     }
 
@@ -874,7 +982,7 @@ public class CombatResolver
         reactor.armedReaction = null;
         reactor.oaState?.RecordOA();
 
-        CombatLog.Add($"{reactor.unitName} reacts with {reaction.definition.actionID}!");
+        CombatLog.Add($"{reactor.unitName} reacts with {reaction.definition.DisplayName}!");
         if (reaction.definition is PsionicPowerDefinition)
             AudioEventBus.Fire(AudioEventIds.Combat.PsionicManifest);
 
@@ -1013,7 +1121,7 @@ public class CombatResolver
         if (!ctx.attacker.CanAct())
         {
             if (!ctx.attacker.IsDead())
-                CombatLog.Add($"{ctx.attacker.unitName} collapses before completing {ctx.definition.actionID}.");
+                CombatLog.Add($"{ctx.attacker.unitName} collapses before completing {ctx.definition.DisplayName}.");
             return false;
         }
 

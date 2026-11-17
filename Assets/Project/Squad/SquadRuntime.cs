@@ -19,6 +19,10 @@ public class SquadRuntime
 
     public bool isIncapacitated = false;
 
+    //Ended an encounter Disabled, Dying or Stabilized: alive, so a full rest (Restore Squad) brings them back.
+    //Dead (rollback) and Microcosm-removed members stay out until the Hub
+    public bool downAtEncounterEnd = false;
+
     public CharacterSnapshot snapshot;
 
     public SquadRuntime(CharacterData source)

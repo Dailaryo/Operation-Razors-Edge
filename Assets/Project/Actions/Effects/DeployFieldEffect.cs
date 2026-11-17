@@ -14,7 +14,9 @@ public class DeployFieldEffect : IActionEffect
     {
         if (!ctx.action.movePosition.HasValue)
         {
-            CombatLog.Add($"{ctx.attacker.unitName}: DeployField requires a tile target.");
+            //Simulations (highlights, validation, AI scoring) replay this many times per click; log only the real action
+            if (!resolver.IsSimulation)
+                CombatLog.Add($"{ctx.attacker.unitName}: DeployField requires a tile target.");
             return;
         }
 
@@ -27,6 +29,7 @@ public class DeployFieldEffect : IActionEffect
                 effectFactories);
         }
 
-        CombatLog.Add($"{ctx.attacker.unitName} deploys a field zone at {ctx.action.movePosition.Value}.");
+        if (!resolver.IsSimulation)
+            CombatLog.Add($"{ctx.attacker.unitName} deploys a field zone at {ctx.action.movePosition.Value}.");
     }
 }

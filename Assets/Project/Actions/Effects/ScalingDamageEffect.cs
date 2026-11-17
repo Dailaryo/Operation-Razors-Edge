@@ -15,6 +15,13 @@ public class ScalingDamageEffect : IActionEffect
 
         ctx.modifiedDamage += bonus;
 
-        Debug.Log($"{ctx.attacker.unitName} gains {bonus} damage from {stat} scaling");
+        //Simulations (move highlights, validation, AI scoring) replay this effect many times per click; log only the real attack
+        if (!resolver.IsSimulation)
+        {
+            string detail = stat == StatType.MeleePower
+                ? $" (POW {ctx.attacker.GetModifier(StatType.Power):+0;-0;+0}, bonuses {ctx.attacker.GetStat(StatType.MeleePower):+0;-0;+0})"
+                : "";
+            Debug.Log($"{ctx.attacker.unitName} gains {bonus} damage from {stat} scaling{detail}");
+        }
     }
 }

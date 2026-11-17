@@ -138,11 +138,12 @@ public static class MissionObjectiveEvaluator
             NarrativeFlagManager.SetFlag(flagId, 1);
     }
 
+    //Out of the fight: dead, or extracted from the map
     static bool AllDead(List<Unit> units)
     {
         foreach (Unit unit in units)
         {
-            if (!unit.IsDead()) return false;
+            if (!unit.IsDead() && !unit.isExtracted) return false;
         }
         return true;
     }

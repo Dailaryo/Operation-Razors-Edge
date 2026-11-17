@@ -48,6 +48,10 @@ public class GridVisualizer : MonoBehaviour
             }
         }
 
+        //New map drawn: centre the camera on it at the default zoom
+        if (CameraController.Instance != null)
+            CameraController.Instance.ResetView();
+
         ////Debug.Log("Grid size: " + grid.width + " x " + grid.height);
     }
 

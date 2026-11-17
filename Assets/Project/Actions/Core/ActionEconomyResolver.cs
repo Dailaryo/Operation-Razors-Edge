@@ -107,6 +107,16 @@ public static class ActionEconomyResolver
         if (unit.activeEffects.Exists(e => e is OverdriveEffect))
             limits[ActionDefinition.ActionCategory.Standard] = 2;
 
+        //Disabled (0 HP), or acting in the surprise round: a single move OR standard action per round. With no Move slot,
+        //a move takes the one Standard slot (GetValidCategories), so they exclude each other; full-round actions can't fit.
+        //Swift/free stay available (Pathfinder). Applied after Overdrive so it always caps.
+        //DEFERRED (Charge): a unit limited to a standard action may still charge, but only up to its speed (Pathfinder)
+        if (unit.IsDisabled() || unit.limitedToSingleAction)
+        {
+            limits[ActionDefinition.ActionCategory.Move] = 0;
+            limits[ActionDefinition.ActionCategory.Standard] = 1;
+        }
+
         return limits;
     }
 }

@@ -15,6 +15,16 @@ public class ExplorationUIController : MonoBehaviour
     [SerializeField] private Toggle stealthToggle;
     [SerializeField] private TMP_Text stealthNoteText;
 
+
+    [Header("Debug (editor / development builds only)")]
+    [SerializeField] private Button debugStealthButton;
+    [SerializeField] private TMP_Text debugStealthLabel;
+    [SerializeField] private Button debugXpButton;          //"Grant XP": shows the entry row
+    [SerializeField] private GameObject debugXpEntryRoot;   //Holds the input field and the Grant button
+    [SerializeField] private TMP_InputField debugXpInput;
+    [SerializeField] private Button debugXpGrantButton;
+    [SerializeField] private Button debugRestoreButton;      //"Restore Squad": Training-only full rest
+
     [Header("Encounter Prompt")]
     [SerializeField] private GameObject encounterPromptPanel;
     [SerializeField] private TMP_Text encounterNameText;
@@ -43,6 +53,38 @@ public class ExplorationUIController : MonoBehaviour
 
         if (encounterPromptPanel != null)
             encounterPromptPanel.SetActive(false);
+
+        //Debug controls only exist in the editor and development builds
+        if (debugStealthButton != null)
+        {
+            debugStealthButton.gameObject.SetActive(Debug.isDebugBuild);
+            debugStealthButton.onClick.RemoveAllListeners();
+            debugStealthButton.onClick.AddListener(OnDebugStealthPressed);
+        }
+
+        UpdateDebugStealthLabel();
+
+        if (debugXpButton != null)
+        {
+            debugXpButton.gameObject.SetActive(Debug.isDebugBuild);
+            debugXpButton.onClick.RemoveAllListeners();
+            debugXpButton.onClick.AddListener(OnDebugXpPressed);
+        }
+
+        if (debugXpGrantButton != null)
+        {
+            debugXpGrantButton.onClick.RemoveAllListeners();
+            debugXpGrantButton.onClick.AddListener(OnDebugXpGrantPressed);
+        }
+
+        if (debugXpEntryRoot != null)
+            debugXpEntryRoot.SetActive(false);
+
+        if (debugRestoreButton != null)
+        {
+            debugRestoreButton.onClick.RemoveAllListeners();
+            debugRestoreButton.onClick.AddListener(OnDebugRestorePressed);
+        }
     }
 
     public void Refresh()
@@ -76,8 +118,15 @@ public class ExplorationUIController : MonoBehaviour
             stealthToggle.gameObject.SetActive(!anySocialZone);
 
         if (stealthNoteText != null)
-            stealthNoteText.gameObject.SetActive(
-                ExplorationController.Instance.SquadStealthMode && !anySocialZone);
+        {
+            stealthNoteText.gameObject.SetActive(ExplorationController.Instance.SquadStealthMode);
+            //Keep the checkbox in step with the controller without firing onValueChanged
+            stealthToggle.SetIsOnWithoutNotify(ExplorationController.Instance.SquadStealthMode);
+        }
+
+        //Restore Squad is a Training-only debug control
+        if (debugRestoreButton != null)
+            debugRestoreButton.gameObject.SetActive(Debug.isDebugBuild && IsOnTrainingPlanet());
     }
 
     void AddZoneEntry(Transform container, ZoneDefinition zone)
@@ -205,13 +254,77 @@ public class ExplorationUIController : MonoBehaviour
 
         ExplorationController.Instance.SetStealthMode(value);
 
+        //SetStealthMode can refuse (social zone), so mirror what actually took effect
+        bool active = ExplorationController.Instance.SquadStealthMode;
+        stealthToggle.SetIsOnWithoutNotify(active);
+
         if (stealthNoteText != null)
-            stealthNoteText.gameObject.SetActive(value);
+            stealthNoteText.gameObject.SetActive(active);
     }
 
     void OnDepartPressed()
     {
         if (ExplorationController.Instance != null)
             ExplorationController.Instance.DepartPlanet();
+    }
+
+    void OnDebugStealthPressed()
+    {
+        if (ExplorationController.Instance == null) return;
+
+        ExplorationController.Instance.CycleDebugStealthOverride();
+        UpdateDebugStealthLabel();
+    }
+
+    void UpdateDebugStealthLabel()
+    {
+        if (debugStealthLabel == null || ExplorationController.Instance == null) return;
+
+        debugStealthLabel.text = ExplorationController.Instance.DebugStealthOverride switch
+        {
+            ExplorationController.DebugStealthResult.ForceSuccess => "Stealth: Force Success",
+            ExplorationController.DebugStealthResult.ForceFail => "Stealth: Force Fail",
+            _ => "Stealth: Roll"
+        };
+    }
+
+    //Debug: show or hide the XP entry row
+    void OnDebugXpPressed()
+    {
+        if (debugXpEntryRoot != null)
+            debugXpEntryRoot.SetActive(!debugXpEntryRoot.activeSelf);
+    }
+
+    void OnDebugXpGrantPressed()
+    {
+        if (debugXpInput == null || !int.TryParse(debugXpInput.text, out int amount) || amount <= 0)
+        {
+            Debug.LogWarning("[ExplorationUI] Enter a positive whole number of XP");
+            return;
+        }
+
+        SquadManager.Instance.DebugGrantXP(amount);
+
+        debugXpInput.text = "";
+        if (debugXpEntryRoot != null)
+            debugXpEntryRoot.SetActive(false);
+    }
+
+    //Debug: Training-planet full rest (Restore Squad)
+    void OnDebugRestorePressed()
+    {
+        if (SquadManager.Instance == null) return;
+
+        SquadManager.Instance.DebugRestoreSquad();
+
+        if (PersistentChromeController.Instance != null)
+            PersistentChromeController.Instance.RefreshPortraits();
+    }
+
+    static bool IsOnTrainingPlanet()
+    {
+        var explorer = ExplorationController.Instance;
+        return explorer != null && explorer.currentPlanet != null &&
+               explorer.currentPlanet.planetId == PlanetIds.Training;
     }
 }

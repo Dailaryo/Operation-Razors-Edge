@@ -25,35 +25,19 @@ public class GridHighlighter : MonoBehaviour
     //Highlight valid movement tiles
     public void HighlightValidMoves(Unit unit, CombatManager manager)
     {
-        CombatResolver resolver = new CombatResolver(manager, true);
+        //Live resolver: ActionValidator builds a fresh simulation of this unit's planned actions for each check
+        //(same as HighlightValidTargets). Passing a simulation resolver made the validator replay the plan again
+        //onto it for every tile, stacking planning-only bonuses (Burst) across tiles.
+        CombatResolver resolver = new CombatResolver(manager, false);
 
-        //Simulate this unit's planned actions
         var plannedActions = manager.GetPlannedActions(unit);
 
-        foreach (var prior in plannedActions)
-        {
-            ActionContext ctx = new ActionContext
-            {
-                attacker = prior.source,
-                originalTarget = prior.target,
-                finalTarget = prior.target,
-                baseDamage = Mathf.RoundToInt(prior.source.GetExpectedBaseDamage()),
-                modifiedDamage = Mathf.RoundToInt(prior.source.GetExpectedBaseDamage()),
-                action = prior,
-                temporaryEffects = prior.temporaryEffects
-            };
-
-            var def = prior.definition;
-            BaseAction baseAction = new GenericAction(def);
-            if (baseAction == null) continue;
-
-            baseAction.Execute(ctx, resolver);
-
-            if (ctx.isMovement)
-                resolver.ResolveMove(ctx);
-            else if (ctx.shouldApplyDamage)
-                resolver.ApplyFinalResult(ctx);
-        }
+        //Only offer move tiles if the unit can still afford a move this turn (Move, or a Standard converted to Move).
+        //The probe is a throwaway action; TryAssignCategories only writes to it, never to the planned list
+        var moveDefinition = ActionDatabase.Definitions[ActionIds.Move];
+        CombatAction economyProbe = new CombatAction(unit, null, moveDefinition, manager);
+        bool canAffordMove = ActionEconomyResolver.TryAssignCategories(
+            unit, plannedActions, economyProbe, ActionEconomyResolver.GetLimitsForUnit(unit));
 
         foreach (var kvp in GridVisualizer.Instance.GetAllTiles())
         {
@@ -62,31 +46,22 @@ public class GridHighlighter : MonoBehaviour
 
             Unit occupyingUnit = GridManager.Instance.GetUnitAt(pos);
 
-            //If this unit is moving away, treat tile as empty
-            if (occupyingUnit == unit && manager.IsUnitLeavingTile(unit, pos))
+            //Units stay on their origin tile until the plan executes, so keep showing them there.
+            //(Moving back to the origin is done by cancelling the move, not by selecting the tile.)
+            if (occupyingUnit != null)
             {
-                occupyingUnit = null;
+                tile.SetBaseHighlight(
+                    occupyingUnit.isEnemy == unit.isEnemy
+                    ? Tile.TileHighlightType.Ally
+                    : Tile.TileHighlightType.Enemy
+                );
+                continue;
             }
 
-            //If another unit plans to move here, treat as occupied
-            bool isPlannedOccupied = manager.IsTilePlannedOccupied(pos);
-
-            //Detect unit presence
-            if (occupyingUnit != null || isPlannedOccupied)
+            //Planned destinations (this unit's or another ally's) block movement and get their own colour
+            if (manager.IsTilePlannedOccupied(pos))
             {
-                if (occupyingUnit != null)
-                {
-                    tile.SetBaseHighlight(
-                        occupyingUnit.isEnemy == unit.isEnemy
-                        ? Tile.TileHighlightType.Ally
-                        : Tile.TileHighlightType.Enemy
-                    );
-                }
-                else
-                {
-                    //Planned occupied -> block movement but don't fake a unit
-                    tile.SetBaseHighlight(Tile.TileHighlightType.None);
-                }
+                tile.SetBaseHighlight(Tile.TileHighlightType.PlannedMove);
 
                 continue;
             }
@@ -103,7 +78,7 @@ public class GridHighlighter : MonoBehaviour
             testMove.SetMovePosition(pos);
 
             //Reuse validator
-            if (ActionValidator.IsValid(testMove, resolver))
+            if (canAffordMove && ActionValidator.IsValid(testMove, resolver))
             {
                 tile.SetBaseHighlight(Tile.TileHighlightType.MoveValid);
             }
@@ -131,18 +106,24 @@ public class GridHighlighter : MonoBehaviour
         //Debug.Log("Highlighting valid tiles...");
     }
 
-    public void HighlightValidTargets(Unit unit, string actionType, CombatManager manager)
+    public void HighlightValidTargets(Unit unit, ActionDefinition def, CombatManager manager)
     {
-        ////Debug.Log("HighlightValidTargets CALLED");
-
         Vector2Int plannedOrigin = manager.GetPlannedPosition(unit);
 
-        var def = ActionDatabase.Definitions[actionType];
+        //Range bands (Close/Medium/Long powers) scale with manifester level; same call ActionValidator uses
+        int maxRange = def.GetMaxRange(unit);
 
         CombatResolver resolver = new CombatResolver(manager, false);
 
+        //Ground-targeted actions highlight tiles, not units
+        if (def.IsGroundTargeted())
+        {
+            HighlightGroundTiles(unit, def, manager);
+            return;
+        }
+
         //If action doesn't use targets -> don't use
-        if(!def.requiresTarget)
+        if (!def.requiresTarget)
         {
             //Fallback to default state
             HighlightValidMoves(unit, manager);
@@ -154,11 +135,11 @@ public class GridHighlighter : MonoBehaviour
             Vector2Int pos = kvp.Key;
             Tile tile = kvp.Value;
 
-            if (DistanceUtility.Chebyshev(plannedOrigin, pos) > def.maxRange) continue;
+            if (DistanceUtility.Chebyshev(plannedOrigin, pos) > maxRange) continue;
             int distance = DistanceUtility.MovementCostDistance(plannedOrigin, pos);
 
             //Check if tile is within range
-            bool inRange = distance >= def.minRange && distance <= def.maxRange;
+            bool inRange = distance >= def.minRange && distance <= maxRange;
 
             if (!inRange)
             {
@@ -175,7 +156,9 @@ public class GridHighlighter : MonoBehaviour
                 }
                 else
                 {
-                    tile.SetBaseHighlight(Tile.TileHighlightType.None);
+                    tile.SetBaseHighlight(manager.IsTilePlannedOccupied(pos)
+                        ? Tile.TileHighlightType.PlannedMove
+                        : Tile.TileHighlightType.None);
                 }
 
                 continue;
@@ -184,16 +167,12 @@ public class GridHighlighter : MonoBehaviour
             //Tile is within range
             Unit targetUnit = GridManager.Instance.GetUnitAt(pos);
 
-            //Treat origin tile as empty if unit is moving away
-            if (targetUnit == unit && manager.IsUnitLeavingTile(unit, pos))
+            //The acting unit still stands on its origin until the plan executes, so it shows as Ally there.
+            //Empty planned destinations show as PlannedMove and aren't targetable
+            if (targetUnit == null && manager.IsTilePlannedOccupied(pos))
             {
-                targetUnit = null;
-            }
-
-            //Treat planned destination as occupied
-            if (manager.IsTilePlannedOccupied(pos))
-            {
-                targetUnit = unit; //dummy to mark occupied
+                tile.SetBaseHighlight(Tile.TileHighlightType.PlannedMove);
+                continue;
             }
 
             //empty tile -> show range
@@ -203,14 +182,16 @@ public class GridHighlighter : MonoBehaviour
                 continue;
             }
 
-            //Ally
-            if (targetUnit.isEnemy == unit.isEnemy)
+            bool isAlly = targetUnit.isEnemy == unit.isEnemy;
+
+            //Ally on a non-ally action: shown, never selectable
+            if (isAlly && def.targetType != TargetType.Ally)
             {
                 tile.SetBaseHighlight(Tile.TileHighlightType.Ally);
                 continue;
             }
 
-            //Enemy -> validate
+            //Enemy, or ally on an ally-targeting action (Treat Injury, heals) -> validate
             CombatAction testAction = new CombatAction(
                 unit,
                 targetUnit,
@@ -226,8 +207,40 @@ public class GridHighlighter : MonoBehaviour
             }
             else
             {
-                tile.SetBaseHighlight(Tile.TileHighlightType.Enemy);
+                tile.SetBaseHighlight(isAlly ? Tile.TileHighlightType.Ally : Tile.TileHighlightType.Enemy);
             }
+        }
+    }
+
+    //Ground-targeted actions (Deploy Field, Break Window): every tile in range is selectable, occupied or not
+    void HighlightGroundTiles(Unit unit, ActionDefinition def, CombatManager manager)
+    {
+        CombatResolver resolver = new CombatResolver(manager, false);
+
+        foreach (var kvp in GridVisualizer.Instance.GetAllTiles())
+        {
+            Vector2Int pos = kvp.Key;
+            Tile tile = kvp.Value;
+
+            Unit occupant = GridManager.Instance.GetUnitAt(pos);
+
+            CombatAction testAction = new CombatAction(unit, null, def, manager);
+            testAction.SetMovePosition(pos);
+
+            //In-range tiles tint the terrain, so it stays readable, and are clickable
+            if (ActionValidator.IsValid(testAction, resolver))
+                tile.SetBaseHighlight(Tile.TileHighlightType.GroundTarget);
+            else
+                tile.SetBaseHighlight(occupant == null && manager.IsTilePlannedOccupied(pos)
+                    ? Tile.TileHighlightType.PlannedMove
+                    : Tile.TileHighlightType.None);
+
+            //Units stay visible on top; the tile underneath is still selectable when in range
+            tile.SetOverlayHighlight(occupant == null
+                ? Tile.TileHighlightType.None
+                : occupant.isEnemy == unit.isEnemy
+                    ? Tile.TileHighlightType.Ally
+                    : Tile.TileHighlightType.Enemy);
         }
     }
 
@@ -250,5 +263,14 @@ public class GridHighlighter : MonoBehaviour
                 : Tile.TileHighlightType.Ally
             );
         }
+    }
+
+    //Field zones tint the ground until they expire; called when a zone is placed, expires or is cleared
+    public void RefreshFieldZones()
+    {
+        if (GridVisualizer.Instance == null) return;
+
+        foreach (var kvp in GridVisualizer.Instance.GetAllTiles())
+            kvp.Value.SetFieldZone(FieldZoneManager.IsTileInActiveZone(kvp.Key));
     }
 }

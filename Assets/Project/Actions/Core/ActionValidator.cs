@@ -29,7 +29,19 @@ public static class ActionValidator
         int effectiveCost = action.source.GetEffectiveResourceCost(action.definition);
         if (effectiveCost > 0)
         {
-            if (!action.source.HasResource(effectiveCost)) return false;
+            //Class resources (Cybernetic Power, Ability Surge) are spent at resolution: count what this unit's
+            //earlier planned actions already commit, the same way power points are checked below
+            int committedResource = 0;
+            if (action.manager != null)
+            {
+                foreach (var prior in action.manager.GetPlannedActions(action.source))
+                {
+                    if (prior == action) break;
+                    committedResource += action.source.GetEffectiveResourceCost(prior.definition);
+                }
+            }
+
+            if (!action.source.HasResource(committedResource + effectiveCost)) return false;
         }
 
         // Power point validation for psionic powers
@@ -102,6 +114,18 @@ public static class ActionValidator
         //For actions that require a target
         var def = action.definition;
 
+        //Ground-targeted actions: need a tile in bounds and in range from the planned position, not a unit
+        if (def.IsGroundTargeted())
+        {
+            if (!action.movePosition.HasValue) return false;
+
+            Vector2Int tile = action.movePosition.Value;
+            if (!GridManager.Instance.IsWithinBounds(tile)) return false;
+
+            int tileDistance = DistanceUtility.MovementCostDistance(resolver.GetPosition(action.source), tile);
+            return tileDistance >= def.minRange && tileDistance <= def.GetMaxRange(action.source);
+        }
+
         // No target needed
         if (!def.requiresTarget)
         {
@@ -127,6 +151,11 @@ public static class ActionValidator
                 if (action.target != action.source) return false;
                 break;
         }
+
+        // Treat Injury (stabilize) only applies to a dying ally that hasn't been stabilized yet
+        if (def.actionID == ActionIds.TreatInjury &&
+            (!action.target.IsDying() || action.target.IsStabilized()))
+            return false;
 
         // Detection gate: cannot directly target a unit you cannot detect.
         // Area-of-effect tile-targeted actions bypass this check (requiresTarget is false for those).

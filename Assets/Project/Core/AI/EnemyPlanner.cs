@@ -143,6 +143,9 @@ public class EnemyPlanner
             if (!unit.IsActionAvailable(action)) continue;
             if (!allowMovement && action.IsMove()) continue;
 
+            //DEFERRED: AI consumable use needs an item choice (ctx.consumableItemId); skip until enemies carry consumables
+            if (action.actionID == ActionIds.UseConsumable) continue;
+
             var def = action;
 
             //Targeted actions
@@ -157,6 +160,10 @@ public class EnemyPlanner
                 List<Unit> visibleTargets = isIntelligent
                     ? enemies
                     : enemies.FindAll(e => DetectionStateManager.CanTarget(unit, e));
+
+                //Move on from downed opponents (Dying/Stabilized) while any opponent can still act
+                if (visibleTargets.Exists(e => e.CanAct()))
+                    visibleTargets = visibleTargets.FindAll(e => e.CanAct());
 
                 foreach (Unit target in visibleTargets)
                 {
@@ -204,6 +211,9 @@ public class EnemyPlanner
 
         foreach (Vector2Int pos in reachable)
         {
+            //Destination already claimed this round (squad plan or an earlier enemy's plan)
+            if (manager.IsTilePlannedOccupied(pos)) continue;
+
             CombatAction move = new CombatAction(unit, null, moveDef, manager);
             move.SetMovePosition(pos);
             moves.Add(move);
@@ -390,10 +400,11 @@ public class EnemyPlanner
         return score;
     }
 
+    //Closest opponent still in the fight; a downed one (Dying/Stabilized) only if no other remains
     Unit FindClosestEnemy(Unit unit, CombatResolver resolver, CombatManager manager)
     {
-        Unit best = null;
-        int bestDist = int.MaxValue;
+        Unit best = null, bestDowned = null;
+        int bestDist = int.MaxValue, bestDownedDist = int.MaxValue;
 
         foreach (var u in manager.GetAllUnits())
         {
@@ -401,19 +412,23 @@ public class EnemyPlanner
 
             int d = DistanceUtility.Chebyshev(resolver.GetPosition(unit), resolver.GetPosition(u));
 
-            if (d < bestDist)
+            if (u.CanAct())
             {
-                bestDist = d;
-                best = u;
+                if (d < bestDist) { bestDist = d; best = u; }
+            }
+            else if (d < bestDownedDist)
+            {
+                bestDownedDist = d;
+                bestDowned = u;
             }
         }
 
-        return best;
+        return best ?? bestDowned;
     }
 
     bool CanExecutePlan(ActionPlan plan, Unit unit)
     {
-        var limits = ActionEconomyResolver.GetDefaultLimits();
+        var limits = ActionEconomyResolver.GetLimitsForUnit(unit);
 
         List<CombatAction> simulated = new List<CombatAction>();
 
@@ -454,15 +469,28 @@ public class EnemyPlanner
             return true;
         }
 
-        ActionDefinition def = unit.GetAllActions().Find(a => a.actionID == step.actionId);
+        //Move isn't in a unit's action list (movement is grid-driven), so a Move step uses the shared definition
+        ActionDefinition def = step.actionId == ActionIds.Move
+            ? ActionDatabase.Definitions[ActionIds.Move]
+            : unit.GetAllActions().Find(a => a.actionID == step.actionId);
         if (def == null)
             return PatternFallback(unit, stepIndex, $"'{step.actionId}' is not one of this unit's actions");
 
         if (!unit.IsActionAvailable(def))
             return PatternFallback(unit, stepIndex, $"'{step.actionId}' is on cooldown or out of uses");
 
-        Unit target = ResolvePatternTarget(unit, step, enemies);
         CombatResolver resolver = new CombatResolver(manager, true);
+
+        //Candidates: opponents still in the fight first (enemies move on from downed squad members)
+        List<Unit> candidates = enemies.FindAll(e => e != null && !e.IsDead() && e.CanAct());
+        if (candidates.Count == 0) candidates = enemies;
+
+        //A step that never moves (approach false) picks its target only among those it can use the action on
+        //from where it stands, so "LowestHP" means the lowest-HP target in range and line of sight
+        if (!step.approach && def.requiresTarget && !def.IsMove())
+            candidates = candidates.FindAll(e => ActionValidator.IsValid(new CombatAction(unit, e, def, manager), resolver));
+
+        Unit target = ResolvePatternTarget(unit, step, candidates);
 
         //Move step: step toward the target as far as this round's movement allows
         if (def.IsMove())
@@ -480,7 +508,13 @@ public class EnemyPlanner
         }
 
         if (def.requiresTarget && target == null)
-            return PatternFallback(unit, stepIndex, $"no living target for rule {step.targetRule}");
+        {
+            //Player-facing: a unit that never moves (Marksman) says why it isn't attacking
+            if (!step.approach)
+                CombatLog.Add($"{unit.unitName} holds position: no target in range or line of sight.");
+
+            return PatternFallback(unit, stepIndex, $"no valid target for rule {step.targetRule}");
+        }
 
         CombatAction action = new CombatAction(unit, def.requiresTarget ? target : null, def, manager);
 

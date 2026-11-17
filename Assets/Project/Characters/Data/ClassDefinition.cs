@@ -51,6 +51,12 @@ public class ClassDefinition
     //Weapon proficiencies
     public List<WeaponTag> weaponProficiencies;
 
+    //Feats every class grants (current and future classes): equipped at build, no feat point
+    public static readonly List<string> UniversalClassFeatIds = new List<string>
+    {
+        FeatIds.SimpleWeaponsProficiency,
+    };
+
     //Level Table
     public Dictionary<int, List<ClassLevelEntry>> levelTable;
     public ResourceDefinition resource;
@@ -155,6 +161,14 @@ public class ClassDefinition
             data.classSkills.Add(SkillType.Autohypnosis);
         if (!data.classSkills.Contains(SkillType.Psicraft))
             data.classSkills.Add(SkillType.Psicraft);
+    }
+
+    //Equips the feats every class grants (UniversalClassFeatIds). Runs at build/respec alongside ApplyClassSkills
+    public void ApplyClassFeats(CharacterData data)
+    {
+        foreach (var featId in UniversalClassFeatIds)
+            if (!data.equippedFeatIds.Contains(featId))
+                data.equippedFeatIds.Add(featId);
     }
 
     //LevelUp Application

@@ -16,18 +16,18 @@ public class UIManager : MonoBehaviour
     [SerializeField] private PersistentChromeController chrome;
 
     private Dictionary<ScreenId, GameObject> screens = new Dictionary<ScreenId, GameObject>();
-    private Stack<ScreenId> overlayStack = new Stack<ScreenId>();
+    //Only one overlay is ever open (standing UI rule): opening another replaces it; Back returns to the main screen
+    private ScreenId currentOverlay = ScreenId.None;
     private ScreenId currentScreen = ScreenId.None;
 
-    //Overlays that hide the persistent chrome (mainbar + sidebar)
+    //Overlays that hide the persistent chrome (mainbar + sidebar).
+    //Character Detail and Inventory keep the mainbar visible so the squad cards stay usable.
     private static readonly HashSet<ScreenId> ChromeHidingOverlays = new HashSet<ScreenId>
     {
         ScreenId.LevelUp,
         ScreenId.Settings,
         ScreenId.SaveLoad,
         ScreenId.SystemMap,
-        ScreenId.CharacterDetail,
-        ScreenId.Inventory,
         ScreenId.Journal
     };
 
@@ -66,13 +66,8 @@ public class UIManager : MonoBehaviour
         if (currentScreen != ScreenId.None && screens.TryGetValue(currentScreen, out var current))
             current.SetActive(false);
 
-        //Deactivate all overlays
-        while (overlayStack.Count > 0)
-        {
-            ScreenId overlayId = overlayStack.Pop();
-            if (screens.TryGetValue(overlayId, out var overlay))
-                overlay.SetActive(false);
-        }
+        //Close the open overlay, if any
+        CloseCurrentOverlay();
 
         currentScreen = id;
 
@@ -86,33 +81,45 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    //Opens an overlay. Any overlay already open is closed first: only one is ever open
     public void PushOverlay(ScreenId id)
     {
-        overlayStack.Push(id);
+        if (currentOverlay == id) return;
+
+        CloseCurrentOverlay();
+
+        currentOverlay = id;
 
         if (screens.TryGetValue(id, out var panel))
             panel.SetActive(true);
 
-        if (chrome != null && ChromeHidingOverlays.Contains(id))
-            chrome.SetChromeVisible(false);
+        if (chrome != null)
+            chrome.SetChromeVisible(!ChromeHidingOverlays.Contains(id));
     }
 
+    //Back: closes the open overlay and returns to the main screen with its chrome
     public void PopOverlay()
     {
-        if (overlayStack.Count == 0) return;
+        if (currentOverlay == ScreenId.None) return;
 
-        ScreenId id = overlayStack.Pop();
+        CloseCurrentOverlay();
 
-        if (screens.TryGetValue(id, out var panel))
-            panel.SetActive(false);
-
-        //Restore chorme if no remaining overlays are chrome-hiding
-        if (chrome != null && !AnyActiveOverlayHidesChrome())
+        if (chrome != null)
             chrome.SetChromeVisible(true);
     }
 
     public ScreenId GetCurrentScreen() => currentScreen;
-    public bool IsOverlayActive(ScreenId id) => overlayStack.Contains(id);
+    public bool IsOverlayActive(ScreenId id) => currentOverlay == id;
+
+    void CloseCurrentOverlay()
+    {
+        if (currentOverlay == ScreenId.None) return;
+
+        if (screens.TryGetValue(currentOverlay, out var panel))
+            panel.SetActive(false);
+
+        currentOverlay = ScreenId.None;
+    }
 
     //State mapping
     void HandleStateChanged(GameFlowManager.GameState state)
@@ -141,15 +148,5 @@ public class UIManager : MonoBehaviour
                 ShowScreen(ScreenId.Ending);
                 break;
         }
-    }
-
-    //Helpers
-    bool AnyActiveOverlayHidesChrome()
-    {
-        foreach (ScreenId id in overlayStack)
-        {
-            if (ChromeHidingOverlays.Contains(id)) return true;
-        }
-        return false;
     }
 }

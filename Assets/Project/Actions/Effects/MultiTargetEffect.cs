@@ -49,7 +49,7 @@ public class MultiTargetEffect : IActionEffect
         if (!TryAdd(anchor, selected, ref hdUsed))
         {
             if(!resolver.IsSimulation)
-                CombatLog.Add($"{anchor.unitName} is unaffected by {ctx.definition.actionID} (Hit Dice limit).");
+                CombatLog.Add($"{anchor.unitName} is unaffected by {ctx.definition.DisplayName} (Hit Dice limit).");
             return selected;
         }
 

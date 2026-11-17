@@ -33,7 +33,6 @@ public static class DreadnoughtClass
                 { 1, new List<ClassLevelEntry>
                 {
                     new ClassLevelEntry(
-                        actionUnlockIds: new List<string> { ActionIds.MeleeAttack },
                         passiveIds: new List<string>
                         {
                             PassiveIds.DreadnoughtFearless,

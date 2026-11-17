@@ -9,12 +9,13 @@ public static class MapDatabase
             { MapIds.Default, BuildDefaultMap() },
             { MapIds.TestRoom, BuildTestRoomMap() },
             { MapIds.TrainingRange, BuildTrainingRangeMap() },
+            { MapIds.FiringLine, BuildFiringLineMap() },
         };
 
-    // Flat open 8x5 — matches the original hardcoded grid
+    // Flat open 10x8 — eight rows so all six pregens spawn in the entry column
     static MapDefinition BuildDefaultMap()
     {
-        return new MapDefinition(MapIds.Default, 8, 5);
+        return new MapDefinition(MapIds.Default, 10, 8);
     }
 
     // 8x5 map with a room containing a wall, a door, and a window
@@ -62,11 +63,32 @@ public static class MapDatabase
         map.SetEastEdge(5, 2, EdgeData.EdgeType.Window);
         map.SetEastEdge(5, 3, EdgeData.EdgeType.Wall);
 
-        // Firing Line (TR-05) authored enemy spawns: one Marksman inside the room, one covering from high ground
+        return map;
+    }
+
+    // 10x8 open map for TR-05 Firing Line: range bands and line of sight without edges (walls, doors and windows
+    // are descoped until edges have visual indicators; TestRoom keeps them for that work).
+    // Marksmen (range 2-5, never move) stand 7-8 columns from the squad's entry edge, so the squad must advance.
+    static MapDefinition BuildFiringLineMap()
+    {
+        var map = new MapDefinition(MapIds.FiringLine, 10, 8);
+
+        // Difficult terrain on the squad's approach
+        map.SetTerrain(2, 3, TileData.TerrainType.Difficult);
+        map.SetTerrain(3, 3, TileData.TerrainType.Difficult);
+        map.SetTerrain(2, 4, TileData.TerrainType.Difficult);
+
+        // High ground on the enemy side, holding one Marksman
+        map.SetTerrain(8, 5, TileData.TerrainType.HighGround);
+        map.SetTerrain(9, 5, TileData.TerrainType.HighGround);
+        map.SetTerrain(8, 6, TileData.TerrainType.HighGround);
+        map.SetTerrain(9, 6, TileData.TerrainType.HighGround);
+
+        // Authored Marksman spawns: one in the open, one on high ground
         map.enemySpawnTiles = new List<Vector2Int>
         {
-            new Vector2Int(3, 2),
-            new Vector2Int(7, 4)
+            new Vector2Int(7, 2),
+            new Vector2Int(8, 5)
         };
 
         return map;

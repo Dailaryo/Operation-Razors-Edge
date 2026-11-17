@@ -57,6 +57,15 @@ public class GameFlowManager : MonoBehaviour
             Debug.LogError("CombatManager not assigned in GameFlowManager");
         }
 
+        //Startup order: build the squad, load the save onto it, then enter the Hub.
+        //Load needs the roster to exist (it matches characters by id), and EnterHub's restore and heal
+        //must run after it: launch always lands at the Hub, which is a full restore.
+        if (SquadManager.Instance.GetSquad().Count == 0)
+            CharacterCreationManager.Instance.StartNewGame();
+
+        if (campaignManager != null)
+            campaignManager.LoadSaveIfPresent();
+
         EnterHub();
     }
 
@@ -118,6 +127,7 @@ public class GameFlowManager : MonoBehaviour
         if (combatManager != null)
         {
             var playerUnits = SquadManager.Instance.CreateCombatUnits();
+            SquadManager.Instance.SetLiveCombatUnits(playerUnits);
             //Training encounters live on no campaign planet; tier 1 without the lookup warning
             int planetTier = selectedEncounter.isTraining
                 ? 1
@@ -140,7 +150,11 @@ public class GameFlowManager : MonoBehaviour
                 enemyUnits = EnemyFactory.CreateGroup(EnemyIds.BasicDrone, selectedEncounter.enemyCount, 1, planetTier);
             }
 
-            combatManager.StartCombat(selectedEncounter, playerUnits, enemyUnits, surpriseRound);
+            //Exploration stealth is the only surprise source so far, and it is always the squad's.
+            //DEFERRED: enemy ambushes (SurpriseSide.Enemies) need an encounter-level source when the first one is authored.
+            var surpriseSide = surpriseRound ? CombatManager.SurpriseSide.Squad : CombatManager.SurpriseSide.None;
+
+            combatManager.StartCombat(selectedEncounter, playerUnits, enemyUnits, surpriseSide);
         }
         else
         {

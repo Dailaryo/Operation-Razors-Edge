@@ -3,9 +3,10 @@ using UnityEngine;
 
 public static class ActionIds
 {
+    //Default action list for every unit (action bar and AI). Move is not listed: movement is grid-driven
+    //(tile clicks / EnemyPlanner.GenerateMoveOptions) and uses ActionDatabase.Definitions[Move] directly.
     public static readonly List<string> Universal = new List<string>
 {
-    Move,
     FightingDefensively,
     TotalDefense,
     UseConsumable,
@@ -17,6 +18,7 @@ public static class ActionIds
     public const string RangedAttack = "RangedAttack";
     public const string FightingDefensively = "FightingDefensively";
     public const string TotalDefense = "TotalDefense";
+    public const string PowerAttack = "PowerAttack";
     public const string Move = "Move";
     public const string Feint = "Feint";
     public const string AcrobaticMovement = "AcrobaticMovement";

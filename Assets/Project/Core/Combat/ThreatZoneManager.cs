@@ -70,11 +70,18 @@ public static class ThreatZoneManager
     {
         HashSet<Vector2Int> result = new HashSet<Vector2Int>();
 
+        //Training targets (Static / Mindless) never act, so they threaten nothing and make no OAs
+        if (unit.isInvulnerableTarget) return result;
+
         //A unit with no melee action available threatens nothing
         bool hasMeleeAction = unit.GetAllActions()
             .Exists(a => a.attackType == ActionDefinition.AttackType.Melee);
 
         if (!hasMeleeAction) return result;
+
+        //Unarmed without Combat Martial Arts threatens nothing, so no OAs (d20).
+        //DEFERRED until weapons are implemented: every pregen is unarmed today, so enabling this would remove most squad OAs
+        //if (!unit.CanThreatenUnarmed()) return result;
 
         //Get reach profile, fall back to default if no CharacterData
         ReachProfile reach = unit.sourceCharacterData != null

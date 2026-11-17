@@ -31,7 +31,7 @@ public static class TriggerPower
         int dc = GetDC(power);
         bool success = total >= dc;
 
-        CombatLog.Add($"{unit.unitName} Trigger Power ({power.actionID}): {roll} + {modifier} = {total} " +
+        CombatLog.Add($"{unit.unitName} Trigger Power ({power.DisplayName}): {roll} + {modifier} = {total} " +
                       $"vs DC {dc} — {(success ? "no power points spent" : "normal cost")}");
 
         return success;

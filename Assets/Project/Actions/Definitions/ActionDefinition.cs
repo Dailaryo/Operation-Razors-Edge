@@ -98,4 +98,37 @@ public class ActionDefinition
     {
         return maxRange;
     }
+
+    //Player-facing name derived from the ID: psi_charm_person -> Charm Person, MeleeAttack -> Melee Attack
+    public string DisplayName => FormatActionName(actionID);
+
+    public static string FormatActionName(string actionId)
+    {
+        if (string.IsNullOrEmpty(actionId)) return "";
+
+        string id = actionId.StartsWith("psi_") ? actionId.Substring(4) : actionId;
+        var sb = new System.Text.StringBuilder();
+        bool capitalizeNext = true;
+
+        for (int i = 0; i < id.Length; i++)
+        {
+            char c = id[i];
+
+            if (c == '_')
+            {
+                sb.Append(' ');
+                capitalizeNext = true;
+                continue;
+            }
+
+            //Split camelCase: a capital after a lowercase letter starts a new word
+            if (char.IsUpper(c) && i > 0 && char.IsLower(id[i - 1]))
+                sb.Append(' ');
+
+            sb.Append(capitalizeNext ? char.ToUpper(c) : c);
+            capitalizeNext = false;
+        }
+
+        return sb.ToString();
+    }
 }

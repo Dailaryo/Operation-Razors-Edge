@@ -44,7 +44,6 @@ public class CharacterData
     public bool defensiveManifesting = false; //Stance: while threatened, manifest defensively (concentration
                                               //check instead of provoking). Toggle UI deferred
     public bool isEnemy = false;
-    public bool isFlatFooted = false;
     public bool IsMindless => GetAttributeScore(StatType.Cognition) < 3;
 
     public List<string> unlockedActions = new List<string>();
@@ -154,7 +153,9 @@ public class CharacterData
     public int GetCyberneticCapacity()
     {
         int enduranceMod = CharacterProgression.GetAbilityModifier(GetAttributeScore(StatType.Endurance));
-        return Mathf.Max(1, 2 + enduranceMod + cyberneticCapacityBonus);
+        //Cybertaker's +1 is read from the feat list, not accumulated, so throwaway Units (portrait cards) can't stack it
+        int cybertakerBonus = equippedFeatIds.Contains(FeatIds.Cybertaker) ? 1 : 0;
+        return Mathf.Max(1, 2 + enduranceMod + cybertakerBonus);
     }
 
     public bool HasItemEquipped(EquipmentSlot slot)

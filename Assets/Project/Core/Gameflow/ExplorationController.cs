@@ -9,6 +9,19 @@ public class ExplorationController : MonoBehaviour
 
     public bool SquadStealthMode { get; private set; } = false;
 
+    //DEBUG (dev builds): forces the squad stealth check result (P2-10). The rolls still happen and log
+    public enum DebugStealthResult { Roll, ForceSuccess, ForceFail }
+    public DebugStealthResult DebugStealthOverride { get; private set; } = DebugStealthResult.Roll;
+
+    //Called by the PlanetSide debug button: Roll -> Force Success -> Force Fail -> Roll
+    public void CycleDebugStealthOverride()
+    {
+        if (!Debug.isDebugBuild) return;
+
+        DebugStealthOverride = (DebugStealthResult)(((int)DebugStealthOverride + 1) % 3);
+        CombatLog.Add($"[Debug] Stealth approach result: {DebugStealthOverride}");
+    }
+
     void Awake()
     {
         Instance = this;
@@ -432,6 +445,13 @@ public class ExplorationController : MonoBehaviour
         }
 
         bool success = lowestTotal >= dc;
+
+        //DEBUG (dev builds): override the squad result after the real rolls are logged
+        if (Debug.isDebugBuild && DebugStealthOverride != DebugStealthResult.Roll)
+        {
+            success = DebugStealthOverride == DebugStealthResult.ForceSuccess;
+            CombatLog.Add($"[Debug] Stealth result forced: {(success ? "SUCCESS" : "FAIL")} (rolled {lowestTotal} vs DC {dc})");
+        }
 
         CombatLog.Add($"[Exploration] Squad stealth check: weakest result {lowestTotal} by {weakestLink.unitName} " +
               $"vs DC {dc} — {(success ? "SUCCESS" : "FAIL")}");

@@ -52,7 +52,7 @@ public static class MaterialComponentResolver
     {
         if (!CanPay(action, power, out string reason))
         {
-            CombatLog.Add($"{action.source.unitName} cannot pay the material component for {power.actionID}: {reason}.");
+            CombatLog.Add($"{action.source.unitName} cannot pay the material component for {power.DisplayName}: {reason}.");
             return false;
         }
 

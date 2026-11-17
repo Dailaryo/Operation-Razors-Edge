@@ -12,6 +12,8 @@ public class TurnManager
         Ended
     }
 
+    //Turn being played: 0 = surprise round, 1 = first full round (everyone acts). Advanced by
+    //CombatManager.CheckCombatEnd once a turn has resolved and combat continues.
     public int turnCount { get; private set; }
 
     public CombatState CurrentState { get; private set; }
@@ -43,9 +45,9 @@ public class TurnManager
         return CurrentState == CombatState.PlayerTurn;
     }
 
-    public void ResetTurnCount()
+    public void ResetTurnCount(bool surprisedRound = false)
     {
-        turnCount = 0;
+        turnCount = surprisedRound ? 0 : 1;
     }
 
     public void IncrementTurn()

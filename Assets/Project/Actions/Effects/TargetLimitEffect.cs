@@ -29,7 +29,7 @@ public class TargetLimitEffect : IActionEffect
         if (tooStrong || tooLarge)
         {
             if (!resolver.IsSimulation)
-                CombatLog.Add($"{target.unitName} is unaffected by {ctx.definition.actionID}.");
+                CombatLog.Add($"{target.unitName} is unaffected by {ctx.definition.DisplayName}.");
             return;
         }
 

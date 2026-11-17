@@ -10,17 +10,11 @@ public static class FeatDatabase
             {FeatIds.PowerAttack, new FeatDefinition(
                 featId: FeatIds.PowerAttack,
                 displayName: "Power Attack",
-                description: "Your strikes hit harder at the cost of precision.  Gain +3 damage on all attacks",
+                description: "Toggle each round: -1 to melee attack rolls for +2 melee damage. The trade increases by -1/+2 at BAB +4 and every 4 thereafter.",
                 category: FeatDefinition.FeatCategory.Combat,
                 tags: new List<FeatDefinition.FeatTag> {FeatDefinition.FeatTag.Melee},
                 requiredLevel: 1,
-                effectSource: new FeatEffectSource(
-                    FeatIds.PowerAttack,
-                    new List<StatusEffect>
-                    {
-                        new BonusDamageEffect(3)
-                    }
-                )
+                actionSource: new FeatActionSource(FeatIds.PowerAttack, new List<string> { ActionIds.PowerAttack })
             )},
 
             {FeatIds.PreciseShot, new FeatDefinition(
@@ -198,7 +192,7 @@ public static class FeatDatabase
             { FeatIds.Brawl, new FeatDefinition(
                 featId:      FeatIds.Brawl,
                 displayName: "Brawl",
-                description: "Training in unarmed combat upgrades your unarmed strike from 1d3 to 1d6 damage.",
+                description: "Training in unarmed combat upgrades your unarmed strike from 1d4 to 1d6 damage.",
                 category:    FeatDefinition.FeatCategory.Combat,
                 tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
                 requiredLevel: 1
@@ -217,7 +211,7 @@ public static class FeatDatabase
             { FeatIds.CombatMartialArts, new FeatDefinition(
                 featId:      FeatIds.CombatMartialArts,
                 displayName: "Combat Martial Arts",
-                description: "Your unarmed strikes add your Power modifier to damage.",
+                description: "While unarmed, you threaten nearby enemies and can make attacks of opportunity.",
                 category:    FeatDefinition.FeatCategory.Combat,
                 tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
                 requiredLevel: 1,
@@ -236,7 +230,7 @@ public static class FeatDatabase
                     FeatIds.ImprovedCombatMartialArts,
                     new List<StatusEffect>
                     {
-                        new StatBonusEffect(StatType.Accuracy, 1, FeatIds.ImprovedCombatMartialArts, StatModifier.BonusType.Untyped)
+                        new StatBonusEffect(StatType.UnarmedAccuracy, 1, FeatIds.ImprovedCombatMartialArts, StatModifier.BonusType.Untyped)
                     }
                 )
             )},
@@ -253,7 +247,7 @@ public static class FeatDatabase
                     FeatIds.AdvancedCombatMartialArts,
                     new List<StatusEffect>
                     {
-                        new StatBonusEffect(StatType.Accuracy, 1, FeatIds.AdvancedCombatMartialArts, StatModifier.BonusType.Untyped)
+                        new StatBonusEffect(StatType.UnarmedAccuracy, 1, FeatIds.AdvancedCombatMartialArts, StatModifier.BonusType.Untyped)
                     }
                 )
             )},
@@ -285,14 +279,9 @@ public static class FeatDatabase
                 category:    FeatDefinition.FeatCategory.Combat,
                 tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
                 requiredLevel: 1,
-                requiredFeatIds: new List<string> { FeatIds.ImprovedBrawl },
-                effectSource: new FeatEffectSource(
-                    FeatIds.ImprovedGrapple,
-                    new List<StatusEffect>
-                    {
-                        new StatBonusEffect(StatType.MeleePower, 4, FeatIds.ImprovedGrapple, StatModifier.BonusType.Untyped)
-                    }
-                )
+                requiredFeatIds: new List<string> { FeatIds.ImprovedBrawl }
+                //Deferred: +4 on grapple checks, applied when grapple is implemented.
+                //Not a MeleePower bonus: MeleePower feeds melee damage (Unit.GetDerivedStat)
             )},
 
             { FeatIds.Streetfighting, new FeatDefinition(

@@ -3,6 +3,11 @@ using System.Collections.Generic;
 
 public static class CharacterFactory
 {
+    // Per-unit build detail logs ("Built player unit" summary and Unit.Apply* "Applied ..." lines).
+    // Off by default: ~8-10 lines per unit on every rebuild. Turn on to debug character construction.
+    // Build warnings are not affected.
+    public static bool LogBuildDetails = false;
+
     //Builds a fully initialized player Unit from a SquadRuntime
     //This is the primary construction path for player characters
     public static Unit CreatePlayerUnit(SquadRuntime runtime)
@@ -51,12 +56,13 @@ public static class CharacterFactory
         data.reachProfile = ReachProfile.DeriveFrom(data);
         unit.sizeCategory = data.size;
 
-        Debug.Log($"[CharacterFactory] Built player unit: {unit.unitName} " +
-            $"| Species {data.speciesId} " +
-            $"| Class: {data.classId} " +
-            $"| Background: {data.backgroundId} " +
-            $"| Level: {data.level} " +
-            $"| Items: {data.equippedItemIds.Count}");
+        if (LogBuildDetails)
+            Debug.Log($"[CharacterFactory] Built player unit: {unit.unitName} " +
+                $"| Species {data.speciesId} " +
+                $"| Class: {data.classId} " +
+                $"| Background: {data.backgroundId} " +
+                $"| Level: {data.level} " +
+                $"| Items: {data.equippedItemIds.Count}");
 
         return unit;
     }

@@ -24,6 +24,7 @@ public static class EnemyFactory
         ThreatZoneManager.RegisterUnit(unit);
         unit.xpValue = scaled.xpValue;
         unit.isInvulnerableTarget = def.isInvulnerableTarget; //D6-B; set here so both pipelines get it
+        unit.usesDyingRules = def.usesDyingRules;             //set here so both pipelines get it
         unit.attackPattern = def.attackPattern;               //D4; shared, read-only reference to the authored list
 
         Debug.Log($"[EnemyFactory] Built enemy: {unit.unitName} " +

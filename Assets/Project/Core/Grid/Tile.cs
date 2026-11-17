@@ -7,8 +7,16 @@ public class Tile : MonoBehaviour
     Color baseColor;
     Color hoverColor = Color.yellow;
 
+    //How strongly location highlights (move, range, threat, planned move, LoS) tint the terrain colour. 0 = terrain only, 1 = solid highlight
+    [SerializeField, Range(0f, 1f)] float locationTint = 0.45f;
+
     TileHighlightType baseHighlight = TileHighlightType.None;
     TileHighlightType overlayHighlight = TileHighlightType.None;
+
+    //Active field zone (Deploy Field): tints the terrain under every other highlight
+    bool inFieldZone = false;
+    [SerializeField] Color fieldZoneColor = new Color(0.3f, 0.3f, 0.75f);
+    [SerializeField, Range(0f, 1f)] float fieldZoneTint = 0.5f;
 
     public Vector2Int gridPosition;
 
@@ -22,7 +30,9 @@ public class Tile : MonoBehaviour
         ValidTarget,
         InRange,
         LoSBlocked,
-        Threatened
+        Threatened,
+        PlannedMove,
+        GroundTarget //ground-targeted action range (Deploy Field): tinted, selectable, units drawn on top
     }
 
     private Color terrainColor;
@@ -30,7 +40,8 @@ public class Tile : MonoBehaviour
     public bool IsSelectable()
     {
         return baseHighlight == TileHighlightType.MoveValid
-            || baseHighlight == TileHighlightType.ValidTarget;
+            || baseHighlight == TileHighlightType.ValidTarget
+            || baseHighlight == TileHighlightType.GroundTarget;
     }
 
     void Awake()
@@ -65,46 +76,65 @@ public class Tile : MonoBehaviour
             ? overlayHighlight
             : baseHighlight;
 
-        switch (finalType)
+        //Active field zones tint the ground; every location highlight blends over that
+        Color ground = inFieldZone
+            ? Color.Lerp(terrainColor, fieldZoneColor, fieldZoneTint)
+            : terrainColor;
+
+        if (finalType == TileHighlightType.None)
         {
-            case TileHighlightType.None:
-                rend.material.color = terrainColor;
-                break;
-
-            case TileHighlightType.MoveValid:
-                rend.material.color = Color.cyan;
-                break;
-
-            case TileHighlightType.Hover:
-                rend.material.color = Color.yellow;
-                break;
-
-            case TileHighlightType.Ally:
-                rend.material.color = Color.green;
-                break;
-
-            case TileHighlightType.Enemy:
-                rend.material.color = Color.red;
-                break;
-
-            case TileHighlightType.ValidTarget:
-                rend.material.color = Color.magenta;
-                break;
-
-            case TileHighlightType.InRange:
-                rend.material.color = Color.blue;
-                break;
-
-            case TileHighlightType.LoSBlocked:
-                rend.material.color = Color.black;
-                break;
-
-            case TileHighlightType.Threatened:
-                rend.material.color = Color.orangeRed;
-                break;
+            rend.material.color = ground;
+            return;
         }
 
-        ////Debug.Log($"Tile {gridPosition} | Base: {baseHighlight} | Overlay: {overlayHighlight}");
+        Color highlight = GetHighlightColor(finalType);
+
+        //Location highlights tint the ground so it stays readable underneath; unit and cursor highlights stay solid
+        rend.material.color = IsLocationHighlight(finalType)
+            ? Color.Lerp(ground, highlight, locationTint)
+            : highlight;
+    }
+
+    public void SetFieldZone(bool inZone)
+    {
+        if (inFieldZone == inZone) return;
+        inFieldZone = inZone;
+        ApplyHighlight();
+    }
+
+    static bool IsLocationHighlight(TileHighlightType type)
+    {
+        switch (type)
+        {
+            case TileHighlightType.MoveValid:
+            case TileHighlightType.InRange:
+            case TileHighlightType.Threatened:
+            case TileHighlightType.PlannedMove:
+            case TileHighlightType.LoSBlocked:
+            case TileHighlightType.GroundTarget:
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    static Color GetHighlightColor(TileHighlightType type)
+    {
+        switch (type)
+        {
+            case TileHighlightType.MoveValid: return Color.cyan;
+            case TileHighlightType.Hover: return Color.yellow;
+            case TileHighlightType.Ally: return Color.green;
+            case TileHighlightType.Enemy: return Color.red;
+            case TileHighlightType.ValidTarget: return Color.magenta;
+            case TileHighlightType.InRange: return Color.blue;
+            case TileHighlightType.LoSBlocked: return Color.black;
+            case TileHighlightType.Threatened: return Color.orange;
+            case TileHighlightType.PlannedMove: return new Color(0.2f, 0.6f, 0.45f); //darker "ghost" green: where an ally will be
+            case TileHighlightType.GroundTarget: return Color.magenta;
+            default: return Color.white;
+        }
     }
 
     public void SetTerrainColor(TileData.TerrainType terrain)
@@ -128,9 +158,8 @@ public class Tile : MonoBehaviour
                 break;
         }
 
-        //Only apply immediately if no highlight is active
-        if (baseHighlight == TileHighlightType.None && overlayHighlight == TileHighlightType.None)
-            rend.material.color = terrainColor;
+        //Repaint with the current highlight (tinted highlights blend over the new terrain colour)
+        ApplyHighlight();
     }
 
     public TileHighlightType GetBaseHighlight()

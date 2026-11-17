@@ -11,6 +11,7 @@ public class SquadManager : MonoBehaviour
 
     private List<CharacterData> squad = new List<CharacterData>();
     private List<SquadRuntime> runtimeSquad = new List<SquadRuntime>();
+    private List<Unit> liveCombatUnits = new List<Unit>(); //Set by GameFlowManager.StartCombat
 
     void Awake()
     {
@@ -66,6 +67,39 @@ public class SquadManager : MonoBehaviour
                 }
             }
         }
+
+        liveCombatUnits.Clear(); //combat is over; cards fall back to runtime damage
+    }
+
+    //Squad's combat Units for the encounter in progress, so cards can show live HP.  Cleared when combat ends
+    public void SetLiveCombatUnits(List<Unit> units)
+    {
+        liveCombatUnits = new List<Unit>(units);
+    }
+
+    //Current and max HP as the squad stands right now: the live combat Unit during combat,
+    //otherwise this deployment's runtime damage, otherwise the character data (Hub: full HP)
+    public void GetCurrentHP(CharacterData character, out int current, out int max)
+    {
+        Unit live = liveCombatUnits.Find(unit => unit.sourceCharacterData == character);
+        if (live != null)
+        {
+            current = live.currentHP;
+            max = live.GetMaxHP();
+            return;
+        }
+
+        Unit temp = CharacterFactory.CreatePlayerUnit(character);
+        max = temp.GetMaxHP();
+
+        var runtime = runtimeSquad.Find(r => r.source == character);
+        current = runtime != null ? max - runtime.hpDamage : temp.currentHP;
+    }
+
+    //The live combat Unit for this character during combat; null outside combat
+    public Unit GetLiveUnit(CharacterData character)
+    {
+        return liveCombatUnits.Find(unit => unit.sourceCharacterData == character);
     }
 
     //Called when returning to hub
@@ -247,7 +281,7 @@ public class SquadManager : MonoBehaviour
         CombatLog.Add("[SquadManager] Squad snapshots committed.");
     }
 
-    public void SetIncapacitated(Unit unit, bool rollback = true)
+    public void SetIncapacitated(Unit unit, bool rollback = true, bool downAtEncounterEnd = false)
     {
         var runtime = runtimeSquad.Find(r => r.source == unit.sourceCharacterData);
 
@@ -260,6 +294,7 @@ public class SquadManager : MonoBehaviour
         runtime.isIncapacitated = true;
         runtime.source.isIncapacitated = true;
         runtime.source.incapacitatedWithoutRollback = !rollback;
+        runtime.downAtEncounterEnd = downAtEncounterEnd;
 
         UpdateSquadInventoryCapacity();
 
@@ -287,6 +322,7 @@ public class SquadManager : MonoBehaviour
             runtime.isIncapacitated = false;
             runtime.source.isIncapacitated = false;
             runtime.source.incapacitatedWithoutRollback = false;
+            runtime.downAtEncounterEnd = false;
             runtime.hpDamage = runtime.source.hpDamage;
 
             UpdateSquadInventoryCapacity();
@@ -341,6 +377,64 @@ public class SquadManager : MonoBehaviour
         CreateRuntimeSquad();
 
         CombatLog.Add($"[Debug] Squad rebuilt to level {targetLevel}.");
+    }
+
+    //DEBUG: grants XP to every squad member through the normal GainXP path, so level-ups set levelUpPending
+    //and the card's Level Up buttons appear.  Works outside the Hub (PlanetSide Debug control)
+    public void DebugGrantXP(int amount)
+    {
+        if (!Debug.isDebugBuild) return;
+
+        GrantXPToSquad(amount);
+
+        foreach (var character in squad)
+            character.NotifyChanged(); //cards rebind: level/class line and the Level Up button
+
+        if (GameFlowManager.Instance != null)
+            GameFlowManager.Instance.CheckLevelUpPending();
+
+        CombatLog.Add($"[Debug] Granted {amount} XP to the squad");
+    }
+
+    //DEBUG (Training): a full rest without returning to the Hub. Every member still in the squad goes to full HP,
+    //power points and free 0-level uses, and loses carried "until Hub" effects; stored-PP items recharge.
+    //Incapacitated members (dead, or removed by Microcosm-like effects) are untouched: only the Hub restores them.
+    //Class resources (Cybernetic Power, Ability Surge) and per-combat uses already refill at combat start
+    public void DebugRestoreSquad()
+    {
+        if (!Debug.isDebugBuild) return;
+
+        int restored = 0;
+        int skipped = 0;
+
+        foreach (var runtime in runtimeSquad)
+        {
+            if (runtime.isIncapacitated && !runtime.downAtEncounterEnd)
+            {
+                skipped++;
+                continue;
+            }
+
+            //Down but alive at the end of the last encounter: back in the squad
+            if (runtime.isIncapacitated)
+            {
+                runtime.isIncapacitated = false;
+                runtime.source.isIncapacitated = false;
+                runtime.source.incapacitatedWithoutRollback = false;
+                runtime.downAtEncounterEnd = false;
+            }
+
+            runtime.HealToFull();
+            runtime.source.NotifyChanged(); //cards rebind to the new HP and drop the incapacitated tag
+            restored++;
+        }
+
+        UpdateSquadInventoryCapacity(); //returning members count toward field capacity again
+
+        RechargeStoredPowerPoints();
+
+        CombatLog.Add($"[Debug] Restore Squad: {restored} restored to full" +
+                      (skipped > 0 ? $", {skipped} incapacitated left as they are." : "."));
     }
 
     public void AddCredits(int amount)

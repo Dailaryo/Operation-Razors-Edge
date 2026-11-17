@@ -15,7 +15,11 @@ public class DreadnoughtKnockdownEffect : StatusEffect
         // Only fires on melee attacks that dealt damage
         if (ctx.definition.attackType != ActionDefinition.AttackType.Melee) return;
         if (!ctx.shouldApplyDamage) return;
-        if (ctx.attacker != Target) return;
+
+        //Class passives live in effectSources, so Target is never set: check the attacker's passives instead
+        if (ctx.attacker.sourceCharacterData == null ||
+            !ctx.attacker.sourceCharacterData.unlockedPassiveIds.Contains(PassiveIds.DreadnoughtKnockdown)) return;
+
         if (ctx.finalTarget == null || ctx.finalTarget.IsDead()) return;
         if (ctx.modifiedDamage <= 0) return;
 

@@ -41,11 +41,8 @@ public static class ActionDatabase
                 effects: new List<IActionEffect>
                 {
                     new DamageEffect(),
-                    new ScalingDamageEffect()
                 },
-                attackType: ActionDefinition.AttackType.Ranged,
-                scalingStat: StatType.Accuracy,
-                scalingMultiplier : 1f
+                attackType: ActionDefinition.AttackType.Ranged
             )},
 
             //MOVE
@@ -79,12 +76,32 @@ public static class ActionDatabase
                 category: ActionDefinition.ActionCategory.Free,
                 effects: new List<IActionEffect>
                 {
+                    //d20: +2 dodge to Defense and -4 on attack rolls this round
                     new ApplySelfStatusEffectEffect(unit =>
-                        new DefenseBuffEffect(0.25f, 1)) // placeholder tuning
+                        new TimedStatModifierEffect("Fighting Defensively", 1,
+                            new StatModifier(StatType.Defense, 2, 1f, "Fighting Defensively", StatModifier.BonusType.Dodge),
+                            new StatModifier(StatType.Accuracy, -4, 1f, "Fighting Defensively", StatModifier.BonusType.Untyped)))
                 },
                 attackType: ActionDefinition.AttackType.None
             )},
-
+            
+            //POWER ATTACK (toggle, melee only): Pathfinder -1 attack / +2 damage, rising every 4 BAB
+            { ActionIds.PowerAttack, new ActionDefinition(
+                ActionIds.PowerAttack,
+                TargetType.None,
+                false,
+                0,
+                0,
+                cooldown: 0,
+                dealsDamage: false,
+                targetingMode: ActionDefinition.TargetingMode.None,
+                category: ActionDefinition.ActionCategory.Free,
+                effects: new List<IActionEffect>
+                {
+                    new ApplySelfStatusEffectEffect(unit => new PowerAttackEffect(PowerAttackEffect.GetPenalty(unit)))
+                },
+                attackType: ActionDefinition.AttackType.None
+            )},
             //TOTAL DEFENSE (FULL ACTION)
             { ActionIds.TotalDefense, new ActionDefinition(
                 ActionIds.TotalDefense,
@@ -103,8 +120,11 @@ public static class ActionDatabase
                 },
                 effects: new List<IActionEffect>
                 {
+                    //d20: +4 dodge to Defense this round. Kept as a full-round action (Standard + Move): no attacks, no movement
+                    //DEFERRED (Pathfinder): no attacks of opportunity while in total defense; can't combine with Fighting Defensively
                     new ApplySelfStatusEffectEffect(unit =>
-                        new DefenseBuffEffect(0.75f, 1)) // stronger than defensive // placeholder tuning
+                        new TimedStatModifierEffect("Total Defense", 1,
+                            new StatModifier(StatType.Defense, 4, 1f, "Total Defense", StatModifier.BonusType.Dodge)))
                 },
                 attackType: ActionDefinition.AttackType.None
             )},

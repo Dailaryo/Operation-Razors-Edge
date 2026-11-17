@@ -4,6 +4,9 @@ public class SystemOverrideEffect : IActionEffect
 {
     public void Execute(ActionContext ctx, CombatResolver resolver)
     {
+        //Rolls and results happen once, in the execution phase; planning replays (move highlights, validation) skip them
+        if (resolver.IsSimulation) return;
+
         if (ctx.finalTarget == null) return;
 
         // Compute defender's Focus save as the opposed DC

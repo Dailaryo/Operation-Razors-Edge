@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.EventSystems;
 using static Tile;
 
 public class TileHighlighter : MonoBehaviour
@@ -13,6 +14,13 @@ public class TileHighlighter : MonoBehaviour
 
     void Update()
     {
+        //Pointer over the action bar, log or any other UI: no hover, click or cancel reaches the grid
+        if (IsPointerOverUI())
+        {
+            ClearCurrent();
+            return;
+        }
+
         HandleHover();
 
         if (Input.GetMouseButtonDown(0))
@@ -25,6 +33,12 @@ public class TileHighlighter : MonoBehaviour
         {
             CancelTargeting();
         }
+    }
+
+    //Same check CameraController uses
+    bool IsPointerOverUI()
+    {
+        return EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
     }
 
     void HandleHover()

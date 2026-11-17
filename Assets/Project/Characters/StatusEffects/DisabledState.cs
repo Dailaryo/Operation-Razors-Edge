@@ -10,7 +10,7 @@ public class DisabledState : StatusEffect
     public override void OnApply(Unit unit)
     {
         base.OnApply(unit);
-        CombatLog.Add($"{unit.unitName} is disabled (0 HP). One action per turn only.");
+        CombatLog.Add($"{unit.unitName} is disabled (0 HP): one move or standard action per round, half speed. A standard action costs 1 HP.");
     }
 
     public override void OnTurnEnd(Unit unit)

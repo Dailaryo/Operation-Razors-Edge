@@ -7,6 +7,17 @@ public class StatusEffect
     public int duration;
 
     public bool isPersistent = false;
+
+    //Granted by a feat or passive rather than an action; hidden from the unit label
+    public bool isPassive = false;
+
+    //Fresh copy for one unit. Database feat effects are single shared instances, and effects that keep state
+    //(Resilience's once-per-combat flag, Target) must not be shared between units, including throwaway portrait Units
+    public StatusEffect CreateInstance()
+    {
+        return (StatusEffect)MemberwiseClone();
+    }
+
     public int sourceLevel = 0;
 
     //Number of ConcentrationEffects currently holding this effect open
@@ -109,6 +120,9 @@ public class StatusEffect
 
     //True if the bearer moves at half speed (Slowed, Synesthesia). Halving never stacks
     public virtual bool HalvesSpeed => false;
+
+    //True if the bearer acts in every surprise round, whichever side gained surprise
+    public virtual bool ActsInSurpriseRound => false;
 
     //DC of a concentration check the bearer must pass to manifest this power; 0 = none (Synesthesia)
     public virtual int GetManifestConcentrationDC(Unit owner, PsionicPowerDefinition power) => 0;

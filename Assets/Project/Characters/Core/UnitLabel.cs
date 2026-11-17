@@ -62,16 +62,11 @@ public class UnitLabel : MonoBehaviour
     {
         if (unit == null) return;
 
-        if (unit.activeEffects.Count == 0)
-        {
-            effectsText.text = "";
-            return;
-        }
-
         string text = "";
 
         foreach (var effect in unit.activeEffects)
         {
+            if (effect.isPassive) continue; //feats and passives aren't conditions
             text += effect.effectName + "\n";
         }
 

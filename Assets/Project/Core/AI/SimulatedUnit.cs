@@ -10,7 +10,7 @@ public class SimulatedUnit
 
     public int moveSpeedBonus = 0; //Planning-only speed bonus from earlier planned actions (Burst on self)
 
-    public bool isDead => currentHP <= 0; //Any log message referencing a simulated unit will need to refer back to the source
+    public bool isDead => source.removedFromEncounter || currentHP <= source.GetDeathThreshold(); //Matches Unit.IsDead(): Disabled/Dying units are still on the board
 
     public SimulatedUnit(Unit unit)
     {

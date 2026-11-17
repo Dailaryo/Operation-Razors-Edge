@@ -14,6 +14,7 @@ public static class FieldZoneManager
         activeZones.Add(zone);
         GridManager.Instance.RegisterZone(zoneId, zone.GetTiles());
         CombatLog.Add($"Field zone placed at {center} for {duration} turns.");
+        RefreshVisuals();
     }
 
     public static void ProcessEndPhase(List<Unit> allUnits)
@@ -42,6 +43,7 @@ public static class FieldZoneManager
             {
                 CombatLog.Add($"Field zone at {zone.center} has expired.");
                 activeZones.RemoveAt(i);
+                RefreshVisuals();
             }
         }
     }
@@ -61,5 +63,13 @@ public static class FieldZoneManager
     {
         activeZones.Clear();
         nextZoneIndex = 0;
+        RefreshVisuals();
+    }
+
+    //Repaint zone tiles (view only; zones themselves are pure data)
+    static void RefreshVisuals()
+    {
+        if (GridHighlighter.Instance != null)
+            GridHighlighter.Instance.RefreshFieldZones();
     }
 }

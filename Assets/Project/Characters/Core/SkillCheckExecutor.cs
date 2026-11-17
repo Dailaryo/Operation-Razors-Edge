@@ -103,7 +103,9 @@ public static class SkillCheckExecutor
         }
 
         //Step 7: Log
-        if (context.callerContext == SkillCheckContext.CallerContext.Combat)
+                //Combat and medical checks both happen mid-encounter: show the roll, then the effect's own outcome line follows
+        if (context.callerContext == SkillCheckContext.CallerContext.Combat
+            || context.callerContext == SkillCheckContext.CallerContext.Medical)
         {
             string logLine;
             var tieredEntry = skillCheck.tiers.Find(t => t.tier == result.tier);

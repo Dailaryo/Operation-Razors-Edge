@@ -196,8 +196,8 @@ public static class EncounterDatabase
                 )
             }},
 
-            // TR-05 Firing Line: LoS, door / window edges, Break Window, Hide, detection, stealth approach.
-            // Authored Marksman spawn tiles come with the enemy_spawn zone in Step 2.3; default East-edge placement until then.
+            // TR-05 Firing Line: range bands, line of sight, Hide, detection, stealth approach. Open 10x8 map;
+            // walls, doors and windows are descoped until edges have visual indicators (TestRoom keeps them for later).
             { EncounterIds.TrainingFiringLine, new EncounterData(
                 EncounterIds.TrainingFiringLine,
                 "TR-05 Firing Line",
@@ -206,7 +206,7 @@ public static class EncounterDatabase
             )
             {
                 isTraining = true,
-                mapId = MapIds.TestRoom,
+                mapId = MapIds.FiringLine,
                 enemyTypeName = "Marksmen",
                 primaryObjective = new ObjectiveDefinition(
                     objectiveId: "training_firing_line_primary",
@@ -283,7 +283,7 @@ public static class EncounterDatabase
                     new EscalationWaveDefinition(
                         waveId: "training_escalation_wave_turn",
                         trigger: EscalationWaveDefinition.TriggerCondition.TurnBased,
-                        triggerValue: 1, //turnCount is 0 during round 1, so this fires at the end of round 2
+                        triggerValue: 2, //TurnBased fires in the end phase of this turn: end of Turn 2
                         enemies: new List<EscalationWaveDefinition.EnemySpawnEntry>
                         {
                             new EscalationWaveDefinition.EnemySpawnEntry(EnemyIds.TrainingStriker, 2)

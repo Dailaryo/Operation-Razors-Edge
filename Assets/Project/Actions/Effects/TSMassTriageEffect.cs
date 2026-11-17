@@ -8,6 +8,9 @@ public class TSMassTriageEffect : IActionEffect
 
     public void Execute(ActionContext ctx, CombatResolver resolver)
     {
+        //Rolls and results happen once, in the execution phase; planning replays (move highlights, validation) skip them
+        if (resolver.IsSimulation) return;
+
         if (ctx.attacker == null) return;
 
         // Requires a medkit

@@ -1,6 +1,8 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
+using UnityEngine.Serialization;
 
 public class CharacterDetailPanel : MonoBehaviour
 {
@@ -28,8 +30,9 @@ public class CharacterDetailPanel : MonoBehaviour
     [Header("Feats")]
     [SerializeField] private TMP_Text featsText;
 
-    [Header("Status Effects")]
-    [SerializeField] private TMP_Text statusEffectsText;
+    [Header("Traits & Features")]
+    [FormerlySerializedAs("statusEffectsText")]
+    [SerializeField] private TMP_Text featuresText;
 
     [Header("Navigation")]
     [SerializeField] private Button backButton;
@@ -87,8 +90,11 @@ public class CharacterDetailPanel : MonoBehaviour
         if (speciesBackgroundText != null)
             speciesBackgroundText.text = $"{SpeciesName(character.speciesId)} / {BackgroundName(character.backgroundId)}";
 
-        if (hpText != null)
-            hpText.text = $"HP: {tempUnit.currentHP} / {tempUnit.GetMaxHP()}";
+        if (hpText != null && SquadManager.Instance != null)
+        {
+            SquadManager.Instance.GetCurrentHP(character, out int currentHP, out int maxHP);
+            hpText.text = $"HP: {currentHP} / {maxHP}";
+        }
 
         // Attributes block
         if (attributesText != null)
@@ -115,21 +121,34 @@ public class CharacterDetailPanel : MonoBehaviour
                 $"Initiative: {Signed(tempUnit.GetDerivedStat(StatType.Initiative))}";
         }
 
-        // Skills
+        // Skills: total modifier (the value checks use) and governing attribute. Lists ranked skills, plus unranked
+        // skills that carry a bonus (background pick, species trait) so those bonuses can be checked
         if (skillsText != null)
         {
-            var lines = new System.Collections.Generic.List<string>();
+            var lines = new List<string>();
 
             foreach (SkillType skill in System.Enum.GetValues(typeof(SkillType)))
             {
                 if (!SkillResolver.IsSkillAvailable(character, skill)) continue;
 
                 character.skillRanks.TryGetValue(skill, out int ranks);
-                if (ranks == 0) continue;
+                int miscBonus = tempUnit.GetSkillModifierBonus(SkillResolver.GetSkillStatType(skill));
+                if (ranks == 0 && miscBonus == 0) continue;
 
-                bool isClassSkill = character.classSkills.Contains(skill);
-                string classTag = isClassSkill ? " (Class)" : "";
-                lines.Add($"{skill}{classTag}: {ranks} ranks");
+                var skillDef = SkillDatabase.Get(skill.ToString());
+                string skillName = skillDef != null ? skillDef.displayName : skill.ToString();
+                string attr = skillDef != null ? AttributeAbbreviation(skillDef.governingAttribute) : "?";
+                string tags = character.classSkills.Contains(skill) ? $"{attr}, Class" : attr;
+
+                string value;
+                if (ranks > 0)
+                    value = $"{Signed(SkillResolver.GetSkillTotal(tempUnit, skill))} ({ranks} {(ranks == 1 ? "rank" : "ranks")})";
+                else if (skillDef != null && skillDef.trainedOnly)
+                    value = "trained only";
+                else
+                    value = $"{Signed(SkillResolver.GetSkillTotal(tempUnit, skill))} (untrained)";
+
+                lines.Add($"{skillName} ({tags}): {value}");
             }
 
             skillsText.text = lines.Count > 0 ? string.Join("\n", lines) : "No ranks assigned";
@@ -138,7 +157,7 @@ public class CharacterDetailPanel : MonoBehaviour
         // Feats
         if (featsText != null)
         {
-            var lines = new System.Collections.Generic.List<string>();
+            var lines = new List<string>();
             foreach (var featId in character.equippedFeatIds)
             {
                 var feat = FeatDatabase.Get(featId);
@@ -147,9 +166,10 @@ public class CharacterDetailPanel : MonoBehaviour
             featsText.text = lines.Count > 0 ? string.Join("\n", lines) : "No feats";
         }
 
-        // Status effects — not available without a live Unit; show placeholder
-        if (statusEffectsText != null)
-            statusEffectsText.text = "Status effects visible during combat";
+        // Traits & features: species traits, class features (passives) and background picks.
+        // Names only; full descriptions wait for tooltips
+        if (featuresText != null)
+            featuresText.text = BuildFeaturesText(character);
     }
 
     void OnBackPressed()
@@ -181,6 +201,99 @@ public class CharacterDetailPanel : MonoBehaviour
     {
         if (string.IsNullOrEmpty(id)) return "No background";
         var def = BackgroundDatabase.Get(id);
+        return def != null ? def.displayName : id;
+    }
+    static string AttributeAbbreviation(StatType attribute)
+    {
+        switch (attribute)
+        {
+            case StatType.Power: return "POW";
+            case StatType.Agility: return "AGI";
+            case StatType.Endurance: return "END";
+            case StatType.Cognition: return "COG";
+            case StatType.Insight: return "INS";
+            case StatType.Presence: return "PRE";
+            default: return attribute.ToString();
+        }
+    }
+
+    static string BuildFeaturesText(CharacterData character)
+    {
+        var sections = new List<string>();
+
+        var species = string.IsNullOrEmpty(character.speciesId) ? null : SpeciesDatabase.Get(character.speciesId);
+        if (species != null && species.passiveIds.Count > 0)
+            sections.Add($"{species.displayName} traits: {PassiveNames(species.passiveIds)}");
+
+        //Class level-table passives (and path passives); species passives aren't stored here
+        if (character.unlockedPassiveIds.Count > 0)
+            sections.Add($"{ClassName(character.classId)} features: {PassiveNames(character.unlockedPassiveIds)}");
+
+        //Choice picks that grant no passive (SkillMastery, paths)
+        sections.AddRange(ChoiceSelections(character));
+
+        var background = string.IsNullOrEmpty(character.backgroundId) ? null : BackgroundDatabase.Get(character.backgroundId);
+        if (background != null)
+        {
+            var skills = new List<string>();
+            foreach (var skill in character.backgroundSkillChoices)
+            {
+                var def = SkillDatabase.Get(skill.ToString());
+                skills.Add(def != null ? def.displayName : skill.ToString());
+            }
+
+            string feat = string.IsNullOrEmpty(character.backgroundFeatChoice) ? "none" : FeatName(character.backgroundFeatChoice);
+            string skillList = skills.Count > 0 ? string.Join(", ", skills) : "none";
+            sections.Add($"{background.displayName} background: {feat}; {skillList}");
+        }
+
+        return sections.Count > 0 ? string.Join("\n", sections) : "No traits or features";
+    }
+
+    static string PassiveNames(List<string> ids)
+    {
+        var names = new List<string>();
+        foreach (var id in ids)
+        {
+            var def = PassiveDatabase.Get(id);
+            names.Add(def != null ? def.displayName : id);
+        }
+        return string.Join(", ", names);
+    }
+
+    //Choice-node picks that grant no passive (Skill Mastery skills, path picks);
+    //options that unlock passives are already listed under class features
+    static List<string> ChoiceSelections(CharacterData character)
+    {
+        var picksByNode = new Dictionary<string, List<string>>();
+        var nodeOrder = new List<string>();
+
+        foreach (var node in ChoiceNodeDatabase.Definitions.Values)
+        {
+            foreach (var option in node.options)
+            {
+                if (!character.takenChoiceOptionIds.Contains(option.optionId)) continue;
+                if (option.passiveUnlockIds.Count > 0) continue;
+
+                if (!picksByNode.TryGetValue(node.displayName, out var picks))
+                {
+                    picks = new List<string>();
+                    picksByNode[node.displayName] = picks;
+                    nodeOrder.Add(node.displayName);
+                }
+                picks.Add(option.displayName);
+            }
+        }
+
+        var sections = new List<string>();
+        foreach (var nodeName in nodeOrder)
+            sections.Add($"{nodeName}: {string.Join(", ", picksByNode[nodeName])}");
+        return sections;
+    }
+
+    static string FeatName(string id)
+    {
+        var def = FeatDatabase.Get(id);
         return def != null ? def.displayName : id;
     }
 

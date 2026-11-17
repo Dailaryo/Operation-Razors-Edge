@@ -8,7 +8,7 @@ public class KillTargetEffect : IActionEffect
         if (ctx.finalTarget == null || resolver.IsUnitDead(ctx.finalTarget)) return;
 
         if (!resolver.IsSimulation)
-            CombatLog.Add($"{ctx.finalTarget.unitName} succumbs to {ctx.definition.actionID}.");
+            CombatLog.Add($"{ctx.finalTarget.unitName} succumbs to {ctx.definition.DisplayName}.");
 
         resolver.KillUnit(ctx.finalTarget);
     }

@@ -28,7 +28,7 @@ public static class PsionicSaveResolver
 
         if (target.IsImmuneTo(descriptors, sourceLevel, consume: !resolver.IsSimulation))
         {
-            if (log) CombatLog.Add($"{target.unitName} is immune to {power.actionID}.");
+            if (log) CombatLog.Add($"{target.unitName} is immune to {power.DisplayName}.");
             return PsionicSaveOutcome.Immune;
         }
 
@@ -43,7 +43,7 @@ public static class PsionicSaveResolver
         bool saved = natural == 20 || (natural != 1 && total >= dc);
 
         if (log)
-            CombatLog.Add($"{target.unitName} {power.saveType.Value} save vs {power.actionID}: " +
+            CombatLog.Add($"{target.unitName} {power.saveType.Value} save vs {power.DisplayName}: " +
                           $"{total} (nat {natural}) vs DC {dc} — {(saved ? "Saved" : "Failed")}");
 
         if (!saved && !resolver.IsSimulation)
@@ -51,7 +51,7 @@ public static class PsionicSaveResolver
 
         if (saved && target.NegatesOnSuccessfulSave(descriptors))
         {
-            if (log) CombatLog.Add($"{target.unitName} shrugs off {power.actionID} entirely.");
+            if (log) CombatLog.Add($"{target.unitName} shrugs off {power.DisplayName} entirely.");
             return PsionicSaveOutcome.Immune;
         }
 

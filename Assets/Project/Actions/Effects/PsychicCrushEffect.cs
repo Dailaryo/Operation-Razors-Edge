@@ -62,7 +62,7 @@ public class PsychicCrushEffect : IActionEffect
             resolveSaved = natural == 20 || (natural != 1 && total >= dc);
 
             if (log)
-                CombatLog.Add($"{target.unitName} Resolve save vs {power.actionID}: " +
+                CombatLog.Add($"{target.unitName} Resolve save vs {power.DisplayName}: " +
                               $"{total} (nat {natural}, +{bonus}) vs DC {dc} — {(resolveSaved ? "Saved" : "Failed")}");
         }
 

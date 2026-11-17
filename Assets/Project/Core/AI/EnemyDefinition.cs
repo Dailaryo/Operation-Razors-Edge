@@ -63,6 +63,7 @@ public class EnemyDefinition
     //Training flags
     public bool ignoreDifficultyScaling = false;  //D3: skip EnemyScaler pass 2 and the classed post-build multiplier
     public bool isInvulnerableTarget = false;      //D6-B: damage logs normally, HP resets in the end phase, never dies
+    public bool usesDyingRules = false;            //Bosses/named NPCs: go Disabled/Dying like the squad instead of dying at 0 HP
 
 
     //Scripted behaviour (D4/D5): one step per round, wrapping. Empty = utility planner as today.

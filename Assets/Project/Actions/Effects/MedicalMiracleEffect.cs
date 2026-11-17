@@ -8,6 +8,9 @@ public class MedicalMiracleEffect : IActionEffect
 
     public void Execute(ActionContext ctx, CombatResolver resolver)
     {
+        //Rolls and results happen once, in the execution phase; planning replays (move highlights, validation) skip them
+        if (resolver.IsSimulation) return;
+
         if (ctx.attacker == null || ctx.finalTarget == null) return;
 
         if (!ctx.finalTarget.IsDead())

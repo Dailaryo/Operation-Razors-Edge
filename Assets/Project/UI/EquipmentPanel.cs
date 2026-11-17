@@ -16,6 +16,9 @@ public class EquipmentPanel : MonoBehaviour
     [Header("Item Description")]
     [SerializeField] private TMP_Text itemDescriptionText;
 
+    [Header("Header")]
+    [SerializeField] private TMP_Text characterNameText;
+
     [Header("Action Buttons")]
     [SerializeField] private Button equipButton;
     [SerializeField] private Button unequipButton;
@@ -44,6 +47,15 @@ public class EquipmentPanel : MonoBehaviour
             unequipButton.onClick.RemoveAllListeners();
             unequipButton.onClick.AddListener(OnUnequipPressed);
         }
+
+        //Opened from a card, the Equipment tab or the sidebar: show the selected character,
+        //or the first squad member if none is selected yet. Refreshing here also picks up inventory changes
+        CharacterData character = HubUIController.Instance != null ? HubUIController.Instance.GetSelectedCharacter() : null;
+        if (character == null && SquadManager.Instance != null && SquadManager.Instance.GetSquad().Count > 0)
+            character = SquadManager.Instance.GetSquad()[0];
+
+        if (character != null)
+            SetCharacter(character);
     }
 
     public void SetCharacter(CharacterData character)
@@ -55,6 +67,9 @@ public class EquipmentPanel : MonoBehaviour
     public void Refresh()
     {
         if (currentCharacter == null) return;
+
+        if (characterNameText != null)
+            characterNameText.text = currentCharacter.name;
 
         RefreshSlots();
         RefreshInventory();

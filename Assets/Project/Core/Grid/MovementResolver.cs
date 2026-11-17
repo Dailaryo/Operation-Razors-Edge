@@ -232,17 +232,22 @@ public static class MovementResolver
 
     // Walks the unit along its path one tile at a time.
     // In live mode only — simulation still uses direct position assignment in ResolveMove().
-    public static void ExecuteMovePath(Unit mover, Vector2Int destination, CombatResolver resolver)
+    public static bool ExecuteMovePath(Unit mover, Vector2Int destination, CombatResolver resolver, List<Vector2Int> walked = null)
     {
         List<Vector2Int> path = GetPath(mover, destination, resolver);
 
-        if (path.Count == 0) return;
+        if (path.Count == 0)
+        {
+            mover.provokeImmunity = false; //clear regardless of how the move ended
+            return false;
+        }
 
         Vector2Int previousTile = mover.position;
         AudioEventBus.Fire(AudioEventIds.Movement.UnitMoveStart);
         foreach (Vector2Int nextTile in path)
         {
             GridManager.Instance.MoveUnit(mover, nextTile);
+            walked?.Add(nextTile);
             AudioEventBus.Fire(AudioEventIds.Movement.UnitMoveStep);
             ThreatZoneManager.UpdateUnit(mover);
 
@@ -311,5 +316,7 @@ public static class MovementResolver
 
         // Clear provoke immunity regardless of how the move ended
         mover.provokeImmunity = false;
+
+        return true;
     }
 }
