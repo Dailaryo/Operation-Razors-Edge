@@ -5,6 +5,8 @@ public class ArmamentBurstEffect : IActionEffect
 {
     public void Execute(ActionContext ctx, CombatResolver resolver)
     {
+        if (resolver.IsSimulation) return;
+
         if (ctx.attacker == null) return;
 
         var allUnits = resolver.GetAllUnits();

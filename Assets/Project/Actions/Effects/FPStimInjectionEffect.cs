@@ -9,6 +9,8 @@ public class FPStimInjectionEffect : IActionEffect
 
     public void Execute(ActionContext ctx, CombatResolver resolver)
     {
+        if (resolver.IsSimulation) return;
+
         if (ctx.attacker == null || ctx.finalTarget == null) return;
 
         if (!DistanceUtility.IsAdjacent(ctx.attacker.position, ctx.finalTarget.position))

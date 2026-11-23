@@ -27,6 +27,8 @@ public class PsionicPowerDefinition : ActionDefinition
     public System.Func<int, int> concentrationMaxRounds; // ML -> max rounds while concentrating; null = no cap
     public List<string> variantPowerIds;                 // Other manifestation modes (own entries). Usable whenever this
                                                          // power is known; never learned on their own (not on class lists)
+    public bool hasVariableDice;   // Effect rolls variable dice (damage, duration, healing, counts): Maximize Power
+                                   // can apply. Set it on any new power whose effect or design rolls dice
 
     public class AugmentationOption
     {
@@ -75,7 +77,8 @@ public class PsionicPowerDefinition : ActionDefinition
         int creditCost = 0,
         PowerRange rangeBand = PowerRange.Fixed,
         System.Func<int, int> concentrationMaxRounds = null,
-        List<string> variantPowerIds = null
+        List<string> variantPowerIds = null,
+        bool hasVariableDice = false
     ) : base(
         actionId, targetType, requiresTarget, minRange, maxRange,
         cooldown, dealsDamage, targetingMode, category, consumesCategories,
@@ -99,6 +102,7 @@ public class PsionicPowerDefinition : ActionDefinition
         this.rangeBand = rangeBand;
         this.concentrationMaxRounds = concentrationMaxRounds;
         this.variantPowerIds = variantPowerIds ?? new List<string>();
+        this.hasVariableDice = hasVariableDice;
     }
 
     public int GetSaveDC(Unit manifester)

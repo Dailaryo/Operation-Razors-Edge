@@ -13,7 +13,7 @@ public class TacticalUplinkEffect : StatusEffect
         isPersistent = true;
     }
 
-    public void ApplyToNearbyAllies(Unit source, List<Unit> allUnits)
+    public override void OnEndPhaseAura(Unit source, List<Unit> allUnits)
     {
         int multiplier = source.activeEffects.Exists(e => e is HighCommandActiveEffect) ? 2 : 1;
         int effectiveBonus = bonus * multiplier;

@@ -66,6 +66,7 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
     {
         if (unit.defeatProcessed) return;
         unit.defeatProcessed = true;
+        unit.EndConcentration("defeated"); //a dead manifester's maintained powers (Inflict Pain repeats) end with them
 
         if (!unit.isEnemy)
             SquadManager.Instance.SetIncapacitated(unit);
@@ -135,7 +136,6 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
 
     public event System.Action<List<Unit>> OnTargetSelectionRequested;
     public event System.Action<Unit> OnActionBarRefreshRequested;
-    public event System.Action<Unit> OnCommandOverrideTriggered;
     public event System.Action<SkillCheckPreviewUI.SkillCheckPreview> OnSkillCheckPreviewRequested;
     public event System.Action<ObjectiveDefinition> OnSecondaryObjectiveRevealed;
 
@@ -351,16 +351,6 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
             return;
         }
 
-        //Debug Log: List of available actions
-        string actions = "";
-
-        foreach (ActionDefinition action in unit.GetAllActions())
-        {
-            bool available = unit.IsActionAvailable(action);
-
-            actions += (actions.Length > 0 ? ", " : "") + action.DisplayName + (available ? "" : " (CD)");
-        }
-
         OnActionBarRefreshRequested?.Invoke(unit);
 
         GridHighlighter.Instance.ClearAll();
@@ -371,7 +361,7 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
             GridHighlighter.Instance.HighlightValidMoves(currentUnit, this);
         }
 
-        CombatLog.Add(unit.unitName + ": Choose Action - " + actions);
+        CombatLog.Add(unit.unitName + ": Choose Action");
 
         var unitActions = actionPlanner.GetActions(unit);
 
@@ -383,33 +373,60 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
 
     void ProcessEndPhase()
     {
-        //Apply end-of-turn effect logic, then reduce ability cooldowns
+        //Apply end-of-turn effect logic, then reduce ability cooldowns. Dead units are skipped:
+        //their effects (e.g. Inflict Pain on a target that already died) must not keep resolving
         foreach (Unit unit in playerUnits)
         {
+            if (unit.IsDead()) continue;
+
             unit.ProcessEffects();
             unit.ReduceCooldowns();
+            unit.CheckSavageMomentum(turnManager.turnCount);
         }
 
         foreach (Unit unit in enemyUnits)
         {
+            if (unit.IsDead()) continue;
+
             unit.ProcessEffects();
             unit.ReduceCooldowns();
             unit.ResetInvulnerableTarget(); //training targets only; no-op for everything else
         }
 
-        //Fast healing (Adaptive Physiology, Rapid Healing): regain HP each round while above 0 HP, up to max HP
+        //Fast healing (Adaptive Physiology, Rapid Healing; Pathfinder): regain HP each round up to max HP at any HP above
+        //the death threshold, so a downed unit climbs back up. FastHealingSuppressedEffect stops it for a round
         foreach (Unit unit in GetAllUnits())
         {
-            if (unit.IsDead() || unit.currentHP <= 0) continue;
+            if (unit.IsDead()) continue;
+
+            //Fast healing stopped this end phase (FastHealingSuppressedEffect: e.g. acid or fire against a troll)
+            if (unit.activeEffects.Find(e => e is FastHealingSuppressedEffect) is FastHealingSuppressedEffect suppressed)
+            {
+                if (unit.GetStat(StatType.FastHealing) > 0)
+                    CombatLog.Add($"{unit.unitName}'s fast healing is suppressed this round.");
+                suppressed.ConsumeRound(unit);
+                continue;
+            }
 
             int fastHealing = unit.GetStat(StatType.FastHealing);
             int maxHP = unit.GetMaxHP();
             if (fastHealing <= 0 || unit.currentHP >= maxHP) continue;
 
+            bool wasDown = unit.currentHP <= 0;
             int healed = Mathf.Min(fastHealing, maxHP - unit.currentHP);
             unit.currentHP += healed;
-            unit.OnHealthChanged?.Invoke(unit);
             CombatLog.Add($"{unit.unitName} regains {healed} HP from fast healing. HP: {unit.currentHP}");
+
+            //Back above 0 HP: Disabled, Dying and Stabilized end
+            if (wasDown && unit.currentHP > 0)
+            {
+                unit.RemoveEffect<DisabledState>();
+                unit.RemoveEffect<DyingState>();
+                unit.RemoveEffect<StabilizedState>();
+                CombatLog.Add($"{unit.unitName} is back on their feet.");
+            }
+
+            unit.OnHealthChanged?.Invoke(unit);
         }
 
         //Flat-footed ends once a unit's turn has come round, even if it planned nothing:
@@ -421,20 +438,8 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         DetectionStateManager.TickAlertCountDowns();
         FieldZoneManager.ProcessEndPhase(GetAllUnits());
 
-        // Apply unit aura effects to nearby allies
-        foreach (Unit unit in GetAllUnits())
-        {
-            foreach (var source in unit.effectSources)
-            {
-                foreach (var effect in source.GetEffects(unit))
-                {
-                    if (effect is TacticalUplinkEffect uplink)
-                    {
-                        uplink.ApplyToNearbyAllies(unit, GetAllUnits());
-                    }
-                }
-            }
-        }
+        //Auras: refreshed every end phase (the buffs last 1 turn, so they carry to the next one)
+        ApplyAuras();
 
         //Escalation check
         int liveEnemyCount = enemyUnits.FindAll(u => !u.IsDead()).Count;
@@ -456,6 +461,24 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
 
         CombatLog.Add($"--- End Phase Complete ---");
         CombatLog.Add($"Turn {turnManager.turnCount} complete");
+    }
+
+    //Auras (Tactical Uplink, Protective Aura): every living source refreshes its allies' buffs. Both effect lists
+    //are checked, so an aura works as a shared passive or an instanced effect. activeEffects is copied because an
+    //aura can buff its own source (Tactical Uplink includes Alexandra). Runs at combat start and every end phase
+    void ApplyAuras()
+    {
+        foreach (Unit unit in GetAllUnits())
+        {
+            if (unit.IsDead()) continue;
+
+            foreach (var effect in new List<StatusEffect>(unit.activeEffects))
+                effect.OnEndPhaseAura(unit, GetAllUnits());
+
+            foreach (var source in unit.effectSources)
+                foreach (var effect in source.GetEffects(unit))
+                    effect.OnEndPhaseAura(unit, GetAllUnits());
+        }
     }
 
     public void StartCombat(EncounterData encounter, List<Unit> playerUnitsInput, List<Unit> enemyUnitsInput, SurpriseSide surpriseSide = SurpriseSide.None)
@@ -543,6 +566,8 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
             }
 
             unit.combatUses.Clear();
+            unit.rampageRound = -1;
+            unit.ResetSavageMomentum();
 
             // Reset per-combat effect flags
             foreach (var effect in unit.activeEffects)
@@ -598,6 +623,8 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         AwarenessManager.ApplyApotheosis(GetAllUnits());
         AuraOfCalm.Initialize(GetAllUnits());
         SweepResolver.Run(GetAllUnits(), encounterStart: true);
+        //Passive auras are on from the start: the end phase refreshes them from round 1 on
+        ApplyAuras();
 
         if (hasSurpriseRound)
             StartSurpriseRound();
@@ -636,30 +663,81 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         return removed > 0;
     }
 
-    //Power Attack is a toggle for the round, like Fighting Defensively (the two can be combined)
-    void TogglePowerAttack(Unit unit)
+    //Maximize Power (Telepath): armed from the Abilities tab, applies to the next power this unit plans.
+    //Not a planned action: off once a power is planned, on right-click, or when the turn is confirmed
+    Unit maximizeArmedFor;
+
+    public bool IsMaximizeArmed(Unit unit) => unit != null && maximizeArmedFor == unit;
+
+    void SetMaximize(Unit unit, bool on)
     {
-        int removed = actionPlanner.GetActions(unit).RemoveAll(a => a.definition.actionID == ActionIds.PowerAttack);
+        if (unit == null || on == IsMaximizeArmed(unit)) return;
+
+        maximizeArmedFor = on ? unit : null;
+        CombatLog.Add(on
+            ? $"{unit.unitName}: Maximize Power on. Choose a power (+{AugmentationProcessor.MaximizePowerCost} PP); right-click to cancel."
+            : $"{unit.unitName}: Maximize Power off.");
+        OnActionBarRefreshRequested?.Invoke(unit);
+    }
+
+    //True if this power can be planned maximized now: it rolls variable dice, and its cost +6 PP fits both the
+    //unit's remaining power points (after earlier planned powers) and the manifestation limit
+    public bool CanMaximize(Unit unit, PsionicPowerDefinition power)
+    {
+        if (!power.hasVariableDice) return false;
+
+        ActionValidator.GetCommittedPowerPoints(unit, actionPlanner.GetActions(unit), null,
+            out int committedPP, out int committedFreeUses);
+
+        return AugmentationProcessor.Validate(unit, power, null, committedPP, committedFreeUses, maximized: true).isValid;
+    }
+
+    //Manifest Defensively is a toggle for the round, like Power Attack: while threatened, this unit's powers this
+    //round use a concentration check instead of provoking. Dropped at resolution if it manifests nothing
+    void ToggleManifestDefensively(Unit unit)
+    {
+        int removed = actionPlanner.GetActions(unit).RemoveAll(a => a.definition.actionID == ActionIds.ManifestDefensively);
         if (removed > 0)
         {
-            CombatLog.Add($"{unit.unitName}: Power Attack off.");
+            CombatLog.Add($"{unit.unitName}: Manifest Defensively off.");
+            OnActionBarRefreshRequested?.Invoke(unit);
+            return;
+        }
+
+        CombatLog.Add($"{unit.unitName}: Manifest Defensively on (concentration check instead of provoking this round).");
+        AddPlannedAction(new CombatAction(unit, null, ActionDatabase.Definitions[ActionIds.ManifestDefensively], this));
+    }
+
+    //Power Attack (melee) and Deadly Aim (ranged) are toggles for the round, like Fighting Defensively (all can be
+    //combined). Turning one on goes straight to that attack's targeting if no attack of that type is planned yet;
+    //right-click cancels the targeting and leaves the stance on
+    void ToggleAttackStance(Unit unit, string stanceId, bool ranged)
+    {
+        ActionDefinition stance = ActionDatabase.Definitions[stanceId];
+        string attackWord = ranged ? "ranged" : "melee";
+
+        int removed = actionPlanner.GetActions(unit).RemoveAll(a => a.definition.actionID == stanceId);
+        if (removed > 0)
+        {
+            CombatLog.Add($"{unit.unitName}: {stance.DisplayName} off.");
             OnActionBarRefreshRequested?.Invoke(unit);
             return;
         }
 
         int penalty = PowerAttackEffect.GetPenalty(unit);
-        CombatLog.Add($"{unit.unitName}: Power Attack on (-{penalty} melee attack, +{penalty * 2} melee damage this round).");
-        AddPlannedAction(new CombatAction(unit, null, ActionDatabase.Definitions[ActionIds.PowerAttack], this));
+        CombatLog.Add($"{unit.unitName}: {stance.DisplayName} on (-{penalty} {attackWord} attack, " +
+                      $"+{penalty * 2} {attackWord} damage this round).");
+        AddPlannedAction(new CombatAction(unit, null, stance, this));
 
-        //Power Attack only matters with a melee attack: go straight to Melee Attack targeting if none is planned yet.
-        //Right-click cancels the targeting and leaves Power Attack on
+        var attackType = ranged ? ActionDefinition.AttackType.Ranged : ActionDefinition.AttackType.Melee;
         var planned = actionPlanner.GetActions(unit);
-        bool powerAttackOn = planned.Exists(a => a.definition.actionID == ActionIds.PowerAttack);
-        bool meleePlanned = planned.Exists(a => a.definition.attackType == ActionDefinition.AttackType.Melee);
-        ActionDefinition meleeAttack = unit.GetAllActions().Find(a => a.actionID == ActionIds.MeleeAttack);
+        bool stanceOn = planned.Exists(a => a.definition.actionID == stanceId);
+        bool attackPlanned = planned.Exists(a => a.definition.attackType == attackType);
+        ActionDefinition attack = unit.GetAllActions()
+            .Find(a => a.actionID == (ranged ? ActionIds.RangedAttack : ActionIds.MeleeAttack));
 
-        if (powerAttackOn && !meleePlanned && meleeAttack != null && currentUnit == unit && unit.IsActionAvailable(meleeAttack))
-            PlayerChooseAction(meleeAttack);
+        if (stanceOn && !attackPlanned && attack != null && currentUnit == unit && unit.IsActionAvailable(attack))
+            PlayerChooseAction(attack);
     }
 
 
@@ -668,7 +746,7 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         //Get current unit
         Unit unit = CurrentUnit;
 
-        if (unit == null || unit.IsDead()) return;
+        if (!CanPlan || unit == null || unit.IsDead()) return;
 
         //Fighting Defensively is a stance for the round, not a separate action: the button toggles it
         if (action.actionID == ActionIds.FightingDefensively)
@@ -677,9 +755,22 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
             return;
         }
 
-        if (action.actionID == ActionIds.PowerAttack)
+        if (action.actionID == ActionIds.PowerAttack || action.actionID == ActionIds.DeadlyAim)
         {
-            TogglePowerAttack(unit);
+            ToggleAttackStance(unit, action.actionID, ranged: action.actionID == ActionIds.DeadlyAim);
+            return;
+        }
+
+
+        if (action.actionID == ActionIds.MaximizePower)
+        {
+            SetMaximize(unit, !IsMaximizeArmed(unit));
+            return;
+        }
+
+        if (action.actionID == ActionIds.ManifestDefensively)
+        {
+            ToggleManifestDefensively(unit);
             return;
         }
 
@@ -761,11 +852,24 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         currentUnit = unit;
     }
 
+    //Drops any action waiting for a target and hides the target-selection UI.
+    //Used when a planned action is rejected and when the unit confirms its turn
+    void ClearTargeting()
+    {
+        pendingAction = null;
+        OnTargetSelectionRequested?.Invoke(null);
+    }
+
     public void AddPlannedAction(CombatAction action)
     {
+        //Maximize Power armed: the next power planned is maximized (validated with the +6 PP)
+        bool maximizing = IsMaximizeArmed(action.source) && action.definition is PsionicPowerDefinition;
+        if (maximizing) action.maximize = true;
+
         if (!ActionValidator.IsValid(action, GetValidationResolver()))
         {
             CombatLog.Add("Invalid Action");
+            ClearTargeting();
 
             GridHighlighter.Instance.ClearAll();
 
@@ -784,6 +888,7 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         if (!success)
         {
             CombatLog.Add($"Not enough action resources for {action.definition.DisplayName}");
+            ClearTargeting();
 
             GridHighlighter.Instance.ClearAll();
 
@@ -795,18 +900,11 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
             return;
         }
 
-        // Check for Command Override — interrupt to offer bonus action
-        foreach (Unit playerUnit in playerUnits)
+        if (maximizing)
         {
-            if (playerUnit.pendingCommandOverride)
-            {
-                playerUnit.pendingCommandOverride = false;
-                currentUnit = playerUnit;
-                OnCommandOverrideTriggered?.Invoke(playerUnit);
-                OnActionBarRefreshRequested?.Invoke(playerUnit);
-                CombatLog.Add($"{playerUnit.unitName}: Command Override — choose a bonus action.");
-                return;
-            }
+            maximizeArmedFor = null;
+            CombatLog.Add($"{unit.unitName}: {action.definition.DisplayName} will be maximized " +
+                          $"(+{AugmentationProcessor.MaximizePowerCost} PP).");
         }
 
         var unitActions = actionPlanner.GetActions(unit);
@@ -857,12 +955,15 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
 
     public void CancelCurrentUnitAction()
     {
+        if (!CanPlan || currentUnit == null) return;
+
         var actions = actionPlanner.GetActions(currentUnit);
 
         //First handle targeting state
         if (pendingAction != null)
         {
             pendingAction = null;
+            SetMaximize(currentUnit, false); //cancelling a maximized power's targeting ends Maximize too
 
             CombatLog.Add(currentUnit.unitName + " canceled targeting.");
 
@@ -870,6 +971,13 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
             GridHighlighter.Instance.HighlightValidMoves(currentUnit, this);
 
             OnTargetSelectionRequested?.Invoke(null);
+            return;
+        }
+
+        //Maximize Power armed with nothing targeted: right-click turns it off
+        if (IsMaximizeArmed(currentUnit))
+        {
+            SetMaximize(currentUnit, false);
             return;
         }
 
@@ -884,23 +992,14 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         actions.RemoveAt(actions.Count - 1);
 
         CombatLog.Add(currentUnit.unitName + " canceled last action.");
+        OnActionBarRefreshRequested?.Invoke(currentUnit); //stance labels ("Power Attack: On") and resource counts update
 
         pendingAction = null;
 
+        GridHighlighter.Instance.ClearAll(); //drop overlays from the cancelled action before redrawing
         GridHighlighter.Instance.HighlightValidMoves(currentUnit, this);
 
         OnTargetSelectionRequested?.Invoke(null);
-    }
-
-    void Update()
-    {
-        if (!IsPlayerTurn) return;
-        if (currentUnit == null) return;
-
-        if (Input.GetMouseButtonDown(1))
-        {
-            CancelCurrentUnitAction();
-        }
     }
 
     public bool IsTilePlannedOccupied(Vector2Int pos)
@@ -961,6 +1060,8 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
 
     public void HandleTargetSelection(Unit target)
     {
+        if (!CanPlan) return;
+
         if (pendingAction == null)
         {
             OnTargetSelectionRequested?.Invoke(null);
@@ -990,7 +1091,7 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
     {
         Unit unit = CurrentUnit;
 
-        if (unit == null || unit.IsDead()) return;
+        if (!CanPlan || unit == null || unit.IsDead()) return;
 
         ActionDefinition pending = pendingAction;
 
@@ -1081,11 +1182,15 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
 
     public void ConfirmTurn()
     {
-        if (currentUnit == null || currentUnit.IsDead()) return;
+        if (!CanPlan || currentUnit == null || currentUnit.IsDead()) return;
 
         var unitActions = actionPlanner.GetActions(currentUnit);
 
         CombatLog.Add($"{currentUnit.unitName} confirmed turn.");
+
+        //An action still waiting for a target (or one rejected mid-targeting) must not carry over to the next unit
+        ClearTargeting();
+        SetMaximize(currentUnit, false);
 
         turnManager.AdvanceUnit();
         PromptNextUnit();
@@ -1288,6 +1393,10 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
         turnManager.CurrentState == TurnManager.CombatState.PlayerTurn ||
         turnManager.CurrentState == TurnManager.CombatState.SurpriseRound;
 
+    //Squad input is accepted only while planning and before the round starts resolving
+    //(the surprise round keeps its state while RunTurn plans the enemies, so the processing flag is needed too)
+    public bool CanPlan => IsPlanningPhase && !isProcessingTurn;
+
     //DEBUG (dev builds): ends the current encounter at once, through the normal end-of-combat path as a Retreat
     //(no loot). Drills leave campaign state untouched; other encounters record the Retreat. Planning phase only.
     public void DebugExitCombat()
@@ -1388,6 +1497,25 @@ public class CombatManager : MonoBehaviour, ICombatInputHandler
             return;
         }
 
+        RefreshCurrentUnitHighlights();
+    }
+
+    //DEBUG (dev builds): empties the unit's regular power point pool, to test powers it can't afford.
+    //Power Crystal charges and free 0-level uses are left alone. Planning phase only
+    public void DebugDrainPowerPoints(Unit unit)
+    {
+        if (!Debug.isDebugBuild) return;
+        if (!IsPlanningPhase || isProcessingTurn) return;
+        if (unit == null || unit.powerPoints == null) return;
+
+        var pp = unit.powerPoints;
+        pp.current = 0;
+
+        string crystal = pp.crystal != null ? $" (crystal still holds {pp.CrystalPoints})" : "";
+        CombatLog.Add($"[Debug] {unit.unitName}: power points set to 0/{pp.max}{crystal}.");
+
+        //Readout and button state, then the grid (any targeting in progress is re-validated)
+        OnActionBarRefreshRequested?.Invoke(unit);
         RefreshCurrentUnitHighlights();
     }
 }

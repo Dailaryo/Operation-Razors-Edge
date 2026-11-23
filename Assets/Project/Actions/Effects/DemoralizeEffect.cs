@@ -21,7 +21,7 @@ public class DemoralizeEffect : IActionEffect
             return;
         }
 
-        int defenderTotal = ctx.finalTarget.RollSave(Unit.SaveType.Focus, fear);
+        var defenderTotal = ctx.finalTarget.RollSave(Unit.SaveType.Focus, fear);
 
         var context = new SkillCheckContext
         {
@@ -30,7 +30,8 @@ public class DemoralizeEffect : IActionEffect
             defender = ctx.finalTarget,
             callerContext = SkillCheckContext.CallerContext.Combat,
             showPreview = false,
-            defenderTotalOverride = defenderTotal,
+            defenderTotalOverride = defenderTotal.total,
+            defenderNaturalRoll = defenderTotal.natural,
             onResult = result =>
             {
                 if (!result.success) return;

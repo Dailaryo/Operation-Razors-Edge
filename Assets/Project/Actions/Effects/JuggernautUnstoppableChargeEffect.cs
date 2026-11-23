@@ -5,6 +5,8 @@ public class JuggernautUnstoppableChargeEffect : IActionEffect
 {
     public void Execute(ActionContext ctx, CombatResolver resolver)
     {
+        if (resolver.IsSimulation) return;
+
         if (ctx.attacker == null || ctx.finalTarget == null) return;
 
         Vector2Int start = resolver.GetPosition(ctx.attacker);

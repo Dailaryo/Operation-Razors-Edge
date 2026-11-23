@@ -8,7 +8,7 @@ public class BastionProtectiveAuraEffect : StatusEffect
         isPersistent = true;
     }
 
-    public void ApplyToNearbyAllies(Unit source, List<Unit> allUnits)
+    public override void OnEndPhaseAura(Unit source, List<Unit> allUnits)
     {
         if (source.currentHP <= 0) return;
 

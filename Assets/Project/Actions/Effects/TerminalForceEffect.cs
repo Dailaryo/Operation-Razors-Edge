@@ -7,9 +7,9 @@ public class TerminalForceEffect : IActionEffect
     {
         if (ctx.finalTarget == null || ctx.attacker == null) return;
 
-        ctx.attacker.SetCooldown(ctx.definition, 3);
-
         if (resolver.IsSimulation) return;
+
+        ctx.attacker.SetCooldown(ctx.definition, 3);
 
         int bonusDamage = 0;
 

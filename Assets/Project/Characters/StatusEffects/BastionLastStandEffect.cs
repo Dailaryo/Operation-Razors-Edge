@@ -7,6 +7,7 @@ public class BastionLastStandEffect : StatusEffect
     public BastionLastStandEffect() : base("BastionLastStand", 0)
     {
         isPersistent = true;
+        instancedPassive = true;
     }
 
     public bool TryTrigger(Unit unit, int incomingDamage)

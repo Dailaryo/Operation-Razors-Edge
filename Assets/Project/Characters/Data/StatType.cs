@@ -53,5 +53,8 @@ public enum StatType
     UnarmedAccuracy,
 
     //Accuracy that applies only to melee attacks (Power Attack)
-    MeleeAccuracy
+    MeleeAccuracy,
+
+    //Accuracy that applies only to ranged attacks (Deadly Aim)
+    RangedAccuracy
 }

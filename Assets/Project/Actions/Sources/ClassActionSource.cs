@@ -53,6 +53,19 @@ public class ClassActionSource : IActionSource
             }
         }
 
+        // Actions granted by unlocked passives (active Helix mutations: Adrenaline Surge, Adrenal Frenzy)
+        foreach (var passiveId in characterData.unlockedPassiveIds)
+        {
+            var passive = PassiveDatabase.Get(passiveId);
+            if (passive == null) continue;
+
+            foreach (var id in passive.grantedActionIds)
+            {
+                var def = ActionDatabase.Get(id);
+                if (def != null && !result.Contains(def)) result.Add(def);
+            }
+        }
+
         return result;
     }
 }

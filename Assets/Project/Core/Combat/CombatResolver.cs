@@ -11,6 +11,11 @@ public class CombatResolver
     private bool isSimulation = false;
 
     public bool IsSimulation => isSimulation;
+    public CombatManager Manager => manager;
+
+    //True while a real round is being executed (not planning, not the end phase).
+    //Unit.AddEffect reads it to decide whether an effect needs extending to cover the recipient's next turn
+    public static bool ResolutionInProgress { get; private set; }
 
     //Planning only: speed bonus from this unit's earlier planned actions (e.g. Burst on self)
     public void AddSimulatedMoveSpeedBonus(Unit unit, int bonus)
@@ -114,6 +119,8 @@ public class CombatResolver
             case ActionIds.TotalDefense:
             case ActionIds.FightingDefensively:
             case ActionIds.PowerAttack:
+            case ActionIds.ManifestDefensively:
+            case ActionIds.DeadlyAim:
                 return DefensiveStanceSpeed;
 
             default: return 0;
@@ -172,17 +179,34 @@ public class CombatResolver
             CombatAction stance = actions[i];
             string id = stance.definition.actionID;
 
-            bool meleeOnly;
-            if (id == ActionIds.FightingDefensively) meleeOnly = false;
-            else if (id == ActionIds.PowerAttack) meleeOnly = true;
+            System.Predicate<CombatAction> needs;
+            string missing;
+            if (id == ActionIds.FightingDefensively)
+            {
+                needs = a => a.definition.attackType != ActionDefinition.AttackType.None;
+                missing = "attacking";
+            }
+            else if (id == ActionIds.PowerAttack)
+            {
+                needs = a => a.definition.attackType == ActionDefinition.AttackType.Melee;
+                missing = "making a melee attack";
+            }
+            else if (id == ActionIds.DeadlyAim)
+            {
+                needs = a => a.definition.attackType == ActionDefinition.AttackType.Ranged;
+                missing = "making a ranged attack";
+            }
+            else if (id == ActionIds.ManifestDefensively)
+            {
+                needs = a => a.definition is PsionicPowerDefinition;
+                missing = "manifesting a power";
+            }
             else continue;
 
-            if (actions.Exists(a => a.source == stance.source &&
-                (meleeOnly ? a.definition.attackType == ActionDefinition.AttackType.Melee
-                           : a.definition.attackType != ActionDefinition.AttackType.None))) continue;
+            if (actions.Exists(a => a.source == stance.source && needs(a))) continue;
 
             if (!isSimulation)
-                CombatLog.Add($"{stance.source.unitName} isn't {(meleeOnly ? "making a melee attack" : "attacking")} " +
+                CombatLog.Add($"{stance.source.unitName} isn't {missing} " +
                               $"this round: {stance.definition.DisplayName} has no effect.");
             actions.RemoveAt(i);
         }
@@ -190,10 +214,13 @@ public class CombatResolver
         //Reactions are armed for the round and fire from their trigger, not in initiative order
         ArmReactions(actions);
 
-        //Count each unit's planned actions so effects can tell whether the unit still acts this round
-        foreach (CombatAction planned in actions) planned.source.pendingActionCount = 0;
+        //Count each unit's planned actions so effects can tell whether the unit still acts this round.
+        //Every unit starts at 0, so a unit with nothing planned counts as having no actions left
+        foreach (Unit unit in manager.GetAllUnits()) unit.pendingActionCount = 0;
         foreach (CombatAction planned in actions)
             if (!planned.isReaction) planned.source.pendingActionCount++;
+
+        if (!isSimulation) ResolutionInProgress = true;
 
         foreach (CombatAction action in actions)
         {
@@ -254,6 +281,9 @@ public class CombatResolver
 
             if (!action.isReaction) action.source.pendingActionCount--;
         }
+
+        //Resolution over: effects applied from here on (end phase, round start) already cover the coming round
+        if (!isSimulation) ResolutionInProgress = false;
     }
 
     public void ExecuteAction(CombatAction action)
@@ -324,7 +354,7 @@ public class CombatResolver
 
         //Opportunity attacks and psionic concentration resolve BEFORE the action takes effect.
         //Skip in simulation mode — OA logic does not run during AI planning
-        if (!isSimulation && !action.isReaction)
+        if (!isSimulation && !action.isReaction && !action.isFollowUp)
         {
             if (!ResolveProvocation(ctx, action)) return;
         }
@@ -346,8 +376,40 @@ public class CombatResolver
             return;
         }
 
+        //One line per resolved action, placeholders included (movement logs its own path line)
+        if (!isSimulation && !def.IsMove())
+        {
+            string on = ctx.finalTarget != null && ctx.finalTarget != ctx.attacker
+                ? $" on {ctx.finalTarget.unitName}"
+                : def.IsGroundTargeted() && ctx.action.movePosition.HasValue
+                    ? $" at {ctx.action.movePosition.Value}"
+                    : "";
+            CombatLog.Add($"{ctx.attacker.unitName} uses {def.DisplayName}{on}.");
+        }
+
+        //Killing Blow (Helix Berserker): melee attacks against a target at 25% HP or less deal maximum damage.
+        //Set before the effects run so bonus dice (Brutal Strike, Devastating Cleave) are maximized too
+        if (def.attackType == ActionDefinition.AttackType.Melee && ctx.finalTarget != null &&
+            ctx.attacker.HasPassive(PassiveIds.HelixKillingBlow) &&
+            GetCurrentHP(ctx.finalTarget) * 4 <= ctx.finalTarget.GetMaxHP())
+        {
+            ctx.isMaximized = true;
+            if (!isSimulation)
+                CombatLog.Add($"Killing Blow: {ctx.finalTarget.unitName} is at 25% HP or less — maximum damage.");
+        }
+
         //Execute action (behavior only)
         baseAction.Execute(ctx, this);
+
+        //Powers whose effect isn't authored yet: roll the save and hold concentration anyway
+        if (!isSimulation && concentrationPower != null &&
+            (def.effects == null || def.effects.Count == 0))
+            ResolveDeferredPower(ctx, concentrationPower);
+
+        //Class actions whose effect isn't authored yet (Vanish, Spectral Form, Group Suggestion): say so, like powers
+        else if (!isSimulation && concentrationPower == null && !def.IsMove() &&
+                 (def.effects == null || def.effects.Count == 0))
+            CombatLog.Add($"{def.DisplayName}: effect not implemented yet.");
 
         //Link everything this power applied to a ConcentrationEffect on the manifester
         if (startsConcentration && ctx.appliedEffects.Count > 0)
@@ -363,6 +425,11 @@ public class CombatResolver
         if (effectiveCost > 0)
         {
             ctx.attacker.SpendResource(effectiveCost);
+
+            var resource = ctx.attacker.resource;
+            if (!isSimulation && resource != null)
+                CombatLog.Add($"{ctx.attacker.unitName} spends {effectiveCost} {resource.definition.displayName} " +
+                              $"({resource.current}/{resource.max} remaining).");
         }
 
         if (ctx.isMovement)
@@ -373,6 +440,8 @@ public class CombatResolver
         {
             TryFireReaction(ctx.finalTarget, ReactionTrigger.TargetedByAttack, ctx.attacker);
 
+            ApplyPreAttackEffects(ctx);
+
             if (!ResolveHit(ctx))
             {
                 CombatLog.Add($"{ctx.attacker.unitName} misses {ctx.finalTarget.unitName}");
@@ -380,16 +449,49 @@ public class CombatResolver
                 return;
             }
 
+            action.hit = true;
+
             InitializeDamage(ctx);
 
-            ApplyPreActionEffects(ctx);
+            //Devastating Cleave: extra dice of the attack's base damage die (follow-up attacks only), rolled and logged
+            if (action.extraDamageDice > 0 && ctx.damageDice.Count > 0)
+            {
+                int sides = ctx.damageDice[0].y;
+                string label = action.extraDamageDiceLabel ?? "Bonus";
+                int roll = PowerDice.Roll(ctx, action.extraDamageDice, sides, label);
+                ctx.modifiedDamage += roll;
+                ctx.AddDamagePart($"{label} {action.extraDamageDice}d{sides}", roll);
+            }
 
+            //Bloodlust (Helix Berserker): below half HP, +1 melee damage per 4 levels
+            if (def.attackType == ActionDefinition.AttackType.Melee &&
+                ctx.attacker.HasPassive(PassiveIds.HelixBloodlust) &&
+                ctx.attacker.currentHP * 2 < ctx.attacker.GetMaxHP())
+            {
+                int bloodlust = Mathf.Max(1, (ctx.attacker.sourceCharacterData?.level ?? 4) / 4);
+                ctx.modifiedDamage += bloodlust;
+                ctx.AddDamagePart("Bloodlust", bloodlust);
+            }
+
+            ApplyPreActionEffects(ctx);
+            LogDamageBreakdown(ctx);
             ApplyFinalResult(ctx);
 
             DetectionStateManager.EvaluateBreak(ctx.attacker, ctx.definition);
 
             //After-hit triggers (Knockdown): run once the damage has been applied
             ApplyPostActionEffects(ctx);
+
+            //Savage Momentum: a melee hit that dropped its target adds +1 attack (before any follow-up attacks)
+            if (!isSimulation && ctx.droppedTarget && def.attackType == ActionDefinition.AttackType.Melee &&
+                ctx.attacker.HasPassive(PassiveIds.HelixSavageMomentum))
+                ctx.attacker.GainSavageMomentum(manager.GetCurrentRound());
+
+            //Follow-ups registered by the action's effects (Cleave), after this hit is fully resolved
+            if (!isSimulation) ctx.onHitResolved?.Invoke(ctx);
+
+            //Rampage: a melee hit that dropped its target grants a free attack (once per round)
+            if (!isSimulation) TryRampage(ctx);
         }
         else if (ctx.isWindowBreak)
         {
@@ -407,6 +509,83 @@ public class CombatResolver
         }
 
         action.OnResolved();
+    }
+
+    //Extra melee attack inside another action (Cleave, Rampage): resolved at once through ExecuteAction, without
+    //provoking and without action economy. Returns true if it hit
+    public bool ExecuteFollowUpAttack(Unit attacker, Unit target, ActionDefinition attackDef,
+                                      int extraDamageDice = 0, string extraDamageDiceLabel = null)
+    {
+        var followUp = new CombatAction(attacker, target, attackDef, manager)
+        {
+            isFollowUp = true,
+            extraDamageDice = extraDamageDice,
+            extraDamageDiceLabel = extraDamageDiceLabel
+        };
+        ExecuteAction(followUp);
+        return followUp.hit;
+    }
+
+    //Rampage (Helix Berserker): once per round, a melee hit that drops its target grants a free melee attack against
+    //another enemy adjacent to the attacker (lowest HP first). Not spent when no enemy is in reach
+    void TryRampage(ActionContext ctx)
+    {
+        Unit attacker = ctx.attacker;
+        if (!ctx.droppedTarget || ctx.definition.attackType != ActionDefinition.AttackType.Melee) return;
+        if (!attacker.HasPassive(PassiveIds.HelixRampage) || !attacker.CanAct()) return;
+
+        int round = manager.GetCurrentRound();
+        if (attacker.rampageRound == round) return;
+
+        Unit next = null;
+        foreach (var unit in GetAllUnits())
+        {
+            if (unit == ctx.finalTarget || unit.isEnemy == attacker.isEnemy) continue;
+            if (IsUnitDead(unit) || !unit.CanAct()) continue;
+            if (!DistanceUtility.IsAdjacent(attacker.position, unit.position)) continue;
+
+            if (next == null || unit.currentHP < next.currentHP) next = unit;
+        }
+
+        if (next == null)
+        {
+            CombatLog.Add($"{attacker.unitName}'s Rampage: no other enemy within reach.");
+            return;
+        }
+
+        attacker.rampageRound = round;
+        CombatLog.Add($"{attacker.unitName} rampages into {next.unitName}!");
+        ExecuteFollowUpAttack(attacker, next, ActionDatabase.Get(ActionIds.MeleeAttack),
+            CleaveEffect.DevastatingDice(attacker), "Devastating Cleave");
+    }
+
+    //Stand-in for psionic powers whose effect isn't authored yet (stubs and deferred powers: empty effects list).
+    //Rolls power resistance and the save like an authored power, logs that the effect is deferred, and for
+    //concentration powers places a placeholder condition so concentration starts and can be maintained
+    void ResolveDeferredPower(ActionContext ctx, PsionicPowerDefinition power)
+    {
+        Unit target = ctx.finalTarget;
+        bool affected = true;
+
+        if (target != null && !IsUnitDead(target))
+        {
+            var outcome = PsionicSaveResolver.Resolve(ctx, target, this);
+            affected = outcome == PsionicSaveOutcome.Failed || outcome == PsionicSaveOutcome.NoSave;
+        }
+
+        CombatLog.Add($"{power.DisplayName}: effect not implemented yet.");
+
+        if (!affected || !power.concentrationRequired) return;
+
+        //Untargeted concentration powers (Object Reading) hold the placeholder on the manifester
+        Unit holder = target ?? ctx.attacker;
+        var placeholder = new StatusEffect(power.DisplayName, 0)
+        {
+            isHarmful = holder.isEnemy != ctx.attacker.isEnemy
+        };
+
+        var applied = holder.AddEffect(placeholder);
+        if (applied != null) ctx.appliedEffects.Add(applied);
     }
 
     public List<Unit> GetAllUnits()
@@ -584,8 +763,24 @@ public class CombatResolver
 
         foreach (var effect in effects)
         {
+            int before = ctx.modifiedDamage;
             effect.OnBeforeAction(ctx);
+            ctx.AddDamagePart(effect.effectName, ctx.modifiedDamage - before);
         }
+    }
+
+    //Before the attack roll: effects that change the roll itself (Coordinated Fire's +2). Execution phase only,
+    //so one-shot effects are spent once, not in every planning replay
+    void ApplyPreAttackEffects(ActionContext ctx)
+    {
+        if (isSimulation) return;
+
+        //Shared passive instances can be collected from both attacked and target: run each once
+        var effects = new List<StatusEffect>(new HashSet<StatusEffect>(CollectEffects(ctx)));
+        effects.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+
+        foreach (var effect in effects)
+            effect.OnBeforeAttackRoll(ctx);
     }
 
     void ApplyPostActionEffects(ActionContext ctx)
@@ -618,7 +813,8 @@ public class CombatResolver
             action = action,
             temporaryEffects = action.temporaryEffects,
             definition = action.definition,
-            isMaximized = action.maximize
+            isMaximized = action.maximize,
+            logRolls = !isSimulation
         };
     }
 
@@ -663,25 +859,42 @@ public class CombatResolver
 
         CombatLog.Add($"{target.unitName} takes {actual} damage{reduction}. HP: {target.currentHP}");
 
-        // Massive damage check: single hit >= MDT forces Resolve save or immediate disable
-        if (actual >= target.GetMassiveDamageThreshold())
+        //Massive damage (d20 Modern): a single hit at or above the threshold that leaves the target above 0 HP
+        //forces a Resolve (Fortitude) save, DC 15. Failure drops it straight to -1 HP and dying.
+        //A hit that already took the target to 0 or lower skips the check
+        if (actual >= target.GetMassiveDamageThreshold() && target.currentHP > 0)
         {
-            int saveRoll = target.RollSave(Unit.SaveType.Resolve);
+            var saveRoll = target.RollSave(Unit.SaveType.Resolve);
             CombatLog.Add($"{target.unitName} massive damage check: rolled {saveRoll} vs DC 15");
 
-            if (saveRoll < 15 && !target.IsDead())
+            if (saveRoll < 15)
             {
                 if (target.isInvulnerableTarget)
                 {
-                    CombatLog.Add($"[Target] {target.unitName}: fails massive damage save — would be disabled (ignored, training target).");
+                    CombatLog.Add($"[Target] {target.unitName}: fails massive damage save — would drop to -1 HP and dying (ignored, training target).");
                 }
                 else
                 {
-                    target.currentHP = 0;
-                    CombatLog.Add($"{target.unitName} fails massive damage save — disabled!");
+                    target.currentHP = -1;
+                    CombatLog.Add($"{target.unitName} fails massive damage save — drops to -1 HP!");
+
+                    //General enemies (no dying rules) are dead at -1: Kill() fires OnDeath, which removes the
+                    //unit's model and label and runs the defeat path (same as DropToDying)
+                    if (target.IsDead())
+                    {
+                        target.Kill();
+                    }
+                    else
+                    {
+                        if (!target.CanAct()) target.EndConcentration("incapacitated");
+                        target.OnHealthChanged?.Invoke(target);
+                    }
                 }
             }
         }
+
+        //Rampage and Savage Momentum: this hit dropped the target (dead, or from above 0 HP to 0 or below)
+        ctx.droppedTarget = target.IsDead() || (prev > 0 && target.currentHP <= 0);
 
         if (target.IsDead())
         {
@@ -787,25 +1000,34 @@ public class CombatResolver
         bool isMeleeAttack = attackType == ActionDefinition.AttackType.Melee;
         Debug.Log($"Attack Roll: {roll} + acc {accuracy} [{ctx.attacker.DescribeAccuracy(isMeleeAttack)}] + BAB {bab} " +
                   $"+ mod {ctx.attackRollModifier} = {attackTotal} vs {defense}" +
-          (ctx.finalTarget.IsFlatFooted ? " (target flat-footed: no Agility bonus)" : ""));
+          (ctx.finalTarget.IsFlatFooted ? " (target flat-footed: no Agility bonus)" : "") +
+          (roll == 20 ? " (natural 20: automatic hit)" : roll == 1 ? " (natural 1: automatic miss)" : ""));
 
-        bool hit = attackTotal >= defense;
+        //d20: a natural 1 always misses, a natural 20 always hits (critical threats are deferred until criticals exist)
+        bool hit = roll == 20 || (roll != 1 && attackTotal >= defense);
 
-        //Miss chance: rolled only on a hit; the attacker's and target's sources don't stack, highest applies
+        //Miss chance: rolled only on a hit; the attacker's and target's sources don't stack, highest applies.
+        //Every roll is logged with its source, whether it turns the hit into a miss or not
         if (hit)
         {
-            int missChance = Mathf.Max(
-                ctx.attacker.GetMissChance(outgoing: true),
-                ctx.finalTarget.GetMissChance(outgoing: false));
+            int outgoing = ctx.attacker.GetMissChance(true, out string outgoingSource);
+            int incoming = ctx.finalTarget.GetMissChance(false, out string incomingSource);
+
+            bool fromAttacker = outgoing >= incoming;
+            int missChance = fromAttacker ? outgoing : incoming;
 
             if (missChance > 0)
             {
+                string source = fromAttacker
+                    ? $"{ctx.attacker.unitName}'s {ActionDefinition.FormatActionName(outgoingSource)}"
+                    : $"{ctx.finalTarget.unitName}'s {ActionDefinition.FormatActionName(incomingSource)}";
+
                 int percentile = Random.Range(1, 101);
-                if (percentile <= missChance)
-                {
-                    hit = false;
-                    CombatLog.Add($"Miss chance: rolled {percentile} vs {missChance}%");
-                }
+                hit = percentile > missChance;
+
+                if (!isSimulation)
+                    CombatLog.Add($"Miss chance ({source}, {missChance}%): rolled {percentile} — " +
+                                  $"{(hit ? "the hit stands" : "miss")}");
             }
         }
 
@@ -825,6 +1047,21 @@ public class CombatResolver
         }
 
         return hit;
+    }
+
+    //One line per hit: base roll, each labelled contributor and the total, before DR and temporary HP
+    //(ApplyFinalResult logs those). Anything that changed damage without a label shows as "other"
+    void LogDamageBreakdown(ActionContext ctx)
+    {
+        if (isSimulation) return;
+
+        var parts = new List<string> { $"roll [ {ctx.baseDamage} ]" };
+        parts.AddRange(ctx.damageParts);
+
+        int other = ctx.modifiedDamage - ctx.baseDamage - ctx.itemizedDamage;
+        if (other != 0) parts.Add($"other [ {other} ]");
+
+        CombatLog.Add($"{ctx.attacker.unitName} damage: {string.Join(" + ", parts)} = {ctx.modifiedDamage}");
     }
 
     void InitializeDamage(ActionContext ctx)
@@ -848,21 +1085,23 @@ public class CombatResolver
             {
                 int total = 0;
                 for (int i = 0; i < weapon.damageDiceCount; i++)
-                    total += Random.Range(1, weapon.damageDiceSides + 1);
+                    total += ctx.isMaximized ? weapon.damageDiceSides : Random.Range(1, weapon.damageDiceSides + 1);
 
                 total += weapon.damageBonus;
+                ctx.damageDice.Add(new Vector2Int(weapon.damageDiceCount, weapon.damageDiceSides));
 
                 if (!isSimulation)
-                    CombatLog.Add($"{ctx.attacker.unitName} rolls {weapon.displayName}: {total}");
+                    CombatLog.Add($"{ctx.attacker.unitName} rolls {weapon.displayName}{(ctx.isMaximized ? " (maximized)" : "")}: {total}");
                 return total;
             }
         }
 
         //Fallback: unarmed strike, die from the unarmed feat chain
         int sides = ctx.attacker.GetUnarmedDamageDie();
-        int unarmedRoll = Random.Range(1, sides + 1);
+        int unarmedRoll = ctx.isMaximized ? sides : Random.Range(1, sides + 1);
+        ctx.damageDice.Add(new Vector2Int(1, sides));
         if (!isSimulation)
-            CombatLog.Add($"{ctx.attacker.unitName} rolls unarmed (1d{sides}): {unarmedRoll}");
+            CombatLog.Add($"{ctx.attacker.unitName} rolls unarmed (1d{sides}){(ctx.isMaximized ? " (maximized)" : "")}: {unarmedRoll}");
         return unarmedRoll;
     }
 
@@ -1103,8 +1342,9 @@ public class CombatResolver
 
         //Defensive Manifesting stance: while threatened, a concentration check replaces provoking.
         //Not threatened: nothing to avoid, so no check
-        if (power != null && ctx.attacker.sourceCharacterData != null &&
-            ctx.attacker.sourceCharacterData.defensiveManifesting &&
+        if (power != null &&
+            (ctx.attacker.activeEffects.Exists(e => e.effectName == ConcentrationManager.DefensiveManifestingEffectName) ||
+             (ctx.attacker.sourceCharacterData != null && ctx.attacker.sourceCharacterData.defensiveManifesting)) &&
             CollectProvocationOAs(ctx).Count > 0)
         {
             bool defensiveSuccess = false;

@@ -282,7 +282,8 @@ public static class PassiveDatabase
             { PassiveIds.HelixAdaptivePhysiology, new PassiveDefinition(
                 passive: PassiveIds.HelixAdaptivePhysiology,
                 name:    "Adaptive Physiology",
-                desc:    "The Helix Warrior's altered biology repairs damage continuously. Fast healing 1 while above 0 HP.",
+                desc:    "The Helix Warrior's altered biology repairs damage continuously. Fast healing 1: regain HP each round, " +
+                         "even while dying, and stabilize automatically if dying.",
                 effect:  new SimpleEffectSource(new List<StatusEffect>
                 {
                     new StatBonusEffect(StatType.FastHealing, 1, PassiveIds.HelixAdaptivePhysiology, StatModifier.BonusType.Untyped)
@@ -291,11 +292,12 @@ public static class PassiveDatabase
             { PassiveIds.HelixRapidHealing, new PassiveDefinition(
                 passive: PassiveIds.HelixRapidHealing,
                 name:    "Rapid Healing",
-                desc:    "Mutation: Regenerate 1 HP per round while above 0 HP.",
+                desc:    "Mutation: Fast healing 1.",
                 effect:  new SimpleEffectSource(new List<StatusEffect>
                 {
                     new StatBonusEffect(StatType.FastHealing, 1, PassiveIds.HelixRapidHealing, StatModifier.BonusType.Untyped)
-                })
+                }),
+                mutationCost: 2
             )},
             { PassiveIds.HelixRapidHealingEnhanced, new PassiveDefinition(
                 passive: PassiveIds.HelixRapidHealingEnhanced,
@@ -309,10 +311,10 @@ public static class PassiveDatabase
             { PassiveIds.HelixRapidHealingGreater, new PassiveDefinition(
                 passive: PassiveIds.HelixRapidHealingGreater,
                 name:    "Rapid Healing (Greater)",
-                desc:    "Mutation upgraded: Fast healing 3. Automatically stabilize at 0 HP.",
+                desc:    "Mutation upgraded: Fast healing increases to 4.",
                 effect:  new SimpleEffectSource(new List<StatusEffect>
                 {
-                    new StatBonusEffect(StatType.FastHealing, 3, PassiveIds.HelixRapidHealingGreater, StatModifier.BonusType.Untyped)
+                    new StatBonusEffect(StatType.FastHealing, 4, PassiveIds.HelixRapidHealingGreater, StatModifier.BonusType.Untyped)
                 })
             )},
             { PassiveIds.HelixEnhancedMusculature, new PassiveDefinition(
@@ -322,7 +324,8 @@ public static class PassiveDatabase
                 effect:  new SimpleEffectSource(new List<StatusEffect>
                 {
                     new StatBonusEffect(StatType.MeleePower, 2, PassiveIds.HelixEnhancedMusculature, StatModifier.BonusType.Racial)
-                })
+                }),
+                mutationCost: 2 // Design doc: 3 MP; 2 so the doc's purchase order fits the pool
             )},
             { PassiveIds.HelixEnhancedMusculatureImproved, new PassiveDefinition(
                 passive: PassiveIds.HelixEnhancedMusculatureImproved,
@@ -337,7 +340,9 @@ public static class PassiveDatabase
                 passive: PassiveIds.HelixAdrenalineSurge,
                 name:    "Adrenaline Surge",
                 desc:    "Mutation (active): Once per combat, gain +4 Power for 3 rounds as a free action.",
-                effect:  null // Delivered as an action — see ActionIds.HelixAdrenalineSurge
+                effect:  null, // Delivered as an action
+                mutationCost: 2,
+                actions: new List<string> { ActionIds.HelixAdrenalineSurge }
             )},
             { PassiveIds.HelixPredatoryReflexes, new PassiveDefinition(
                 passive: PassiveIds.HelixPredatoryReflexes,
@@ -346,7 +351,8 @@ public static class PassiveDatabase
                 effect:  new SimpleEffectSource(new List<StatusEffect>
                 {
                     new StatBonusEffect(StatType.Initiative, 2, PassiveIds.HelixPredatoryReflexes, StatModifier.BonusType.Racial)
-                })
+                }),
+                mutationCost: 3
             )},
             { PassiveIds.HelixBoneDensity, new PassiveDefinition(
                 passive: PassiveIds.HelixBoneDensity,
@@ -354,14 +360,58 @@ public static class PassiveDatabase
                 desc:    "Mutation: +1 natural armor bonus to Defense.",
                 effect:  new SimpleEffectSource(new List<StatusEffect>
                 {
-                    new StatBonusEffect(StatType.NaturalArmor, 1, PassiveIds.HelixBoneDensity, StatModifier.BonusType.Racial)
-                })
+                    new StatBonusEffect(StatType.NaturalArmor, 1, PassiveIds.HelixBoneDensity, StatModifier.BonusType.Enhancement) //Enhancement: stacks with species natural armor
+                }),
+                mutationCost: 3
             )},
             { PassiveIds.HelixAdrenalFrenzy, new PassiveDefinition(
                 passive: PassiveIds.HelixAdrenalFrenzy,
                 name:    "Adrenal Frenzy",
                 desc:    "Mutation upgraded (active): +6 Power and +1 attack roll for 4 rounds, 1/combat. Replaces Adrenaline Surge.",
-                effect:  null // Delivered as an action — see ActionIds.HelixAdrenalFrenzy
+                effect:  null, // Delivered as an action. Reached by upgrade (Improved Mutation), not purchased
+                actions: new List<string> { ActionIds.HelixAdrenalFrenzy }
+            )},
+                        // --- Helix Warrior mutation upgrade tiers (Enhanced / Improved / Greater Mutation choice nodes) ---
+            { PassiveIds.HelixRapidHealingImproved, new PassiveDefinition(
+                passive: PassiveIds.HelixRapidHealingImproved,
+                name:    "Rapid Healing (Improved)",
+                desc:    "Mutation upgraded: Fast healing increases to 3.",
+                effect:  new SimpleEffectSource(new List<StatusEffect>
+                {
+                    new StatBonusEffect(StatType.FastHealing, 3, PassiveIds.HelixRapidHealingImproved, StatModifier.BonusType.Untyped)
+                })
+            )},
+            { PassiveIds.HelixEnhancedMusculatureEnhanced, new PassiveDefinition(
+                passive: PassiveIds.HelixEnhancedMusculatureEnhanced,
+                name:    "Enhanced Musculature (Enhanced)",
+                desc:    "Mutation upgraded: +3 bonus on melee damage rolls and Power checks.",
+                effect:  new SimpleEffectSource(new List<StatusEffect>
+                {
+                    new StatBonusEffect(StatType.MeleePower, 3, PassiveIds.HelixEnhancedMusculatureEnhanced, StatModifier.BonusType.Racial)
+                })
+            )},
+            { PassiveIds.HelixEnhancedMusculatureGreater, new PassiveDefinition(
+                passive: PassiveIds.HelixEnhancedMusculatureGreater,
+                name:    "Enhanced Musculature (Greater)",
+                desc:    "Mutation upgraded: +6 bonus on melee damage rolls and Power checks.",
+                effect:  new SimpleEffectSource(new List<StatusEffect>
+                {
+                    new StatBonusEffect(StatType.MeleePower, 6, PassiveIds.HelixEnhancedMusculatureGreater, StatModifier.BonusType.Racial)
+                })
+            )},
+            { PassiveIds.HelixAdrenalineSurgeEnhanced, new PassiveDefinition(
+                passive: PassiveIds.HelixAdrenalineSurgeEnhanced,
+                name:    "Adrenaline Surge (Enhanced)",
+                desc:    "Mutation upgraded (active): Adrenaline Surge lasts 4 rounds.",
+                effect:  null, // Delivered as an action; the action reads this tier for its duration
+                actions: new List<string> { ActionIds.HelixAdrenalineSurge }
+            )},
+            { PassiveIds.HelixAdrenalFrenzyGreater, new PassiveDefinition(
+                passive: PassiveIds.HelixAdrenalFrenzyGreater,
+                name:    "Adrenal Frenzy (Greater)",
+                desc:    "Mutation upgraded (active): +8 Power and +2 attack rolls for 5 rounds, 1/combat.",
+                effect:  null, // Delivered as an action; the action reads this tier for its bonuses
+                actions: new List<string> { ActionIds.HelixAdrenalFrenzy }
             )},
             // --- Helix Warrior Core Class Features ---
             { PassiveIds.HelixPowerfulBuild, new PassiveDefinition(
@@ -380,32 +430,32 @@ public static class PassiveDatabase
             { PassiveIds.HelixRampage, new PassiveDefinition(
                 passive: PassiveIds.HelixRampage,
                 name:    "Rampage",
-                desc:    "On any melee kill, gain a bonus melee attack against an adjacent enemy.",
-                effect:  null // Hooks into post-kill resolution — scoped during Berserker action authoring
+                desc:    "Once per round, when a melee hit drops a foe, make a free melee attack against another adjacent enemy.",
+                effect:  null // Checked by CombatResolver.TryRampage (HasPassive)
             )},
             { PassiveIds.HelixBloodlust, new PassiveDefinition(
                 passive: PassiveIds.HelixBloodlust,
                 name:    "Bloodlust",
-                desc:    "While below 50% HP, gain bonus melee damage.",
-                effect:  null // Conditional — scoped during Berserker action authoring
+                desc:    "While below 50% HP, melee attacks deal +1 damage per 4 Helix Warrior levels.",
+                effect:  null // Checked by CombatResolver.ExecuteAction (HasPassive): own damage-breakdown part
             )},
             { PassiveIds.HelixSavageMomentum, new PassiveDefinition(
                 passive: PassiveIds.HelixSavageMomentum,
                 name:    "Savage Momentum",
-                desc:    "Each consecutive melee kill this combat increases your attack bonus by 1, stacking up to 3.",
-                effect:  null // State-tracking — scoped during Berserker action authoring
+                desc:    "Each melee kill gives +1 attack, stacking up to +3. Lost at the end of a round with no melee kill.",
+                effect:  null // Tracked on Unit (GainSavageMomentum / CheckSavageMomentum)
             )},
             { PassiveIds.HelixKillingBlow, new PassiveDefinition(
                 passive: PassiveIds.HelixKillingBlow,
                 name:    "Killing Blow",
-                desc:    "Melee attacks against targets at 25% HP or below automatically deal maximum damage.",
-                effect:  null // Hooks into pre-damage phase — scoped during Berserker action authoring
+                desc:    "Melee attacks against targets at 25% HP or below deal maximum damage (all damage dice).",
+                effect:  null // Checked by CombatResolver.ExecuteAction (HasPassive): sets ctx.isMaximized
             )},
             { PassiveIds.HelixDevastatingCleave, new PassiveDefinition(
                 passive: PassiveIds.HelixDevastatingCleave,
                 name:    "Devastating Cleave",
-                desc:    "Cleave attacks deal an additional die of damage.",
-                effect:  null // Hooks into Cleave resolution — scoped during Berserker action authoring
+                desc:    "Cleave and Rampage follow-up attacks deal one additional damage die.",
+                effect:  null // Checked by CleaveEffect.DevastatingDice (HasPassive)
             )},
             // --- Helix Warrior Apex Predator Path ---
             { PassiveIds.HelixHuntingInstinct, new PassiveDefinition(
@@ -469,7 +519,7 @@ public static class PassiveDatabase
                 desc:    "Natural armor increases by 2 and critical threat range against you is reduced by 1.",
                 effect:  new SimpleEffectSource(new List<StatusEffect>
                 {
-                    new StatBonusEffect(StatType.NaturalArmor, 2, PassiveIds.HelixFortressBody, StatModifier.BonusType.Racial)
+                    new StatBonusEffect(StatType.NaturalArmor, 2, PassiveIds.HelixFortressBody, StatModifier.BonusType.Enhancement) //Enhancement: stacks with species natural armor
                 })
             )},
             { PassiveIds.HelixUnbreakable, new PassiveDefinition(
@@ -1352,7 +1402,7 @@ public static class PassiveDatabase
                 passive: PassiveIds.TelepathMaximizePower,
                 name:    "Maximize Power",
                 desc:    "Spend 6 additional power points to manifest a power at maximum effect: every variable " +
-                         "die rolls its highest value. The extra cost counts toward the manifestation limit.",
+                         "die rolls its highest value.",
                 effect:  null // Toggled per action (CombatAction.maximize); checked by ActionValidator
             )},
 
@@ -1483,5 +1533,46 @@ public static class PassiveDatabase
 
         UnityEngine.Debug.LogWarning($"PassiveDatabase: '{passiveId}' not found.");
         return null;
+    }
+
+    //Upgrade tiers that replace a lower tier: higher tier -> the tier it replaces. The Detail panel lists only the
+    //highest tier unlocked. Upgrades that add to the lower tier (Hardened Chassis, Signal Scramble, Shadow Step) stay out
+    public static readonly Dictionary<string, string> Replaces = new Dictionary<string, string>
+    {
+        { PassiveIds.NeuralAcuity2, PassiveIds.NeuralAcuity1 },
+        { PassiveIds.NeuralAcuity3, PassiveIds.NeuralAcuity2 },
+        { PassiveIds.SubdermalWeave2, PassiveIds.SubdermalWeave1 },
+        { PassiveIds.TacticalUplink2, PassiveIds.TacticalUplink1 },
+        { PassiveIds.HelixRapidHealingEnhanced, PassiveIds.HelixRapidHealing },
+        { PassiveIds.HelixRapidHealingImproved, PassiveIds.HelixRapidHealingEnhanced },
+        { PassiveIds.HelixRapidHealingGreater, PassiveIds.HelixRapidHealingImproved },
+        { PassiveIds.HelixEnhancedMusculatureEnhanced, PassiveIds.HelixEnhancedMusculature },
+        { PassiveIds.HelixEnhancedMusculatureImproved, PassiveIds.HelixEnhancedMusculatureEnhanced },
+        { PassiveIds.HelixEnhancedMusculatureGreater, PassiveIds.HelixEnhancedMusculatureImproved },
+        { PassiveIds.HelixAdrenalineSurgeEnhanced, PassiveIds.HelixAdrenalineSurge },
+        { PassiveIds.HelixAdrenalFrenzy, PassiveIds.HelixAdrenalineSurgeEnhanced },
+        { PassiveIds.HelixAdrenalFrenzyGreater, PassiveIds.HelixAdrenalFrenzy },
+        { PassiveIds.BastionDR4, PassiveIds.BastionDR2 },
+        { PassiveIds.BastionDR6, PassiveIds.BastionDR4 },
+        { PassiveIds.BastionDR8, PassiveIds.BastionDR6 },
+        { PassiveIds.FieldMedicMedicalSpecialist2, PassiveIds.FieldMedicMedicalSpecialist1 },
+        { PassiveIds.FieldMedicMedicalSpecialist3, PassiveIds.FieldMedicMedicalSpecialist2 },
+        { PassiveIds.TSMedicalSpecialist4, PassiveIds.FieldMedicMedicalSpecialist3 },
+        { PassiveIds.TSMedicalSpecialist5, PassiveIds.TSMedicalSpecialist4 },
+        { PassiveIds.CMMedicalSpecialist4, PassiveIds.FieldMedicMedicalSpecialist3 },
+        { PassiveIds.CMMedicalSpecialist5, PassiveIds.CMMedicalSpecialist4 },
+        { PassiveIds.FPMedicalSpecialist4, PassiveIds.FieldMedicMedicalSpecialist3 },
+        { PassiveIds.FPMedicalSpecialist5, PassiveIds.FPMedicalSpecialist4 },
+    };
+
+    //True if 'higher' is an upgrade of 'lower', directly or through a chain of tiers
+    public static bool Supersedes(string higher, string lower)
+    {
+        while (higher != null && Replaces.TryGetValue(higher, out string replaced))
+        {
+            if (replaced == lower) return true;
+            higher = replaced;
+        }
+        return false;
     }
 }

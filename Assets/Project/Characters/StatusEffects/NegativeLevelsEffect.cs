@@ -32,7 +32,12 @@ public class NegativeLevelsEffect : StatusEffect
         if (lostPowerId == null) lostPowerId = FindHighestPower(unit);
 
         //Not in activeEffects yet, so GetMaxHP excludes this effect's penalty
-        unit.currentHP = Mathf.Min(unit.currentHP, unit.GetMaxHP() - 5 * levels);
+        int newMaxHP = unit.GetMaxHP() - 5 * levels;
+        unit.currentHP = Mathf.Min(unit.currentHP, newMaxHP);
+
+        CombatLog.Add($"{unit.unitName} gains {levels} negative level{(levels == 1 ? "" : "s")}: " +
+                      $"-{levels} attacks, saves and skills, max HP {newMaxHP} (-{5 * levels}). HP: {unit.currentHP}");
+        LogLostPower(unit);
         CheckDeath(unit);
     }
 
@@ -40,8 +45,13 @@ public class NegativeLevelsEffect : StatusEffect
     {
         if (!(incoming is NegativeLevelsEffect other)) return;
 
-        levels += other.levels;
+        int added = other.levels;
+        levels += added;
         Target.currentHP = Mathf.Min(Target.currentHP, Target.GetMaxHP());
+
+        CombatLog.Add($"{Target.unitName} gains {added} more negative level{(added == 1 ? "" : "s")} ({levels} total): " +
+                      $"-{levels} attacks, saves and skills, max HP {Target.GetMaxHP()}. HP: {Target.currentHP}");
+        LogLostPower(Target);
         CheckDeath(Target);
     }
 
@@ -63,6 +73,16 @@ public class NegativeLevelsEffect : StatusEffect
             CombatLog.Add($"{unit.unitName} dies from unknown causes");
             unit.Kill();
         }
+    }
+
+    //Psionic bearers: the power lost to the negative levels, and the manifester level penalty
+    private void LogLostPower(Unit unit)
+    {
+        if (lostPowerId == null) return;
+
+        var power = PowerDatabase.Get(lostPowerId);
+        CombatLog.Add($"{unit.unitName} loses access to {(power != null ? power.DisplayName : lostPowerId)} " +
+                      $"and manifests at -{levels} manifester level{(levels == 1 ? "" : "s")}.");
     }
 
     private static string FindHighestPower(Unit unit)

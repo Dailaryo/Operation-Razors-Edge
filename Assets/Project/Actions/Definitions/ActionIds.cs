@@ -19,6 +19,8 @@ public static class ActionIds
     public const string FightingDefensively = "FightingDefensively";
     public const string TotalDefense = "TotalDefense";
     public const string PowerAttack = "PowerAttack";
+    public const string ManifestDefensively = "ManifestDefensively";
+    public const string MaximizePower = "MaximizePower";
     public const string Move = "Move";
     public const string Feint = "Feint";
     public const string AcrobaticMovement = "AcrobaticMovement";
@@ -27,6 +29,7 @@ public static class ActionIds
     public const string BreakWindow = "BreakWindow";
     public const string TreatInjury = "TreatInjury";
     public const string Hide = "Hide";
+    public const string KnockoutPunch = "KnockoutPunch";
 
     //Technosavant Tier 1
     public const string PowerSurge = "PowerSurge";
@@ -63,6 +66,10 @@ public static class ActionIds
     public const string HelixAdrenalineSurge = "HelixAdrenalineSurge";
     public const string HelixAdrenalFrenzy = "HelixAdrenalFrenzy";
 
+    // Helix Warrior — Tier 1
+    public const string BrutalStrike = "BrutalStrike";
+    public const string Cleave = "Cleave"; //Cleave feat (Pathfinder): Standard melee attack with a follow-up on a hit
+
     // Helix Warrior — Berserker Path
     public const string HelixFrenziedStrike = "HelixFrenziedStrike";
     public const string HelixBerserkApotheosis = "HelixBerserkApotheosis";
@@ -80,7 +87,7 @@ public static class ActionIds
     public const string HelixApexMutationIron = "HelixApexMutationIron";
 
     // Infiltrator
-    public const string DeadAim = "DeadAim";
+    public const string DeadlyAim = "DeadlyAim";
 
     // Infiltrator — Ghost Path
     public const string InfiltratorVanish           = "InfiltratorVanish";

@@ -18,6 +18,7 @@ public static class PregenProgression
         }
 
         ApplyFeats(data, level, step);
+        ApplyMutations(data, level, step);   //before choices: an upgrade pick can need this level's purchase
         ApplyChoices(data, level, step);
         ApplyASI(data, level, step);
         ApplySkillRanks(data, level, step);
@@ -78,7 +79,35 @@ public static class PregenProgression
             }
 
             data.takenChoiceOptionIds.Add(optionId);
+            ChoiceNodeDatabase.Get(nodeId)?.options.Find(o => o.optionId == optionId)?.ApplyPassives(data);
             data.pendingChoiceNodeIds.Remove(nodeId);
+        }
+    }
+
+    //Helix Warrior mutation purchases: each costs its PassiveDefinition.mutationCost from the Mutation Point pool
+    //(the class resource maximum at this level). Recorded as an unlocked passive; spent MP stays on the character
+    private static void ApplyMutations(CharacterData data, int level, PregenLevelPlan step)
+    {
+        if (step.mutations.Count == 0) return;
+
+        var resource = ClassDatabase.Get(data.classId)?.resource;
+        int pool = resource != null ? resource.GetMaxAtLevel(level) : 0;
+
+        foreach (var passiveId in step.mutations)
+        {
+            var passive = PassiveDatabase.Get(passiveId);
+            if (passive == null || passive.mutationCost <= 0)
+            { Warn(data, level, $"'{passiveId}' is not a purchasable mutation"); continue; }
+
+            if (data.unlockedPassiveIds.Contains(passiveId))
+            { Warn(data, level, $"mutation '{passive.displayName}' is already owned"); continue; }
+
+            int left = pool - data.mutationPointsSpent;
+            if (passive.mutationCost > left)
+            { Warn(data, level, $"mutation '{passive.displayName}' costs {passive.mutationCost} MP, only {left} of {pool} left"); continue; }
+
+            data.mutationPointsSpent += passive.mutationCost;
+            data.unlockedPassiveIds.Add(passiveId);
         }
     }
 

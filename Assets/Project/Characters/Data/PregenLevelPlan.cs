@@ -6,6 +6,7 @@ public class PregenLevelPlan
 {
     public List<string> feats = new List<string>();          //granted (unlockedFeatIds) are free; others cost a feat point
     public List<string> choiceOptions = new List<string>();
+    public List<string> mutations = new List<string>();      //Helix Warrior: mutation passives bought with Mutation Points
 
     //A higher tier frees the slots of the lower tiers it replaces:
     //list it BEFORE the replacement picks that fill those slots

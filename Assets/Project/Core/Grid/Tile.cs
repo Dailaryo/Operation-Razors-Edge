@@ -12,6 +12,7 @@ public class Tile : MonoBehaviour
 
     TileHighlightType baseHighlight = TileHighlightType.None;
     TileHighlightType overlayHighlight = TileHighlightType.None;
+    bool isHovered = false; //cursor over this tile (TileHighlighter); drawn above base and overlay
 
     //Active field zone (Deploy Field): tints the terrain under every other highlight
     bool inFieldZone = false;
@@ -70,10 +71,18 @@ public class Tile : MonoBehaviour
         ApplyHighlight();
     }
 
+    public void SetHover(bool on)
+    {
+        if (isHovered == on) return;
+        isHovered = on;
+        ApplyHighlight();
+    }
+
     void ApplyHighlight()
     {
-        TileHighlightType finalType = overlayHighlight != TileHighlightType.None
-            ? overlayHighlight
+        //Hover sits above everything and is never stored in the base/overlay, so highlight rebuilds can't strand it
+        TileHighlightType finalType = isHovered ? TileHighlightType.Hover
+            : overlayHighlight != TileHighlightType.None ? overlayHighlight
             : baseHighlight;
 
         //Active field zones tint the ground; every location highlight blends over that

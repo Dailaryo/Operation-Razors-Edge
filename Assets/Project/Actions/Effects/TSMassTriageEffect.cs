@@ -103,10 +103,12 @@ public class TSMassTriageEffect : IActionEffect
                 {
                     foreach (Unit target in targets)
                     {
+                        bool wasDown = target.IsDying() || target.IsDisabled();
+
                         target.currentHP = Mathf.Min(target.currentHP + total, target.GetMaxHP());
                         target.OnHealthChanged?.Invoke(target);
 
-                        if (target.IsDying() || target.IsDisabled())
+                        if (wasDown)
                         {
                             if (target.currentHP > 0)
                             {

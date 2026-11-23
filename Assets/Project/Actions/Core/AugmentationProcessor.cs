@@ -84,7 +84,8 @@ public static class AugmentationProcessor
 
         //Enforce manifester level cap
         int limit = GetManifestationLimit(manifester);
-        if (totalCost > limit)
+        //House rule: Maximize Power's +6 doesn't count toward the manifestation limit (3.5 says it does)
+        if (totalCost - (maximized ? MaximizePowerCost : 0) > limit)
         {
             result.isValid = false;
             result.failureReason = $"Total PP cost ({totalCost}) exceeds manifester limit ({limit})";
@@ -115,7 +116,8 @@ public static class AugmentationProcessor
 
         result.isValid = true;
         result.totalPowerPointCost = totalCost;
-        result.usesFreeZeroLevel = freeUse;
+        //A maximized 0-level power never spends a free use: with one available it costs only Maximize's +6 PP
+        result.usesFreeZeroLevel = freeUse && !maximized;
         if (requestedOptions != null)
             result.appliedOptions.AddRange(requestedOptions);
         return result;

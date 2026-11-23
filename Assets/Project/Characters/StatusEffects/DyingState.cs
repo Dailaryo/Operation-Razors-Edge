@@ -15,6 +15,17 @@ public class DyingState : StatusEffect
 
     public override void OnTurnEnd(Unit unit)
     {
+        //Fast healing (Pathfinder): a dying unit with working fast healing stabilizes automatically instead of bleeding
+        //out, and fast healing later in this end phase brings HP back up. Suppressed fast healing doesn't stabilize
+        bool fastHealingSuppressed = unit.activeEffects.Exists(e => e is FastHealingSuppressedEffect);
+        if (unit.GetStat(StatType.FastHealing) > 0 && !fastHealingSuppressed)
+        {
+            CombatLog.Add($"{unit.unitName} stabilizes automatically (fast healing). HP: {unit.currentHP}");
+            unit.RemoveEffect<DyingState>();
+            unit.AddEffect(new StabilizedState());
+            return;
+        }
+
         //Lose 1 HP per round
         unit.currentHP -= 1;
         CombatLog.Add($"{unit.unitName} loses 1 HP while dying. HP: {unit.currentHP}");
@@ -28,7 +39,7 @@ public class DyingState : StatusEffect
         }
 
         //Attempt natural stabilization: Resolve save DC 20
-        int total = unit.RollSave(Unit.SaveType.Resolve);
+        var total = unit.RollSave(Unit.SaveType.Resolve);
 
         if (total >= 20)
         {

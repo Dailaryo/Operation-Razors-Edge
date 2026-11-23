@@ -63,6 +63,12 @@ public static class SkillCheckExecutor
                     //Attacker rolls normally; defender total is supplied by caller
                     result = SkillResolver.Resolve(context.attacker, skillCheck.skill, context.defenderTotalOverride.Value);
                     result.dc = context.defenderTotalOverride.Value;
+
+
+                    //The defender's side is a saving throw: a natural 20 always saves (the check fails),
+                    //a natural 1 always fails (the check succeeds)
+                    if (context.defenderNaturalRoll == 20) result.success = false;
+                    else if (context.defenderNaturalRoll == 1) result.success = true;
                 }
                 else
                 {
@@ -116,6 +122,9 @@ public static class SkillCheckExecutor
                 logLine = $"{context.attacker.unitName} {skillCheck.description}: " +
                           $"{result.total} vs {result.dc} — " +
                           $"{(result.success ? "Success" : "Failure")}";
+
+            if (context.defenderNaturalRoll == 1 || context.defenderNaturalRoll == 20)
+                logLine += $" (defender's save: natural {context.defenderNaturalRoll})";
 
             CombatLog.Add(logLine);
         }

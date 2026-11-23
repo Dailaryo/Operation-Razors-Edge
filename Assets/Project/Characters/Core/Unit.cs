@@ -10,7 +10,6 @@ public class Unit
     public bool isEnemy;
     public bool isExtracted = false;
     public bool provokeImmunity = false;
-    public bool pendingCommandOverride = false;
 
     public int maxHP;
     public int currentHP;
@@ -26,6 +25,7 @@ public class Unit
     public bool defeatProcessed = false;     //Removal from the encounter has run (once per unit)
     public bool removedFromEncounter = false; //Out of the fight without dying (Microcosm): counts as dead
     public bool isInvulnerableTarget = false;   //Training target (D6-B): set by EnemyFactory from EnemyDefinition
+    public Unit.SaveType? riggedSave = null;    //Training: set by EnemyFactory. Saves of this type roll a natural 20, all others a natural 1
     public bool usesDyingRules = true;          //Disabled/Dying at 0 HP and below (squad). False = dies at 0 HP (general enemies; set by EnemyFactory)
     public bool actsInSurpriseRound = false;    //Set by CombatManager.StartCombat: surprising side, or AlwaysActsInSurpriseRound
     public bool limitedToSingleAction = false;  //This round only: a single move OR standard action (surprise round). Set and cleared by CombatManager
@@ -50,6 +50,49 @@ public class Unit
 
     //Uses of limited actions this combat (ActionDefinition.usesPerCombat). Cleared at combat start
     public Dictionary<ActionDefinition, int> combatUses = new Dictionary<ActionDefinition, int>();
+
+    //Round in which Rampage last fired (once per round). Reset at combat start
+    public int rampageRound = -1;
+
+    //Savage Momentum (Helix Berserker): +1 untyped Accuracy per melee kill, up to +3, lost at the end of a round
+    //with no melee kill. savageMomentumRound = the last round with a melee kill
+    public const string SavageMomentumSource = "SavageMomentum";
+    public int savageMomentum = 0;
+    public int savageMomentumRound = -1;
+
+    public void GainSavageMomentum(int round)
+    {
+        savageMomentumRound = round;
+        if (savageMomentum >= 3) return;
+
+        SetSavageMomentum(savageMomentum + 1);
+        CombatLog.Add($"{unitName}'s Savage Momentum: +{savageMomentum} attack.");
+    }
+
+    //End phase: no melee kill this round, so the momentum is lost
+    public void CheckSavageMomentum(int round)
+    {
+        if (savageMomentum == 0 || savageMomentumRound == round) return;
+
+        SetSavageMomentum(0);
+        CombatLog.Add($"{unitName}'s Savage Momentum fades.");
+    }
+
+    public void ResetSavageMomentum()
+    {
+        SetSavageMomentum(0);
+        savageMomentumRound = -1;
+    }
+
+    void SetSavageMomentum(int value)
+    {
+        var old = activeEffects.Find(e => e is StatBonusEffect && e.effectName.StartsWith(SavageMomentumSource));
+        if (old != null) RemoveEffect(old);
+
+        savageMomentum = value;
+        if (value > 0)
+            AddEffect(new StatBonusEffect(StatType.Accuracy, value, SavageMomentumSource) { isPersistent = true });
+    }
 
     public int GetCombatUses(ActionDefinition action)
     {
@@ -229,9 +272,11 @@ public class Unit
             return null;
         }
 
-        //A lockout landing on a unit with no actions left this round would expire at the end phase without
-        //costing it anything; extend it so it covers the unit's next turn (d20 "until your next turn")
-        if (newEffect.BlocksActions && pendingActionCount == 0 && !newEffect.isPersistent)
+        //Durations count the recipient's own turns. An effect landing during resolution on a unit with no actions
+        //left this round would lose a round at the end phase without covering any of its turns, so extend it to
+        //cover the unit's next turn (d20 "until your next turn"). Applies to buffs and debuffs alike
+        if (CombatResolver.ResolutionInProgress && pendingActionCount == 0 &&
+            !newEffect.isPersistent && !newEffect.lastsUntilHub && newEffect.duration > 0)
             newEffect.duration += 1;
 
         //Same effect doesn't stack (d20): keep one instance with the longer duration
@@ -469,6 +514,10 @@ public class Unit
         return currentHP < 0 && currentHP > GetDeathThreshold();
     }
 
+    //Class, path or mutation passive unlocked on this unit's character (Greater Rapid Healing and similar checks)
+    public bool HasPassive(string passiveId) =>
+        sourceCharacterData != null && sourceCharacterData.unlockedPassiveIds.Contains(passiveId);
+
     public bool IsStabilized()
     {
         return activeEffects.Exists(e => e is StabilizedState);
@@ -487,8 +536,8 @@ public class Unit
 
     public bool IsActionAvailable(ActionDefinition action)
     {
-        if (action.usesPerCombat > 0 && GetCombatUses(action) >= action.usesPerCombat)
-            return false;
+        int maxUses = action.GetUsesPerCombat(this);
+        if (maxUses > 0 && GetCombatUses(action) >= maxUses) return false;
 
         if (!cooldowns.TryGetValue(action, out int cd))
             return true;
@@ -560,6 +609,10 @@ public class Unit
         return baseValue;
     }
 
+    //Debug: log which typed bonus wins when several of the same type compete. Off by default; stat lookups run
+    //hundreds of times per planning click (simulation replays), so this floods the Console when on
+    public static bool LogStackingDetails = false;
+
     private List<StatModifier> CollectStatModifiers(StatType stat, EffectDescriptor context =EffectDescriptor.None)
     {
         List<StatModifier> all = new List<StatModifier>();
@@ -615,7 +668,7 @@ public class Unit
 
             result.Add(best);
 
-            if (pool.Count > 1)
+            if (pool.Count > 1 && LogStackingDetails)
             {
                 Debug.Log($"{unitName}: {stat} {type} bonus — " +
                 $"kept +{best.flatBonus} from '{best.source}', " +
@@ -697,9 +750,10 @@ public class Unit
             : GetModifier(StatType.Power);
 
         int unarmed = (isMelee && IsUnarmed()) ? GetStat(StatType.UnarmedAccuracy) : 0;
-        int melee = isMelee ? GetStat(StatType.MeleeAccuracy) : 0;
+        //Attack-type-only accuracy: Power Attack (melee), Deadly Aim (ranged)
+        int attackTypeOnly = isMelee ? GetStat(StatType.MeleeAccuracy) : GetStat(StatType.RangedAccuracy);
 
-        return ability + GetStat(StatType.Accuracy) + melee + unarmed;
+        return ability + GetStat(StatType.Accuracy) + attackTypeOnly + unarmed;
     }
 
     //Unarmed: no main-hand weapon, or one tagged Unarmed. Units without CharacterData use natural attacks, not unarmed strikes
@@ -731,11 +785,27 @@ public class Unit
             foreach (var mod in CollectStatModifiers(StatType.MeleeAccuracy))
                 parts.Add($"{mod.source} {Signed(mod.flatBonus)} (melee)");
 
+        if (!isMelee)
+            foreach (var mod in CollectStatModifiers(StatType.RangedAccuracy))
+                parts.Add($"{mod.source} {Signed(mod.flatBonus)} (ranged)");
+
         if (isMelee && IsUnarmed())
             foreach (var mod in CollectStatModifiers(StatType.UnarmedAccuracy))
                 parts.Add($"{mod.source} {Signed(mod.flatBonus)} (unarmed)");
 
         return string.Join(", ", parts);
+    }
+
+    //MeleePower damage bonus by source, for the damage breakdown: the POW modifier, then each MeleePower modifier
+    //(Enhanced Musculature, Berserk Apotheosis, ...) with the same stacking rules GetStat applies
+    public List<(string label, int amount)> GetMeleePowerParts()
+    {
+        var parts = new List<(string label, int amount)> { ("POW", GetModifier(StatType.Power)) };
+
+        foreach (var mod in CollectStatModifiers(StatType.MeleePower))
+            parts.Add((mod.source, mod.flatBonus));
+
+        return parts;
     }
 
     //Unarmed strike die: 1d4 base, raised by the unarmed feat chain (highest wins)
@@ -854,18 +924,19 @@ public class Unit
         }
     }
 
-    public int RollSave(SaveType type, EffectDescriptor context = EffectDescriptor.None)
-    => RollSave(type, out _, context);
+    public SaveRoll RollSave(SaveType type, EffectDescriptor context = EffectDescriptor.None, bool log = true)
+        => RollSave(type, out _, context, log);
 
-    public int RollSave(SaveType type, out int natural, EffectDescriptor context = EffectDescriptor.None)
+    public SaveRoll RollSave(SaveType type, out int natural, EffectDescriptor context = EffectDescriptor.None, bool log = true)
     {
-        natural = Random.Range(1, 21);
+        //Training targets (TR-02): natural 20 on their own save type, natural 1 on every other
+        natural = riggedSave.HasValue ? (type == riggedSave.Value ? 20 : 1) : Random.Range(1, 21);
         int value = GetSaveValue(type, context);
-        int total = natural + value;
+        var save = new SaveRoll(natural + value, natural);
 
-        Debug.Log($"{unitName} {type} save: {natural} + {value} = {total}");
+        if (log) Debug.Log($"{unitName} {type} save: {natural} + {value} = {save}");
 
-        return total;
+        return save;
     }
 
     public void ApplyFeats()
@@ -988,24 +1059,16 @@ public class Unit
                 StatModifier.BonusType.Untyped)
         }));
 
-        // Apply effects from taken choice options
+        // Apply effects from taken choice options. Their passives were recorded on the character when the option
+        // was taken (ChoiceOption.ApplyPassives); building a unit only reads them
         foreach (var node in ChoiceNodeDatabase.Definitions.Values)
         {
             foreach (var option in node.options)
             {
                 if (!sourceCharacterData.takenChoiceOptionIds.Contains(option.optionId)) continue;
 
-                // Remove passives that this upgrade replaces
-                foreach (string removeId in option.passiveRemoveIds)
-                    sourceCharacterData.unlockedPassiveIds.Remove(removeId);
-
-                // Add replacement passives
-                foreach (string addId in option.passiveUnlockIds)
-                    if (!sourceCharacterData.unlockedPassiveIds.Contains(addId))
-                        sourceCharacterData.unlockedPassiveIds.Add(addId);
-
                 if (option.effectSource != null)
-                    effectSources.Add(option.effectSource);
+                    AddClassEffectSource(option.effectSource);
             }
         }
 
@@ -1016,7 +1079,7 @@ public class Unit
             if (passive == null) continue;
 
             if (passive.effectSource != null)
-                effectSources.Add(passive.effectSource);
+                AddClassEffectSource(passive.effectSource);
 
             if (CharacterFactory.LogBuildDetails)
                 Debug.Log($"{unitName}: Applied passive '{passive.displayName}'");
@@ -1024,6 +1087,35 @@ public class Unit
 
         if (CharacterFactory.LogBuildDetails)
             Debug.Log($"{unitName}: Applied class '{classDef.displayName}' at level {sourceCharacterData.level}");
+    }
+
+    //Class passives and choice options. Effects flagged instancedPassive get their own copy in activeEffects
+    //(OnApply runs, per-unit state, found by activeEffects lookups); the rest stay one shared effectSources entry.
+    //A source with nothing instanced is added as-is, so sources that build their effects per unit keep doing so
+    void AddClassEffectSource(IEffectSource source)
+    {
+        var effects = source.GetEffects(this);
+        if (!effects.Exists(e => e.instancedPassive))
+        {
+            effectSources.Add(source);
+            return;
+        }
+
+        var shared = new List<StatusEffect>();
+        foreach (var effect in effects)
+        {
+            if (effect.instancedPassive)
+            {
+                StatusEffect instance = effect.CreateInstance();
+                instance.isPassive = true;
+                AddEffect(instance);
+            }
+            else
+                shared.Add(effect);
+        }
+
+        if (shared.Count > 0)
+            effectSources.Add(new SimpleEffectSource(shared));
     }
 
     public void ApplyBackground()
@@ -1328,20 +1420,29 @@ public class Unit
     }
 
     //Highest miss chance from active effects and effect sources (miss chances don't stack)
-    public int GetMissChance(bool outgoing)
+    public int GetMissChance(bool outgoing) => GetMissChance(outgoing, out _);
+
+    //source: effectName of the effect that supplies the highest miss chance (null when there is none)
+    public int GetMissChance(bool outgoing, out string source)
     {
         int best = 0;
+        source = null;
 
         foreach (var effect in activeEffects)
         {
             if (IsSuppressed(effect)) continue;
-            best = Mathf.Max(best, outgoing ? effect.GetOutgoingMissChance(this) : effect.GetIncomingMissChance(this));
+
+            int chance = outgoing ? effect.GetOutgoingMissChance(this) : effect.GetIncomingMissChance(this);
+            if (chance > best) { best = chance; source = effect.effectName; }
         }
 
-        foreach (var source in effectSources)
+        foreach (var src in effectSources)
         {
-            foreach (var effect in source.GetEffects(this))
-                best = Mathf.Max(best, outgoing ? effect.GetOutgoingMissChance(this) : effect.GetIncomingMissChance(this));
+            foreach (var effect in src.GetEffects(this))
+            {
+                int chance = outgoing ? effect.GetOutgoingMissChance(this) : effect.GetIncomingMissChance(this);
+                if (chance > best) { best = chance; source = effect.effectName; }
+            }
         }
 
         return best;

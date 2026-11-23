@@ -27,7 +27,7 @@ public class FrightfulPresenceEffect : StatusEffect
             resolver.TryFireReaction(unit, ReactionTrigger.TargetedByMindAffecting, attacker);
             if (unit.IsImmuneTo(fear, level, consume: true)) continue;
 
-            int saveRoll = unit.RollSave(Unit.SaveType.Focus, fear);
+            var saveRoll = unit.RollSave(Unit.SaveType.Focus, fear);
             CombatLog.Add($"{unit.unitName} Frightful Presence save: {saveRoll} vs DC {dc}");
 
             if (saveRoll < dc)

@@ -107,6 +107,10 @@ public static class ActionEconomyResolver
         if (unit.activeEffects.Exists(e => e is OverdriveEffect))
             limits[ActionDefinition.ActionCategory.Standard] = 2;
 
+        //Command Override: one bonus Standard this round (CommandOverrideBonusEffect, granted during the last round)
+        if (unit.activeEffects.Exists(e => e is CommandOverrideBonusEffect))
+            limits[ActionDefinition.ActionCategory.Standard] += 1;
+
         //Disabled (0 HP), or acting in the surprise round: a single move OR standard action per round. With no Move slot,
         //a move takes the one Standard slot (GetValidCategories), so they exclude each other; full-round actions can't fit.
         //Swift/free stay available (Pathfinder). Applied after Overdrive so it always caps.

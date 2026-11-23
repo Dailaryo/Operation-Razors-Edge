@@ -64,7 +64,7 @@ public class EnemyDefinition
     public bool ignoreDifficultyScaling = false;  //D3: skip EnemyScaler pass 2 and the classed post-build multiplier
     public bool isInvulnerableTarget = false;      //D6-B: damage logs normally, HP resets in the end phase, never dies
     public bool usesDyingRules = false;            //Bosses/named NPCs: go Disabled/Dying like the squad instead of dying at 0 HP
-
+    public Unit.SaveType? riggedSave = null;       //Training (TR-02): saves of this type always roll a natural 20, every other save a natural 1
 
     //Scripted behaviour (D4/D5): one step per round, wrapping. Empty = utility planner as today.
     //A patterned unit only moves when a step's actionId is ActionIds.Move.

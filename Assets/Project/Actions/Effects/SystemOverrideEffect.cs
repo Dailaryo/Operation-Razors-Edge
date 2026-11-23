@@ -10,14 +10,15 @@ public class SystemOverrideEffect : IActionEffect
         if (ctx.finalTarget == null) return;
 
         // Compute defender's Focus save as the opposed DC
-        int defenderFocusSave = ctx.finalTarget.RollSave(Unit.SaveType.Focus);
+        var defenderFocusSave = ctx.finalTarget.RollSave(Unit.SaveType.Focus);
 
         var context = new SkillCheckContext
         {
             checkId = SkillCheckIds.SystemOverrideOpposed,
             attacker = ctx.attacker,
             defender = ctx.finalTarget,
-            defenderTotalOverride = defenderFocusSave,
+            defenderTotalOverride = defenderFocusSave.total,
+            defenderNaturalRoll = defenderFocusSave.natural,
             callerContext = SkillCheckContext.CallerContext.Combat,
             showPreview = false,
             onResult = result =>

@@ -8,7 +8,8 @@ public class ArtilleristIndirectFireEffect : IActionEffect
 
         ctx.ignoresLoS = true;
 
-        CombatLog.Add($"{ctx.attacker.unitName} fires Indirect Fire on " +
-                      $"{ctx.finalTarget.unitName} — cover ignored.");
+        if (!resolver.IsSimulation)
+            CombatLog.Add($"{ctx.attacker.unitName} fires Indirect Fire on " +
+                          $"{ctx.finalTarget.unitName} — cover ignored.");
     }
 }

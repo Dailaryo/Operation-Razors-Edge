@@ -11,6 +11,11 @@ public class StatusEffect
     //Granted by a feat or passive rather than an action; hidden from the unit label
     public bool isPassive = false;
 
+    //Class passive that needs its own per-unit copy in activeEffects: once-per-combat state, OnApply changes,
+    //or code that looks it up in activeEffects. Unit.ApplyClass routes these through AddEffect(CreateInstance());
+    //every other class passive stays a shared effectSources entry
+    public bool instancedPassive = false;
+
     //Fresh copy for one unit. Database feat effects are single shared instances, and effects that keep state
     //(Resilience's once-per-combat flag, Target) must not be shared between units, including throwaway portrait Units
     public StatusEffect CreateInstance()
@@ -81,6 +86,14 @@ public class StatusEffect
 
     public virtual void OnBeforeAction(ActionContext ctx) { }
     public virtual void OnAfterAction(ActionContext ctx) { }
+
+    //Right before an attack's hit roll (CombatResolver.ApplyPreAttackEffects): adjust ctx.attackRollModifier.
+    //Execution phase only. OnBeforeAction runs after the roll, on a hit
+    public virtual void OnBeforeAttackRoll(ActionContext ctx) { }
+
+    //Aura hook: called once per end phase for each living unit carrying this effect (as a passive or an active
+    //effect). Override to refresh buffs on nearby units (Tactical Uplink, Protective Aura)
+    public virtual void OnEndPhaseAura(Unit source, List<Unit> allUnits) { }
 
     public bool IsExpired()
     {

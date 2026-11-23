@@ -25,6 +25,7 @@ public class CharacterData
     public int skillRanksAvailable = 0;
     public int manifesterLevel = 0;
     public int powerPointsSpent = 0;
+    public int mutationPointsSpent = 0; //Helix Warrior: Mutation Points spent on purchases (pool = class resource max)
     public int zeroLevelUsesSpent = 0;
     public int psionicResistance = 0;
     public int respecCount = 0;
@@ -296,6 +297,7 @@ public class CharacterData
         skillRanksAvailable = 0;
         manifesterLevel = 0;
         powerPointsSpent = 0;
+        mutationPointsSpent = 0;
         zeroLevelUsesSpent = 0;
         psionicResistance = 0;
         cyberneticCapacityBonus = 0;

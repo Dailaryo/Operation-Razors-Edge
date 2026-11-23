@@ -9,12 +9,14 @@ public class InflictPainEffect : StatusEffect
     private int repeatsLeft = 4;
     private bool manifestRound = true;
     private bool maximized;
+    private CombatManager manager; //repeat damage builds a resolver from it (no global CombatManager access)
 
-    public InflictPainEffect(Unit manifester, int saveDC, bool maximized = false) : base("InflictPain", 0)
+    public InflictPainEffect(Unit manifester, int saveDC, bool maximized = false, CombatManager manager = null) : base("InflictPain", 0)
     {
         this.manifester = manifester;
         this.saveDC = saveDC;
         this.maximized = maximized;
+        this.manager = manager;
         descriptors = EffectDescriptor.MindAffecting;
         isHarmful = true;
     }
@@ -26,7 +28,7 @@ public class InflictPainEffect : StatusEffect
 
         if (maintainerCount <= 0) return;
 
-        int total = unit.RollSave(Unit.SaveType.Focus, out int natural,
+        var total = unit.RollSave(Unit.SaveType.Focus, out int natural,
             EffectDescriptor.MindAffecting | EffectDescriptor.Psionic);
         bool saved = natural == 20 || (natural != 1 && total >= saveDC);
 
@@ -36,12 +38,36 @@ public class InflictPainEffect : StatusEffect
         }
         else
         {
-            int damage = PowerDice.Roll(maximized, 3, 6);
-            damage = unit.ApplyMindAffectingDamageReduction(damage);
-            CombatLog.Add($"{unit.unitName} suffers Inflict Pain: {damage} damage.");
-            unit.TakeDamage(damage);
+            CombatLog.Add($"{unit.unitName} fails to resist {manifester.unitName}'s Inflict Pain ({total} vs DC {saveDC}).");
+            int damage = PowerDice.Roll(maximized, 3, 6, manifester.unitName, "Inflict Pain", true);
+            damage = PowerDice.ReduceMindAffecting(unit, damage, true);
+            DealDamage(unit, damage);
         }
 
         if (--repeatsLeft <= 0) ended = true;
+    }
+
+    //Repeat damage goes through ApplyFinalResult like the first hit: DR, temp HP, massive damage, Disabled/Dying, death
+    private void DealDamage(Unit unit, int damage)
+    {
+        if (manager == null)
+        {
+            //No manager (applied outside combat): old direct path
+            unit.TakeDamage(damage);
+            CombatLog.Add($"{unit.unitName} takes {damage} damage. HP: {unit.currentHP}");
+            return;
+        }
+
+        var ctx = new ActionContext
+        {
+            attacker = manifester,
+            originalTarget = unit,
+            finalTarget = unit,
+            baseDamage = damage,
+            modifiedDamage = damage,
+            damageSource = effectName
+        };
+
+        new CombatResolver(manager, false).ApplyFinalResult(ctx);
     }
 }

@@ -44,7 +44,7 @@ public class CatapsiEffect : StatusEffect
         if (manifester.IsImmuneTo(descriptors, ownerLevel)) return false;
         if (!PsionicResistanceCalculator.CheckPenetration(owner, manifester, true, descriptors)) return false;
 
-        int total = manifester.RollSave(Unit.SaveType.Focus, out int natural, descriptors);
+        var total = manifester.RollSave(Unit.SaveType.Focus, out int natural, descriptors);
         bool saved = natural == 20 || (natural != 1 && total >= saveDC);
 
         CombatLog.Add($"{manifester.unitName} manifests inside {owner.unitName}'s catapsi field: " +

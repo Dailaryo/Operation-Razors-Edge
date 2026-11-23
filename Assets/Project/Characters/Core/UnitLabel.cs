@@ -67,7 +67,7 @@ public class UnitLabel : MonoBehaviour
         foreach (var effect in unit.activeEffects)
         {
             if (effect.isPassive) continue; //feats and passives aren't conditions
-            text += effect.effectName + "\n";
+            text += ActionDefinition.FormatActionName(effect.effectName) + "\n";
         }
 
         effectsText.text = text;

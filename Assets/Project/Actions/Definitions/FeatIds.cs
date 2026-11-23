@@ -67,7 +67,7 @@ public static class FeatIds
     public const string AdvancedFirearmsProficiency  = "AdvancedFirearmsProficiency";
     public const string PointBlankShot               = "PointBlankShot";
     public const string FarShot                      = "FarShot";
-    public const string DeadAim                      = "DeadAim";
+    public const string DeadlyAim                      = "DeadlyAim";
     public const string DoubleTap                    = "DoubleTap";
 
     // Skill Feats

@@ -21,6 +21,8 @@ public class ApplyStatusEffectToUnitsInRangeEffect : IActionEffect
     {
         if (ctx.attacker == null) return;
 
+        var recipients = new List<string>();
+
         foreach (Unit unit in resolver.GetAllUnits())
         {
             if (resolver.IsUnitDead(unit)) continue;
@@ -37,8 +39,17 @@ public class ApplyStatusEffectToUnitsInRangeEffect : IActionEffect
             if (!resolver.IsSimulation)
             {
                 var applied = unit.AddEffect(effectFactory(ctx.attacker));
-                if (applied != null) ctx.appliedEffects.Add(applied);
+                if (applied != null)
+                {
+                    ctx.appliedEffects.Add(applied);
+                    recipients.Add(unit.unitName);
+                }
             }
         }
+
+        if (!resolver.IsSimulation)
+            CombatLog.Add(recipients.Count > 0
+                ? $"{ctx.definition.DisplayName}: {string.Join(", ", recipients)} affected."
+                : $"{ctx.definition.DisplayName}: no {(targetsAllies ? "allies" : "enemies")} within {range} tiles.");
     }
 }

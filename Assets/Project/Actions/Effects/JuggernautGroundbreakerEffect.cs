@@ -4,6 +4,8 @@ public class JuggernautGroundbreakerEffect : IActionEffect
 {
     public void Execute(ActionContext ctx, CombatResolver resolver)
     {
+        if (resolver.IsSimulation) return;
+
         if (ctx.attacker == null) return;
 
         int level = ctx.attacker.sourceCharacterData?.level ?? 1;
@@ -21,7 +23,7 @@ public class JuggernautGroundbreakerEffect : IActionEffect
 
             if (dist > 1) continue;
 
-            int saveRoll = unit.RollSave(Unit.SaveType.Resolve);
+            var saveRoll = unit.RollSave(Unit.SaveType.Resolve);
             CombatLog.Add($"{unit.unitName} Groundbreaker save: {saveRoll} vs DC {dc}");
 
             if (saveRoll < dc)

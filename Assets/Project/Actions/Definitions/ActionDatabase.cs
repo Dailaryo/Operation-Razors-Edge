@@ -102,6 +102,27 @@ public static class ActionDatabase
                 },
                 attackType: ActionDefinition.AttackType.None
             )},
+            
+            //MAXIMIZE POWER (Telepath toggle): arms the next planned power to be maximized. Never planned itself:
+            //CombatManager intercepts it. Granted by PowerActionSource
+            { ActionIds.MaximizePower, new ActionDefinition(
+                ActionIds.MaximizePower, TargetType.None, false, 0, 0,
+                targetingMode: ActionDefinition.TargetingMode.None,
+                category: ActionDefinition.ActionCategory.Free
+            )},
+
+            //MANIFEST DEFENSIVELY (toggle, manifesters): this round, powers manifested while threatened use a
+            //concentration check (DC 15 + 2 x power level) instead of provoking. Granted by PowerActionSource
+            { ActionIds.ManifestDefensively, new ActionDefinition(
+                ActionIds.ManifestDefensively, TargetType.None, false, 0, 0,
+                targetingMode: ActionDefinition.TargetingMode.None,
+                category: ActionDefinition.ActionCategory.Free,
+                effects: new List<IActionEffect>
+                {
+                    new ApplySelfStatusEffectEffect(unit =>
+                        new TimedStatModifierEffect(ConcentrationManager.DefensiveManifestingEffectName, 1))
+                }
+            )},
             //TOTAL DEFENSE (FULL ACTION)
             { ActionIds.TotalDefense, new ActionDefinition(
                 ActionIds.TotalDefense,
@@ -278,8 +299,8 @@ public static class ActionDatabase
                 targetingMode:  ActionDefinition.TargetingMode.Tile,
                 effects: new List<IActionEffect>
                 {
-                    new ApplyStatusEffectActionEffect(target =>
-                        new DiagnosedEffect())
+                    //Diagnosed on the target, plus Signal Scramble (Ghost Protocol) and Relay Network (Vanguard)
+                    new DiagnoseWeaknessEffect()
                 },
                 attackType:     ActionDefinition.AttackType.None,
                 requiresLoS:    true
@@ -376,8 +397,7 @@ public static class ActionDatabase
                 },
                 attackType:     ActionDefinition.AttackType.None,
                 requiresLoS:    false
-            )},
-            
+            ) { displayName = "Command Override" } },
             { ActionIds.WeaponMount, new ActionDefinition(
                 actionID:       ActionIds.WeaponMount,
                 targetType:     TargetType.None,
@@ -624,7 +644,8 @@ public static class ActionDatabase
                 effects: new List<IActionEffect>
                 {
                     new ApplySelfStatusEffectEffect(unit =>
-                        new StatBonusEffect(StatType.Power, 4, "AdrenalineSurge", StatModifier.BonusType.Racial))
+                        new StatBonusEffect(StatType.Power, 4, "AdrenalineSurge", StatModifier.BonusType.Racial)
+                            { duration = unit.HasPassive(PassiveIds.HelixAdrenalineSurgeEnhanced) ? 4 : 3 })
                 },
                 attackType:     ActionDefinition.AttackType.None,
                 requiresLoS:    false
@@ -641,14 +662,83 @@ public static class ActionDatabase
                 effects: new List<IActionEffect>
                 {
                     new ApplySelfStatusEffectEffect(unit =>
-                        new StatBonusEffect(StatType.Power, 6, "AdrenalFrenzy_Power", StatModifier.BonusType.Racial)),
+                        new StatBonusEffect(StatType.Power, unit.HasPassive(PassiveIds.HelixAdrenalFrenzyGreater) ? 8 : 6,
+                            "AdrenalFrenzy_Power", StatModifier.BonusType.Racial)
+                            { duration = unit.HasPassive(PassiveIds.HelixAdrenalFrenzyGreater) ? 5 : 4 }),
                     new ApplySelfStatusEffectEffect(unit =>
-                        new StatBonusEffect(StatType.Accuracy, 1, "AdrenalFrenzy_Attack", StatModifier.BonusType.Racial))
+                        new StatBonusEffect(StatType.Accuracy, unit.HasPassive(PassiveIds.HelixAdrenalFrenzyGreater) ? 2 : 1,
+                            "AdrenalFrenzy_Attack", StatModifier.BonusType.Racial)
+                            { duration = unit.HasPassive(PassiveIds.HelixAdrenalFrenzyGreater) ? 5 : 4 })
                 },
                 attackType:     ActionDefinition.AttackType.None,
                 requiresLoS:    false
             )},
-
+                        
+            //BRUTAL STRIKE (Helix Warrior 7): a melee attack with +1d6 damage, usable only after a planned move of at
+            //least 10 ft (2 tiles) this round (checked in ActionValidator). Once per round through the Standard action
+            { ActionIds.BrutalStrike, new ActionDefinition(
+                actionID:          ActionIds.BrutalStrike,
+                targetType:        TargetType.Enemy,
+                requiresTarget:    true,
+                minRange:          1,
+                maxRange:          1,
+                dealsDamage:       true,
+                targetingMode:     ActionDefinition.TargetingMode.Tile,
+                category:          ActionDefinition.ActionCategory.Standard,
+                effects: new List<IActionEffect>
+                {
+                    new DamageEffect(),
+                    new ScalingDamageEffect(),
+                    new BonusDamageDiceEffect(1, 6, "Brutal Strike")
+                },
+                attackType:        ActionDefinition.AttackType.Melee,
+                scalingStat:       StatType.MeleePower,
+                scalingMultiplier: 1f
+            )},
+            
+            //CLEAVE (feat, Pathfinder): a melee attack; on a hit, an extra attack on an enemy adjacent to the first target
+            //(Great Cleave: keeps chaining while attacks hit). -2 Defense through the attacker's next round (CleaveEffect)
+            { ActionIds.Cleave, new ActionDefinition(
+                actionID:          ActionIds.Cleave,
+                targetType:        TargetType.Enemy,
+                requiresTarget:    true,
+                minRange:          1,
+                maxRange:          1,
+                dealsDamage:       true,
+                targetingMode:     ActionDefinition.TargetingMode.Tile,
+                category:          ActionDefinition.ActionCategory.Standard,
+                effects: new List<IActionEffect>
+                {
+                    new DamageEffect(),
+                    new ScalingDamageEffect(),
+                    new CleaveEffect()
+                },
+                attackType:        ActionDefinition.AttackType.Melee,
+                scalingStat:       StatType.MeleePower,
+                scalingMultiplier: 1f
+            )},
+            //KNOCKOUT PUNCH (feat, Stunning Fist style): unarmed melee attack declared before the roll; on a hit the target
+            //makes a Resolve save or is Stunned 1 round (KnockoutPunchEffect). 1 use per 4 character levels per combat
+            //(minimum 1); a miss spends the use. Unarmed only (ActionValidator)
+            { ActionIds.KnockoutPunch, new ActionDefinition(
+                actionID:          ActionIds.KnockoutPunch,
+                targetType:        TargetType.Enemy,
+                requiresTarget:    true,
+                minRange:          1,
+                maxRange:          1,
+                dealsDamage:       true,
+                targetingMode:     ActionDefinition.TargetingMode.Tile,
+                category:          ActionDefinition.ActionCategory.Standard,
+                effects: new List<IActionEffect>
+                {
+                    new DamageEffect(),
+                    new ScalingDamageEffect()
+                },
+                attackType:        ActionDefinition.AttackType.Melee,
+                scalingStat:       StatType.MeleePower,
+                scalingMultiplier: 1f
+            ) { usesPerCombatByUnit = unit =>
+                    Mathf.Max(1, (unit.sourceCharacterData != null ? unit.sourceCharacterData.level : 1) / 4) } },
             // ── HELIX WARRIOR — BERSERKER PATH ────────────────────────────────────────
 
             { ActionIds.HelixFrenziedStrike, new ActionDefinition(
@@ -657,7 +747,7 @@ public static class ActionDatabase
                 requiresTarget: false,
                 minRange:       1,
                 maxRange:       1,
-                dealsDamage:    true,
+                dealsDamage:    false, //The action itself rolls nothing; each follow-up Melee Attack deals damage
                 category:       ActionDefinition.ActionCategory.Standard,
                 consumesCategories: new List<ActionDefinition.ActionCategory>
                 {
@@ -667,13 +757,7 @@ public static class ActionDatabase
                 targetingMode:  ActionDefinition.TargetingMode.None,
                 effects: new List<IActionEffect>
                 {
-                    new ApplyStatusEffectToEnemiesEffect(
-                        (attacker, target) =>
-                        {
-                            if (DistanceUtility.IsAdjacent(attacker.position, target.position))
-                                return new StatBonusEffect(StatType.Defense, -2, "FrenziedStrike", StatModifier.BonusType.Untyped);
-                            return null;
-                        })
+                    new FrenziedStrikeEffect()
                 },
                 attackType:     ActionDefinition.AttackType.Melee,
                 requiresLoS:    false
@@ -690,9 +774,9 @@ public static class ActionDatabase
                 effects: new List<IActionEffect>
                 {
                     new ApplySelfStatusEffectEffect(unit =>
-                        new StatBonusEffect(StatType.MeleePower, 4, "BerserkApotheosis_Damage", StatModifier.BonusType.Morale)),
+                        new StatBonusEffect(StatType.MeleePower, 4, "BerserkApotheosis_Damage", StatModifier.BonusType.Morale) { isPersistent = true }),
                     new ApplySelfStatusEffectEffect(unit =>
-                        new StatBonusEffect(StatType.Accuracy, 2, "BerserkApotheosis_Attack", StatModifier.BonusType.Morale))
+                        new StatBonusEffect(StatType.Accuracy, 2, "BerserkApotheosis_Attack", StatModifier.BonusType.Morale) { isPersistent = true })
                 },
                 attackType:     ActionDefinition.AttackType.None,
                 requiresLoS:    false
@@ -709,9 +793,9 @@ public static class ActionDatabase
                 effects: new List<IActionEffect>
                 {
                     new ApplySelfStatusEffectEffect(unit =>
-                        new StatBonusEffect(StatType.MeleePower, 6, "ApexMutation_Berserker", StatModifier.BonusType.Morale)),
+                        new StatBonusEffect(StatType.MeleePower, 6, "ApexMutation_Berserker", StatModifier.BonusType.Morale) { isPersistent = true }),
                     new ApplySelfStatusEffectEffect(unit =>
-                        new StatBonusEffect(StatType.Accuracy, 3, "ApexMutation_BerserkerAcc", StatModifier.BonusType.Morale))
+                        new StatBonusEffect(StatType.Accuracy, 3, "ApexMutation_BerserkerAcc", StatModifier.BonusType.Morale) { isPersistent = true })
                 },
                 attackType:     ActionDefinition.AttackType.None,
                 requiresLoS:    false
@@ -855,26 +939,17 @@ public static class ActionDatabase
 
             // --- Infiltrator ---
 
-            { ActionIds.DeadAim, new ActionDefinition(
-                actionID:          ActionIds.DeadAim,
-                targetType:        TargetType.Enemy,
-                requiresTarget:    true,
-                minRange:          2,
-                maxRange:          10,
-                cooldown:          0,
-                dealsDamage:       true,
-                targetingMode:     ActionDefinition.TargetingMode.Tile,
-                category:          ActionDefinition.ActionCategory.Standard,
-                consumesCategories: new List<ActionDefinition.ActionCategory>
-                {
-                    ActionDefinition.ActionCategory.Standard,
-                    ActionDefinition.ActionCategory.Move
-                },
+            //DEADLY AIM (Pathfinder feat, toggle, ranged only): -1 ranged attack / +2 ranged damage this round,
+            //rising every 4 BAB. Replaces d20 Modern Dead Aim
+            { ActionIds.DeadlyAim, new ActionDefinition(
+                ActionIds.DeadlyAim, TargetType.None, false, 0, 0,
+                targetingMode: ActionDefinition.TargetingMode.None,
+                category: ActionDefinition.ActionCategory.Free,
                 effects: new List<IActionEffect>
                 {
-                    new DamageEffect()
-                },
-                attackType:        ActionDefinition.AttackType.Ranged
+                    new ApplySelfStatusEffectEffect(unit =>
+                        new PowerAttackEffect(PowerAttackEffect.GetPenalty(unit), ranged: true))
+                }
             )},
 
             { ActionIds.InfiltratorVanish, new ActionDefinition(
@@ -918,8 +993,8 @@ public static class ActionDatabase
                     new DamageEffect()
                 },
                 attackType:     ActionDefinition.AttackType.Ranged
-                // 3/combat guaranteed crit from stealth — crit logic scoped during Ghost path authoring
-            )},
+                // DEFERRED: guaranteed crit from stealth — crit logic scoped during Ghost path authoring
+            ) { usesPerCombat = 3 } }, //a miss spends a use, like Knockout Punch
 
             { ActionIds.InfiltratorExposeWeakness, new ActionDefinition(
                 actionID:       ActionIds.InfiltratorExposeWeakness,
@@ -1262,8 +1337,7 @@ public static class ActionDatabase
                 },
                 attackType:     ActionDefinition.AttackType.None,
                 requiresLoS:    false
-            )},
-
+            ) { displayName = "Stabilize" } },
             { ActionIds.TSMassTriage, new ActionDefinition(
                 actionID:       ActionIds.TSMassTriage,
                 targetType:     TargetType.None,
@@ -1280,8 +1354,7 @@ public static class ActionDatabase
                 },
                 attackType:     ActionDefinition.AttackType.None,
                 requiresLoS:    false
-            )},
-
+            ) { displayName = "Mass Triage" } },
             { ActionIds.CMBattlefieldPatch, new ActionDefinition(
                 actionID:       ActionIds.CMBattlefieldPatch,
                 targetType:     TargetType.Ally,
@@ -1298,8 +1371,7 @@ public static class ActionDatabase
                 },
                 attackType:     ActionDefinition.AttackType.None,
                 requiresLoS:    false
-            )},
-
+            ) { displayName = "Battlefield Patch" } },
             { ActionIds.CMRevive, new ActionDefinition(
                 actionID:       ActionIds.CMRevive,
                 targetType:     TargetType.Ally,
@@ -1316,8 +1388,7 @@ public static class ActionDatabase
                 },
                 attackType:     ActionDefinition.AttackType.None,
                 requiresLoS:    false
-            )},
-
+            ) { displayName = "Revive" } },
             { ActionIds.CMPriorityPatient, new ActionDefinition(
                 actionID:       ActionIds.CMPriorityPatient,
                 targetType:     TargetType.Ally,
@@ -1334,8 +1405,7 @@ public static class ActionDatabase
                 },
                 attackType:     ActionDefinition.AttackType.None,
                 requiresLoS:    false
-            )},
-
+            ) { displayName = "Priority Patient" } },
             { ActionIds.CMMedicApotheosis, new ActionDefinition(
                 actionID:       ActionIds.CMMedicApotheosis,
                 targetType:     TargetType.None,
@@ -1352,8 +1422,7 @@ public static class ActionDatabase
                 },
                 attackType:     ActionDefinition.AttackType.None,
                 requiresLoS:    false
-            )},
-
+            ) { displayName = "Medic Apotheosis" } },
             { ActionIds.FPStimInjection, new ActionDefinition(
                 actionID:       ActionIds.FPStimInjection,
                 targetType:     TargetType.Ally,
@@ -1370,7 +1439,7 @@ public static class ActionDatabase
                 },
                 attackType:     ActionDefinition.AttackType.None,
                 requiresLoS:    false
-            )},
+            ) { displayName = "Stim Injection" } },
 
             { ActionIds.FPFieldSynthesis, new ActionDefinition(
                 actionID:       ActionIds.FPFieldSynthesis,
@@ -1388,7 +1457,7 @@ public static class ActionDatabase
                 },
                 attackType:     ActionDefinition.AttackType.None,
                 requiresLoS:    false
-            )},
+            ) { displayName = "Field Synthesis" } },
 
             { ActionIds.FPPharmacistApotheosis, new ActionDefinition(
                 actionID:       ActionIds.FPPharmacistApotheosis,
@@ -1406,9 +1475,10 @@ public static class ActionDatabase
                 },
                 attackType:     ActionDefinition.AttackType.None,
                 requiresLoS:    false
-            )},
+            ) { displayName = "Pharmacist Apotheosis" } },
             //Suggestion against every enemy in a 20-ft. radius. 1/combat.
-            //Deferred: Suggestion behavior is a stub; effects, area targeting and saves come with the full power pass
+            //Area and saves are live: the targeted enemy plus every enemy within 4 tiles (20 ft) of it and of each other,
+            //each rolling Suggestion's save (Focus, PR, mind-affecting). Deferred: Suggestion's effect (stub power)
             { ActionIds.EmpathGroupSuggestion, new ActionDefinition(
                 actionID:       ActionIds.EmpathGroupSuggestion,
                 targetType:     TargetType.Enemy,
@@ -1418,9 +1488,16 @@ public static class ActionDatabase
                 dealsDamage:    false,
                 targetingMode:  ActionDefinition.TargetingMode.Tile,
                 category:       ActionDefinition.ActionCategory.Standard,
-                effects:        new List<IActionEffect>(),
+                effects:        new List<IActionEffect>
+                {
+                    new MultiTargetEffect(new List<IActionEffect>
+                    {
+                        new SaveAsPowerEffect(PowerIds.Suggestion)
+                    }, maxSpread: 4),
+                    new DeferredEffectNotice()
+                },
                 attackType:     ActionDefinition.AttackType.None
-            ) { usesPerCombat = 1 } },
+            ) { usesPerCombat = 1, displayName = "Group Suggestion" } },
             //Move one harmful condition from an ally within 60 ft. to the target enemy. Focus save negates. 2/combat.
             { ActionIds.EmpathSympatheticLink, new ActionDefinition(
                 actionID:       ActionIds.EmpathSympatheticLink,

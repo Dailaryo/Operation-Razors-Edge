@@ -9,10 +9,10 @@ public class CommandOverrideActionEffect : IActionEffect
 
         ctx.attacker.SetCooldown(ctx.definition, Unit.CombatCooldown);
 
-        // Grant the target an additional Standard action this turn
-        // Tracked directly on the unit — UI checks this to offer the bonus action
-        ctx.finalTarget.pendingCommandOverride = true;
+        //The bonus Standard comes in the target's next planning phase: this round's plans are already locked in
+        ctx.finalTarget.AddEffect(new CommandOverrideBonusEffect());
 
-        CombatLog.Add($"{ctx.attacker.unitName}: Command Override — {ctx.finalTarget.unitName} gains a bonus Standard action.");
+        CombatLog.Add($"{ctx.attacker.unitName}: Command Override — {ctx.finalTarget.unitName} gains a bonus " +
+                      $"Standard action next round.");
     }
 }

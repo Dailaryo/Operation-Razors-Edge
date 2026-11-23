@@ -6,6 +6,7 @@ public class FeedbackLoopEffect : StatusEffect
     public FeedbackLoopEffect() : base("FeedbackLoop", -1)
     {
         isPersistent = true;
+        instancedPassive = true;
     }
 
     public override List<StatModifier> GetStatModifiers(Unit unit)

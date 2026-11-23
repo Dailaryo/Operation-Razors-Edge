@@ -6,6 +6,7 @@ public class DistributedProcessingEffect : StatusEffect
     public DistributedProcessingEffect() : base("DistributedProcessing", -1)
     {
         isPersistent = true;
+        instancedPassive = true;
     }
 
     public override List<StatModifier> GetStatModifiers(Unit unit)

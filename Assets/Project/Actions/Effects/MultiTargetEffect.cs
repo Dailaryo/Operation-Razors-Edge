@@ -48,8 +48,8 @@ public class MultiTargetEffect : IActionEffect
 
         if (!TryAdd(anchor, selected, ref hdUsed))
         {
-            if(!resolver.IsSimulation)
-                CombatLog.Add($"{anchor.unitName} is unaffected by {ctx.definition.DisplayName} (Hit Dice limit).");
+            if (!resolver.IsSimulation)
+                CombatLog.Add($"{anchor.unitName} is unaffected by {ctx.definition.DisplayName} ({BudgetText(anchor, hdUsed)}).");
             return selected;
         }
 
@@ -85,7 +85,8 @@ public class MultiTargetEffect : IActionEffect
                 DistanceUtility.MovementCostDistance(resolver.GetPosition(s), pos) <= maxSpread);
             if (!withinSpread) continue;
 
-            TryAdd(unit, selected, ref hdUsed);
+            if (!TryAdd(unit, selected, ref hdUsed) && !resolver.IsSimulation)
+                CombatLog.Add($"{unit.unitName} is unaffected by {ctx.definition.DisplayName} ({BudgetText(unit, hdUsed)}).");
         }
 
         return selected;
@@ -93,13 +94,17 @@ public class MultiTargetEffect : IActionEffect
 
     private bool TryAdd(Unit unit, List<Unit> selected, ref int hdUsed)
     {
-        int hd = unit.sourceCharacterData != null ? unit.sourceCharacterData.level : 0;
+        int hd = HitDice(unit);
         if (hdBudget > 0 && hdUsed + hd > hdBudget) return false;
 
         hdUsed += hd;
         selected.Add(unit);
         return true;
     }
+
+    private static int HitDice(Unit unit) => unit.sourceCharacterData != null ? unit.sourceCharacterData.level : 0;
+
+    private string BudgetText(Unit unit, int hdUsed) => $"Hit Dice limit: {HitDice(unit)} HD, {hdUsed} of {hdBudget} used";
 
     //Same rule as ActionValidator: blindsight within range bypasses line of sight
     private static bool HasLoS(Unit source, Vector2Int from, Vector2Int to)

@@ -10,8 +10,6 @@ public class TileHighlighter : MonoBehaviour
 
     private ICombatInputHandler inputHandler;
 
-    private Tile.TileHighlightType savedOverlay = Tile.TileHighlightType.None;
-
     void Update()
     {
         //Pointer over the action bar, log or any other UI: no hover, click or cancel reaches the grid
@@ -29,10 +27,9 @@ public class TileHighlighter : MonoBehaviour
             HandleClick();
         }
 
-        if (Input.GetMouseButtonDown(1))
-        {
-            CancelTargeting();
-        }
+        //Right-click: the single cancel path (targeting first, then Maximize, then the last planned action)
+        if (Input.GetMouseButtonDown(1) && combat != null)
+            combat.Cancel();
     }
 
     //Same check CameraController uses
@@ -53,24 +50,13 @@ public class TileHighlighter : MonoBehaviour
 
             if (tile != currentTile)
             {
-                // Restore previous tile's saved overlay before leaving it
-                if (currentTile != null)
-                {
-                    currentTile.SetOverlayHighlight(savedOverlay);
-                }
+                //Hover is a flag on the tile, not a saved overlay: a highlight rebuild while the cursor rests here
+                //can't be undone by restoring a stale overlay when it leaves
+                if (currentTile != null) currentTile.SetHover(false);
 
                 currentTile = tile;
 
-                // Save the new tile's current overlay before applying hover
-                if (currentTile != null)
-                {
-                    savedOverlay = currentTile.GetOverlayHighlight();
-                    currentTile.SetOverlayHighlight(Tile.TileHighlightType.Hover);
-                }
-                else
-                {
-                    savedOverlay = Tile.TileHighlightType.None;
-                }
+                if (currentTile != null) currentTile.SetHover(true);
             }
         }
         else
@@ -81,12 +67,10 @@ public class TileHighlighter : MonoBehaviour
 
     void ClearCurrent()
     {
-        if (currentTile != null)
-        {
-            currentTile.SetOverlayHighlight(savedOverlay);
-            savedOverlay = Tile.TileHighlightType.None;
-            currentTile = null;
-        }
+        if (currentTile == null) return;
+
+        currentTile.SetHover(false);
+        currentTile = null;
     }
 
     void HandleClick()
@@ -120,20 +104,6 @@ public class TileHighlighter : MonoBehaviour
             if (inputHandler == null) return;
 
             inputHandler.SelectTile(tile.gridPosition);
-        }
-    }
-
-    void CancelTargeting()
-    {
-        if (combat == null) return;
-
-        combat.ClearPendingAction();
-
-        GridHighlighter.Instance.ClearAll();
-
-        if (combat.CurrentUnit != null && !combat.CurrentUnit.IsDead())
-        {
-            GridHighlighter.Instance.HighlightValidMoves(combat.CurrentUnit, combat);
         }
     }
 

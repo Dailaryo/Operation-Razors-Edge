@@ -5,6 +5,8 @@ public class CascadeBurstEffect : IActionEffect
 {
     public void Execute(ActionContext ctx, CombatResolver resolver)
     {
+        if (resolver.IsSimulation) return;
+
         if (ctx.attacker == null) return;
 
         int dc = 10 + ctx.attacker.GetModifier(StatType.Cognition);
@@ -19,7 +21,7 @@ public class CascadeBurstEffect : IActionEffect
 
             if (dist > 4) continue;
 
-            int saveTotal = unit.RollSave(Unit.SaveType.Focus);
+            var saveTotal = unit.RollSave(Unit.SaveType.Focus);
 
             if (saveTotal < dc)
             {

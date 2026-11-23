@@ -26,6 +26,16 @@ public static class ActionValidator
                 return false;
         }
 
+        //Brutal Strike: needs a move of at least 2 tiles planned before it this round
+        if (action.definition.actionID == ActionIds.BrutalStrike && action.manager != null &&
+            GetPlannedMoveDistance(action.source, action.manager.GetPlannedActions(action.source), action)
+                < BrutalStrikeMinMoveTiles)
+            return false;
+
+        //Knockout Punch: unarmed attacks only
+        if (action.definition.actionID == ActionIds.KnockoutPunch && !action.source.IsUnarmed())
+            return false;
+
         int effectiveCost = action.source.GetEffectiveResourceCost(action.definition);
         if (effectiveCost > 0)
         {
@@ -54,20 +64,9 @@ public static class ActionValidator
             var negative = action.source.activeEffects.Find(e => e is NegativeLevelsEffect) as NegativeLevelsEffect;
             if (negative != null && negative.lostPowerId == psionicDef.actionID) return false;
 
-            //Sum PP and free 0-level uses already commited by this unit's earlier planned actions
-            int committedPP = 0;
-            int committedFreeUses = 0;
-
-            foreach (var prior in action.manager.GetPlannedActions(action.source))
-            {
-                if (prior == action) break;
-                if (!(prior.definition is PsionicPowerDefinition priorPower)) continue;
-
-                bool priorFree = AugmentationProcessor.UsesFreeZeroLevel(action.source, priorPower, committedFreeUses);
-                if (priorFree) committedFreeUses++;
-
-                committedPP += AugmentationProcessor.GetTotalCost(priorPower, prior.augmentations, priorFree, prior.maximize);
-            }
+            //PP and free 0-level uses already committed by this unit's earlier planned actions
+            GetCommittedPowerPoints(action.source, action.manager.GetPlannedActions(action.source), action,
+                out int committedPP, out int committedFreeUses);
 
             //Maximize Power requires the class feature
             if (action.maximize &&
@@ -197,6 +196,48 @@ public static class ActionValidator
         }
 
         return true;
+    }
+
+    public const int BrutalStrikeMinMoveTiles = 2; //10 ft
+
+    //Tiles covered by a unit's planned moves, in order, up to (not including) stopAt. stopAt null = every planned move.
+    //Each move counts from where the previous one ends (straight-line movement cost; the walked path is never shorter)
+    public static int GetPlannedMoveDistance(Unit unit, System.Collections.Generic.List<CombatAction> planned,
+        CombatAction stopAt)
+    {
+        int total = 0;
+        Vector2Int from = unit.position;
+
+        foreach (var prior in planned)
+        {
+            if (prior == stopAt) break;
+            if (!prior.definition.IsMove() || !prior.movePosition.HasValue) continue;
+
+            total += DistanceUtility.MovementCostDistance(from, prior.movePosition.Value);
+            from = prior.movePosition.Value;
+        }
+
+        return total;
+    }
+
+    //Power points and free 0-level uses committed by a unit's planned powers, up to (not including) stopAt.
+    //stopAt null = every planned action. Maximized powers count their +6 and never spend a free use
+    public static void GetCommittedPowerPoints(Unit unit, System.Collections.Generic.List<CombatAction> planned,
+        CombatAction stopAt, out int committedPP, out int committedFreeUses)
+    {
+        committedPP = 0;
+        committedFreeUses = 0;
+
+        foreach (var prior in planned)
+        {
+            if (prior == stopAt) break;
+            if (!(prior.definition is PsionicPowerDefinition priorPower)) continue;
+
+            bool priorFree = AugmentationProcessor.UsesFreeZeroLevel(unit, priorPower, committedFreeUses);
+            if (priorFree && !prior.maximize) committedFreeUses++; //maximized 0-level powers keep the free use
+
+            committedPP += AugmentationProcessor.GetTotalCost(priorPower, prior.augmentations, priorFree, prior.maximize);
+        }
     }
 
     static CombatResolver BuildSimulationState(CombatAction action, CombatResolver resolver)

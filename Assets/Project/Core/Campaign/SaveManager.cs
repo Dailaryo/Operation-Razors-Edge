@@ -91,6 +91,7 @@ public static class SaveManager
         public int psionicResistance;
         public int respecCount;
         public int cyberneticCapacityBonus;
+        public int mutationPointsSpent;
         public bool levelUpPending;
         public List<string> unlockedActions = new List<string>();
         public List<string> unlockedFeatIds = new List<string>();
@@ -176,7 +177,7 @@ public static class SaveManager
         public int manifesterLevel;
         public int psionicResistance;
         public int cyberneticCapacityBonus;
-
+        public int mutationPointsSpent;
         public List<string> equippedFeatIds = new List<string>();
         public List<string> pendingChoiceNodeIds = new List<string>();
         public List<string> unlockedFeatIds = new List<string>();
@@ -266,6 +267,7 @@ public static class SaveManager
                 psionicResistance = character.psionicResistance,
                 respecCount = character.respecCount,
                 cyberneticCapacityBonus = character.cyberneticCapacityBonus,
+                mutationPointsSpent = character.mutationPointsSpent,
                 levelUpPending = character.levelUpPending,
                 unlockedActions = new List<string>(character.unlockedActions),
                 unlockedFeatIds = new List<string>(character.unlockedFeatIds),
@@ -463,6 +465,7 @@ public static class SaveManager
             character.psionicResistance = charSave.psionicResistance;
             character.respecCount = charSave.respecCount;
             character.cyberneticCapacityBonus = charSave.cyberneticCapacityBonus;
+            character.mutationPointsSpent = charSave.mutationPointsSpent;
             character.levelUpPending = charSave.levelUpPending;
 
             character.knownPowerIds = new List<string>(charSave.knownPowerIds);
@@ -543,6 +546,7 @@ public static class SaveManager
             manifesterLevel = snap.manifesterLevel,
             psionicResistance = snap.psionicResistance,
             cyberneticCapacityBonus = snap.cyberneticCapacityBonus,
+            mutationPointsSpent = snap.mutationPointsSpent,
             equippedFeatIds = new List<string>(snap.equippedFeatIds),
             pendingChoiceNodeIds = new List<string>(snap.pendingChoiceNodeIds),
             unlockedFeatIds = new List<string>(snap.unlockedFeatIds),
@@ -606,6 +610,7 @@ public static class SaveManager
             manifesterLevel = save.manifesterLevel,
             psionicResistance = save.psionicResistance,
             cyberneticCapacityBonus = save.cyberneticCapacityBonus,
+            mutationPointsSpent = save.mutationPointsSpent,
             equippedFeatIds = new List<string>(save.equippedFeatIds),
             pendingChoiceNodeIds = new List<string>(save.pendingChoiceNodeIds),
             unlockedFeatIds = new List<string>(save.unlockedFeatIds),

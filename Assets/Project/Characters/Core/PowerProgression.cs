@@ -54,10 +54,24 @@ public static class PowerProgression
         return counts;
     }
 
-    //Everything a known power makes usable: itself, its variant modes, and (undercasting) every lower tier
+    //Everything a known power makes usable, in action-bar order: lower tiers first (undercasting, ascending),
+    //then the known power, then its variant modes
     public static List<PsionicPowerDefinition> GetManifestable(PsionicPowerDefinition known)
     {
-        var result = new List<PsionicPowerDefinition> { known };
+        var result = new List<PsionicPowerDefinition>();
+
+        if (known.IsTiered)
+        {
+            var tiers = new List<PsionicPowerDefinition>();
+            foreach (var power in PowerDatabase.Definitions.Values)
+                if (power.IsLowerTierOf(known))
+                    tiers.Add(power);
+
+            tiers.Sort((a, b) => a.tier.CompareTo(b.tier));
+            result.AddRange(tiers);
+        }
+
+        result.Add(known);
 
         foreach (var variantId in known.variantPowerIds)
         {
@@ -65,15 +79,6 @@ public static class PowerProgression
             if (variant != null) result.Add(variant);
         }
 
-        if (!known.IsTiered) return result;
-
-        var tiers = new List<PsionicPowerDefinition>();
-        foreach (var power in PowerDatabase.Definitions.Values)
-            if (power.IsLowerTierOf(known))
-                tiers.Add(power);
-
-        tiers.Sort((a, b) => a.tier.CompareTo(b.tier));
-        result.AddRange(tiers);
         return result;
     }
 

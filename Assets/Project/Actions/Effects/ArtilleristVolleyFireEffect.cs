@@ -35,7 +35,7 @@ public class ArtilleristVolleyFireEffect : IActionEffect
             int attackTotal = roll + accuracy + ctx.attacker.GetBAB();
             int defense = unit.GetDefense();
 
-            if (attackTotal >= defense)
+            if (roll == 20 || (roll != 1 && attackTotal >= defense)) //natural 1 always misses, natural 20 always hits
             {
                 int damage = Random.Range(1, 9); // 1d8 base volley damage
                 unit.TakeDamage(damage);

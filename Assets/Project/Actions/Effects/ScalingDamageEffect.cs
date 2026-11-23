@@ -9,19 +9,19 @@ public class ScalingDamageEffect : IActionEffect
         var stat = ctx.definition.scalingStat;
         float multiplier = ctx.definition.scalingMultiplier;
 
-        int statValue = ctx.attacker.GetDerivedStat(stat);
-
-        int bonus = Mathf.RoundToInt(statValue * multiplier);
-
+        int bonus = Mathf.RoundToInt(ctx.attacker.GetDerivedStat(stat) * multiplier);
         ctx.modifiedDamage += bonus;
 
-        //Simulations (move highlights, validation, AI scoring) replay this effect many times per click; log only the real attack
-        if (!resolver.IsSimulation)
+        //MeleePower at x1 (d20 Strength to damage): one damage-breakdown part per source, so the log line itemises
+        //the POW modifier and every MeleePower bonus. Any other scaling stays one lumped part
+        if (stat == StatType.MeleePower && Mathf.Approximately(multiplier, 1f))
         {
-            string detail = stat == StatType.MeleePower
-                ? $" (POW {ctx.attacker.GetModifier(StatType.Power):+0;-0;+0}, bonuses {ctx.attacker.GetStat(StatType.MeleePower):+0;-0;+0})"
-                : "";
-            Debug.Log($"{ctx.attacker.unitName} gains {bonus} damage from {stat} scaling{detail}");
+            foreach (var (label, amount) in ctx.attacker.GetMeleePowerParts())
+                ctx.AddDamagePart(label, amount);
+        }
+        else
+        {
+            ctx.AddDamagePart($"{stat} scaling", bonus);
         }
     }
 }

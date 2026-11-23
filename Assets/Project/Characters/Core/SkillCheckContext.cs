@@ -14,4 +14,5 @@ public class SkillCheckContext
     //Overrides: callers set these when the definition's defaults don't apply
     public int? dcOverride; //For dynamic DCs
     public int? defenderTotalOverride; //For non-skill opposition
+    public int? defenderNaturalRoll;   //Natural d20 of a defender's saving throw used as defenderTotalOverride: 20 always saves, 1 always fails
 }

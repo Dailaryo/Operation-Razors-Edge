@@ -19,11 +19,11 @@ public class PowerDamageEffect : IActionEffect
     {
         if (ctx.finalTarget == null) return;
 
-        int total = flatBonus + PowerDice.Roll(ctx, diceCount, diceSides);
+        int total = PowerDice.Roll(ctx, diceCount, diceSides, flatBonus: flatBonus);
 
         var power = ctx.definition as PsionicPowerDefinition;
         if (power != null && (power.descriptors & EffectDescriptor.MindAffecting) != 0)
-            total = ctx.finalTarget.ApplyMindAffectingDamageReduction(total);
+            total = PowerDice.ReduceMindAffecting(ctx.finalTarget, total, !resolver.IsSimulation);
 
         ctx.baseDamage = total;
         ctx.modifiedDamage = total;

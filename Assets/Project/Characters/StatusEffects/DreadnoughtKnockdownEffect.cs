@@ -24,7 +24,7 @@ public class DreadnoughtKnockdownEffect : StatusEffect
         if (ctx.modifiedDamage <= 0) return;
 
         int dc = Mathf.RoundToInt(ctx.modifiedDamage);
-        int saveRoll = ctx.finalTarget.RollSave(Unit.SaveType.Resolve);
+        var saveRoll = ctx.finalTarget.RollSave(Unit.SaveType.Resolve);
 
         CombatLog.Add($"{ctx.finalTarget.unitName} Knockdown save: {saveRoll} vs DC {dc}");
 

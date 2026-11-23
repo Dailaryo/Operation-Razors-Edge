@@ -45,7 +45,7 @@ public class PrimalRegressionEffect : StatusEffect
 
     public override void OnExpire(Unit unit)
     {
-        int total = unit.RollSave(Unit.SaveType.Focus, out int natural,
+        var total = unit.RollSave(Unit.SaveType.Focus, out int natural,
             EffectDescriptor.MindAffecting | EffectDescriptor.Psionic);
         bool saved = natural == 20 || (natural != 1 && total >= saveDC);
 

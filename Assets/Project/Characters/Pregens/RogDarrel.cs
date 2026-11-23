@@ -75,8 +75,16 @@ public static class RogDarrel
         route[5].choiceOptions.Add(ChoiceNodeIds.HelixImprovedMutationMusculature);
         route[8].choiceOptions.Add(ChoiceNodeIds.HelixGreaterMutationRapidHealing);
         route[10].choiceOptions.Add(ChoiceNodeIds.HelixWarriorBerserker);
-        route[15].choiceOptions.Add(ChoiceNodeIds.HelixEnhancedMutationMusculature);   // Berserker
-        route[18].choiceOptions.Add(ChoiceNodeIds.HelixImprovedMutationRapidHealing);  // Berserker
+        route[15].choiceOptions.Add(ChoiceNodeIds.HelixEnhancedMutationAdrenaline);    // Berserker: 2nd Enhanced
+        route[17].choiceOptions.Add(ChoiceNodeIds.HelixGreaterMutationMusculature);    // Berserker: 2nd Greater (L17 node)
+        route[18].choiceOptions.Add(ChoiceNodeIds.HelixImprovedMutationAdrenaline);    // Berserker: 2nd Improved -> Adrenal Frenzy
+
+        // Mutation purchases (Mutation Points, pool from HelixWarriorClass): 2 + 2 + 2 + 3 + 3 = 12 MP by level 15
+        route[1].mutations.Add(PassiveIds.HelixRapidHealing);
+        route[4].mutations.Add(PassiveIds.HelixEnhancedMusculature);
+        route[7].mutations.Add(PassiveIds.HelixAdrenalineSurge);
+        route[12].mutations.Add(PassiveIds.HelixPredatoryReflexes);
+        route[15].mutations.Add(PassiveIds.HelixBoneDensity);
 
         // Skill ranks: 1 per level
         PregenLevelPlan.FillSkillsAtCap(route, 1, 20, SkillType.Intimidate);

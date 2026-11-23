@@ -55,7 +55,8 @@ public static class HelixWarriorClass
                 { 7, new List<ClassLevelEntry>
                 {
                     new ClassLevelEntry(
-                        passiveIds: new List<string> { PassiveIds.HelixBrutalStrike })
+                        passiveIds: new List<string> { PassiveIds.HelixBrutalStrike },
+                        actionUnlockIds: new List<string> { ActionIds.BrutalStrike })
                 }},
 
                 { 8, new List<ClassLevelEntry>
@@ -166,6 +167,10 @@ public static class HelixWarriorClass
                         passiveIds: new List<string> { PassiveIds.HelixDevastatingCleave },
                         prerequisiteOptionId: ChoiceNodeIds.HelixWarriorBerserker),
 
+                    new ClassLevelEntry(                          // Berserker: 2nd Greater Mutation
+                        choicNodeId: ChoiceNodeIds.HelixGreaterMutation,
+                        prerequisiteOptionId: ChoiceNodeIds.HelixWarriorBerserker),
+
                     new ClassLevelEntry(                          // Apex Predator
                         passiveIds: new List<string> { PassiveIds.HelixApexSpeed },
                         prerequisiteOptionId: ChoiceNodeIds.HelixWarriorApexPredator),
@@ -232,7 +237,7 @@ public static class HelixWarriorClass
             FeatIds.AdvancedCombatMartialArts, FeatIds.AdvancedFirearmsProficiency, FeatIds.ArmorProficiencyLight,
             FeatIds.ArmorProficiencyMedium, FeatIds.ArmorProficiencyHeavy, FeatIds.ArmorProficiencyPowered,
             FeatIds.Athletic, FeatIds.BlindFight, FeatIds.CombatExpertise, FeatIds.CombatReflexes,
-            FeatIds.CombatThrow, FeatIds.DeadAim, FeatIds.DefensiveMartialArts, FeatIds.ElusiveTarget,
+            FeatIds.CombatThrow, FeatIds.DeadlyAim, FeatIds.DefensiveMartialArts, FeatIds.ElusiveTarget,
             FeatIds.ExoticFirearmsProficiency, FeatIds.FarShot, FeatIds.GreatFortitude,
             FeatIds.ImprovedCombatMartialArts, FeatIds.ImprovedCombatThrow, FeatIds.ImprovedDisarm,
             FeatIds.ImprovedTrip, FeatIds.IronWill, FeatIds.LightningReflexes, FeatIds.NervePinch,

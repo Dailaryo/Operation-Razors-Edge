@@ -56,6 +56,13 @@ public static class PassiveIds
     public const string HelixBoneDensity = "helix_bone_density";
     public const string HelixAdrenalFrenzy = "helix_adrenal_frenzy";
 
+    // Helix Warrior — mutation upgrade tiers (choice nodes)
+    public const string HelixRapidHealingImproved = "helix_rapid_healing_improved";
+    public const string HelixEnhancedMusculatureEnhanced = "helix_enhanced_musculature_enhanced";
+    public const string HelixEnhancedMusculatureGreater = "helix_enhanced_musculature_greater";
+    public const string HelixAdrenalineSurgeEnhanced = "helix_adrenaline_surge_enhanced";
+    public const string HelixAdrenalFrenzyGreater = "helix_adrenal_frenzy_greater";
+
     // Helix Warrior — Core Class Features
     public const string HelixAdaptivePhysiology = "helix_adaptive_physiology";
     public const string HelixPowerfulBuild = "helix_powerful_build";

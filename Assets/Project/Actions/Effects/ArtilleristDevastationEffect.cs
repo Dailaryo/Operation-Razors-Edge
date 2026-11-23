@@ -4,6 +4,8 @@ public class ArtilleristDevastationEffect : IActionEffect
 {
     public void Execute(ActionContext ctx, CombatResolver resolver)
     {
+        if (resolver.IsSimulation) return;
+
         if (ctx.attacker == null || ctx.finalTarget == null) return;
 
         Vector2Int epicenter = resolver.GetPosition(ctx.finalTarget);
@@ -23,7 +25,7 @@ public class ArtilleristDevastationEffect : IActionEffect
             int dist = DistanceUtility.MovementCostDistance(epicenter, unitPos);
             if (dist > 5) continue;
 
-            int saveRoll = unit.RollSave(Unit.SaveType.Resolve);
+            var saveRoll = unit.RollSave(Unit.SaveType.Resolve);
             CombatLog.Add($"{unit.unitName} Devastation save: {saveRoll} vs DC {dc}");
 
             if (saveRoll < dc)

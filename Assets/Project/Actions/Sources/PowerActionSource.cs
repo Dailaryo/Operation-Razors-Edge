@@ -22,6 +22,14 @@ public class PowerActionSource : IActionSource
             result.AddRange(PowerProgression.GetManifestable(power));
         }
 
+        //Manifesting toggles (Abilities tab), squad only: any manifester can manifest defensively,
+        //Maximize Power needs the Telepath class feature
+        if (!unit.isEnemy && characterData.knownPowerIds.Count > 0)
+            result.Add(ActionDatabase.Get(ActionIds.ManifestDefensively));
+
+        if (!unit.isEnemy && characterData.unlockedPassiveIds.Contains(PassiveIds.TelepathMaximizePower))
+            result.Add(ActionDatabase.Get(ActionIds.MaximizePower));
+
         return result;
     }
 }

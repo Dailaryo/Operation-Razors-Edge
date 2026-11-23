@@ -39,7 +39,7 @@ public static class PsionicSaveResolver
         if (!allowSave || !power.saveType.HasValue) return PsionicSaveOutcome.NoSave;
 
         int dc = power.GetSaveDC(ctx.attacker);
-        int total = target.RollSave(power.saveType.Value, out int natural, descriptors) + saveModifier;
+        var total = target.RollSave(power.saveType.Value, out int natural, descriptors, log) + saveModifier;
         bool saved = natural == 20 || (natural != 1 && total >= dc);
 
         if (log)

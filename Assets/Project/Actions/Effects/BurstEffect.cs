@@ -25,7 +25,11 @@ public class BurstEffect : IActionEffect
             return;
         }
 
-        var applied = target.AddEffect(new TimedStatModifierEffect(PowerIds.Burst, onSelf ? 1 : 2,
+        //Other: the speed matters when the target next plans a move, so it must cover next round.
+        //A target with no actions left gets +1 from Unit.AddEffect; one still to act needs the 2 here
+        int turns = onSelf || target.pendingActionCount == 0 ? 1 : 2;
+
+        var applied = target.AddEffect(new TimedStatModifierEffect(PowerIds.Burst, turns,
             new StatModifier(StatType.MoveSpeed, SpeedBonus, 1f, PowerIds.Burst, StatModifier.BonusType.Untyped)));
 
         if (applied != null) ctx.appliedEffects.Add(applied);

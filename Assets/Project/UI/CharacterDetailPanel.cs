@@ -1,8 +1,8 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
-using System.Collections.Generic;
 using UnityEngine.Serialization;
+using UnityEngine.UI;
 
 public class CharacterDetailPanel : MonoBehaviour
 {
@@ -73,8 +73,10 @@ public class CharacterDetailPanel : MonoBehaviour
         currentCharacter = character;
         if (character == null) return;
 
-        //One temporary Unit for every computed value (HP and derived stats)
-        var tempUnit = CharacterFactory.CreatePlayerUnit(character);
+        //In combat: the live Unit, so temporary buffs and conditions count in the derived stats and are listed.
+        //Otherwise one temporary Unit for every computed value (HP and derived stats)
+        Unit liveUnit = SquadManager.Instance != null ? SquadManager.Instance.GetLiveUnit(character) : null;
+        var tempUnit = liveUnit ?? CharacterFactory.CreatePlayerUnit(character);
 
         if (nameText != null)
             nameText.text = character.name;
@@ -144,14 +146,14 @@ public class CharacterDetailPanel : MonoBehaviour
                 if (ranks > 0)
                     value = $"{Signed(SkillResolver.GetSkillTotal(tempUnit, skill))} ({ranks} {(ranks == 1 ? "rank" : "ranks")})";
                 else if (skillDef != null && skillDef.trainedOnly)
-                    value = "trained only";
+                    value = $"{Signed(SkillResolver.GetSkillTotal(tempUnit, skill))} (trained only)";
                 else
                     value = $"{Signed(SkillResolver.GetSkillTotal(tempUnit, skill))} (untrained)";
 
                 lines.Add($"{skillName} ({tags}): {value}");
             }
 
-            skillsText.text = lines.Count > 0 ? string.Join("\n", lines) : "No ranks assigned";
+            skillsText.text = "<b><u>Skills</u></b>\n" + (lines.Count > 0 ? string.Join("\n", lines) : "No ranks assigned");
         }
 
         // Feats
@@ -163,13 +165,13 @@ public class CharacterDetailPanel : MonoBehaviour
                 var feat = FeatDatabase.Get(featId);
                 lines.Add(feat != null ? feat.displayName : featId);
             }
-            featsText.text = lines.Count > 0 ? string.Join("\n", lines) : "No feats";
+            featsText.text = "<b><u>Feats</u></b>\n" + (lines.Count > 0 ? string.Join("\n", lines) : "No feats");
         }
 
         // Traits & features: species traits, class features (passives) and background picks.
         // Names only; full descriptions wait for tooltips
         if (featuresText != null)
-            featuresText.text = BuildFeaturesText(character);
+            featuresText.text = BuildFeaturesText(character, liveUnit);
     }
 
     void OnBackPressed()
@@ -217,20 +219,27 @@ public class CharacterDetailPanel : MonoBehaviour
         }
     }
 
-    static string BuildFeaturesText(CharacterData character)
+    static string BuildFeaturesText(CharacterData character, Unit liveUnit)
     {
         var sections = new List<string>();
+
+        //In combat: conditions and temporary buffs on the live unit, with what's left of each
+        if (liveUnit != null)
+            sections.Add($"<b>Active effects: {ActiveEffectNames(liveUnit)}</b>");
 
         var species = string.IsNullOrEmpty(character.speciesId) ? null : SpeciesDatabase.Get(character.speciesId);
         if (species != null && species.passiveIds.Count > 0)
             sections.Add($"{species.displayName} traits: {PassiveNames(species.passiveIds)}");
 
-        //Class level-table passives (and path passives); species passives aren't stored here
-        if (character.unlockedPassiveIds.Count > 0)
-            sections.Add($"{ClassName(character.classId)} features: {PassiveNames(character.unlockedPassiveIds)}");
+        //Class level-table passives at their current tier. Passives from choice picks are listed under their node instead
+        var current = CurrentTiers(character.unlockedPassiveIds);
+        var fromChoices = ChoicePassiveIds(character);
+        var classPassives = current.FindAll(id => !fromChoices.Contains(id));
+        if (classPassives.Count > 0)
+            sections.Add($"{ClassName(character.classId)} features: {PassiveNames(classPassives)}");
 
-        //Choice picks that grant no passive (SkillMastery, paths)
-        sections.AddRange(ChoiceSelections(character));
+        //Choice picks, one section per node (mutations, paths, Skill Mastery)
+        sections.AddRange(ChoiceSelections(character, current));
 
         var background = string.IsNullOrEmpty(character.backgroundId) ? null : BackgroundDatabase.Get(character.backgroundId);
         if (background != null)
@@ -247,7 +256,50 @@ public class CharacterDetailPanel : MonoBehaviour
             sections.Add($"{background.displayName} background: {feat}; {skillList}");
         }
 
-        return sections.Count > 0 ? string.Join("\n", sections) : "No traits or features";
+        //Blank line between sections
+        return sections.Count > 0 ? string.Join("\n\n", sections) : "No traits or features";
+    }
+
+    //Non-passive effects on a live unit: "Full Spectrum (1 rd), Concentration (concentration), Negative Levels (until Hub)"
+    static string ActiveEffectNames(Unit unit)
+    {
+        var names = new List<string>();
+        foreach (var effect in unit.activeEffects)
+        {
+            if (effect.isPassive) continue;
+
+            string name = ActionDefinition.FormatActionName(effect.effectName);
+            if (effect.maintainerCount > 0) name += " (concentration)";
+            else if (effect.lastsUntilHub) name += " (until Hub)";
+            else if (!effect.isPersistent && effect.duration > 0) name += $" ({effect.duration} rd)";
+
+            names.Add(name);
+        }
+        return names.Count > 0 ? string.Join(", ", names) : "none";
+    }
+
+    //Every passive a taken choice option grants
+    static HashSet<string> ChoicePassiveIds(CharacterData character)
+    {
+        var ids = new HashSet<string>();
+        foreach (var node in ChoiceNodeDatabase.Definitions.Values)
+            foreach (var option in node.options)
+                if (character.takenChoiceOptionIds.Contains(option.optionId))
+                    ids.UnionWith(option.passiveUnlockIds);
+        return ids;
+    }
+
+    //Drops passives replaced by a higher unlocked tier (Medical Specialist +1/+2 under +3) and duplicate ids
+    static List<string> CurrentTiers(List<string> ids)
+    {
+        var current = new List<string>();
+        foreach (var id in ids)
+        {
+            if (current.Contains(id)) continue;
+            if (ids.Exists(other => PassiveDatabase.Supersedes(other, id))) continue;
+            current.Add(id);
+        }
+        return current;
     }
 
     static string PassiveNames(List<string> ids)
@@ -261,9 +313,9 @@ public class CharacterDetailPanel : MonoBehaviour
         return string.Join(", ", names);
     }
 
-    //Choice-node picks that grant no passive (Skill Mastery skills, path picks);
-    //options that unlock passives are already listed under class features
-    static List<string> ChoiceSelections(CharacterData character)
+    //Choice picks grouped under their node (mutations, path picks, Skill Mastery skills). Picks that grant passives list
+    //those passives at their current tier; upgraded-away tiers drop out, and a node with nothing left isn't shown
+    static List<string> ChoiceSelections(CharacterData character, List<string> currentPassives)
     {
         var picksByNode = new Dictionary<string, List<string>>();
         var nodeOrder = new List<string>();
@@ -273,7 +325,15 @@ public class CharacterDetailPanel : MonoBehaviour
             foreach (var option in node.options)
             {
                 if (!character.takenChoiceOptionIds.Contains(option.optionId)) continue;
-                if (option.passiveUnlockIds.Count > 0) continue;
+
+                var names = new List<string>();
+                if (option.passiveUnlockIds.Count == 0)
+                    names.Add(option.displayName);
+                else
+                    foreach (var id in option.passiveUnlockIds)
+                        if (currentPassives.Contains(id)) names.Add(PassiveNames(new List<string> { id }));
+
+                if (names.Count == 0) continue;
 
                 if (!picksByNode.TryGetValue(node.displayName, out var picks))
                 {
@@ -281,7 +341,9 @@ public class CharacterDetailPanel : MonoBehaviour
                     picksByNode[node.displayName] = picks;
                     nodeOrder.Add(node.displayName);
                 }
-                picks.Add(option.displayName);
+
+                foreach (var name in names)
+                    if (!picks.Contains(name)) picks.Add(name);
             }
         }
 

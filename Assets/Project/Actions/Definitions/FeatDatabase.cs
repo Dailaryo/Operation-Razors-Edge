@@ -252,24 +252,34 @@ public static class FeatDatabase
                 )
             )},
 
+            //Knockout Punch (Pathfinder Stunning Fist style): grants the Knockout Punch attack; a hit forces a Resolve save
+            //(DC 10 + 1/2 level + Insight modifier) or Stunned 1 round. 1 use per 4 character levels per combat (min 1)
             { FeatIds.KnockoutPunch, new FeatDefinition(
                 featId:      FeatIds.KnockoutPunch,
                 displayName: "Knockout Punch",
-                description: "A precise unarmed strike can stun or knock out the target.",
+                description: "Make a Knockout Punch, an unarmed attack declared before the roll. On a hit the target makes a " +
+                             "Resolve save (DC 10 + half your level + Insight modifier) or is Stunned for 1 round. " +
+                             "Once per 4 character levels per combat (minimum 1); a miss uses it up.",
                 category:    FeatDefinition.FeatCategory.Combat,
                 tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
                 requiredLevel: 1,
-                requiredFeatIds: new List<string> { FeatIds.Brawl }
+                requiredFeatIds: new List<string> { FeatIds.Brawl },
+                actionSource: new FeatActionSource(FeatIds.KnockoutPunch, new List<string> { ActionIds.KnockoutPunch }),
+                effectSource: new FeatEffectSource(FeatIds.KnockoutPunch,
+                    new List<StatusEffect> { new KnockoutPunchEffect(improved: false) })
             )},
-
+            //Improved Knockout Punch (d20 Modern Knockout Punch): an unarmed melee hit on a flat-footed target is an
+            //automatic critical hit (double damage; lethal until nonlethal damage exists)
             { FeatIds.ImprovedKnockoutPunch, new FeatDefinition(
                 featId:      FeatIds.ImprovedKnockoutPunch,
                 displayName: "Improved Knockout Punch",
-                description: "Improves the DC and duration of your Knockout Punch.",
+                description: "Your unarmed hits against flat-footed opponents are automatic critical hits (double damage).",
                 category:    FeatDefinition.FeatCategory.Combat,
                 tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
                 requiredLevel: 1,
-                requiredFeatIds: new List<string> { FeatIds.KnockoutPunch, FeatIds.ImprovedBrawl }
+                requiredFeatIds: new List<string> { FeatIds.KnockoutPunch, FeatIds.ImprovedBrawl },
+                effectSource: new FeatEffectSource(FeatIds.ImprovedKnockoutPunch,
+                    new List<StatusEffect> { new KnockoutPunchEffect(improved: true) })
             )},
 
             { FeatIds.ImprovedGrapple, new FeatDefinition(
@@ -299,17 +309,18 @@ public static class FeatDatabase
             { FeatIds.Cleave, new FeatDefinition(
                 featId:      FeatIds.Cleave,
                 displayName: "Cleave",
-                description: "When you drop a target with a melee attack, you may immediately make a bonus melee attack against an adjacent enemy.",
+                description: "Cleave (standard action): make a melee attack. If it hits, make one extra melee attack against an enemy adjacent to the first target and within reach. You take -2 Defense until the end of your next round.",
                 category:    FeatDefinition.FeatCategory.Combat,
                 tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
                 requiredLevel: 1,
-                requiredFeatIds: new List<string> { FeatIds.PowerAttack }
+                requiredFeatIds: new List<string> { FeatIds.PowerAttack },
+                actionSource: new FeatActionSource(FeatIds.Cleave, new List<string> { ActionIds.Cleave })
             )},
 
             { FeatIds.GreatCleave, new FeatDefinition(
                 featId:      FeatIds.GreatCleave,
                 displayName: "Great Cleave",
-                description: "You may Cleave any number of times per round with no limit.",
+                description: "Cleave keeps going: after each Cleave hit, attack another enemy adjacent to the last one struck, as long as your attacks hit. No enemy can be struck twice.",
                 category:    FeatDefinition.FeatCategory.Combat,
                 tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Melee },
                 requiredLevel: 1,
@@ -379,17 +390,17 @@ public static class FeatDatabase
                 requiredFeatIds: new List<string> { FeatIds.PointBlankShot }
             )},
 
-            { FeatIds.DeadAim, new FeatDefinition(
-                featId:      FeatIds.DeadAim,
-                displayName: "Dead Aim",
-                description: "By taking a moment to line up your shot precisely, you make a devastating ranged attack. " +
-                             "Spend your Standard and Move actions to make one ranged attack with a significant bonus to hit. " +
-                             "Cannot be used if you moved this turn.",
+            { FeatIds.DeadlyAim, new FeatDefinition(
+                featId:      FeatIds.DeadlyAim,
+                displayName: "Deadly Aim",
+                description: "Toggle each round: -1 to ranged attack rolls for +2 ranged damage. The trade increases by " +
+                             "-1/+2 at BAB +4 and every 4 thereafter. The bonus doesn't apply to attacks that deal no hit point damage.",
                 category:    FeatDefinition.FeatCategory.Combat,
                 tags:        new List<FeatDefinition.FeatTag> { FeatDefinition.FeatTag.Ranged },
                 requiredLevel: 1,
                 requiredFeatIds: new List<string> { FeatIds.FarShot },
-                actionSource: new FeatActionSource(FeatIds.DeadAim, new List<string> { ActionIds.DeadAim })
+                requiredAttributes: new Dictionary<StatType, int> { { StatType.Agility, 13 } },
+                actionSource: new FeatActionSource(FeatIds.DeadlyAim, new List<string> { ActionIds.DeadlyAim })
             )},
 
             { FeatIds.DoubleTap, new FeatDefinition(

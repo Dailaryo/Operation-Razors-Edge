@@ -5,6 +5,8 @@ public class ArtilleristSuppressionFireEffect : IActionEffect
 {
     public void Execute(ActionContext ctx, CombatResolver resolver)
     {
+        if (resolver.IsSimulation) return;
+
         if (ctx.attacker == null || ctx.finalTarget == null) return;
 
         Vector2Int attackerPos = resolver.GetPosition(ctx.attacker);
@@ -38,7 +40,7 @@ public class ArtilleristSuppressionFireEffect : IActionEffect
             }
 
             // Other units on the line make a save
-            int saveRoll = unit.RollSave(Unit.SaveType.Resolve);
+            var saveRoll = unit.RollSave(Unit.SaveType.Resolve);
             CombatLog.Add($"{unit.unitName} Suppression Fire save: {saveRoll} vs DC {saveDC}");
 
             if (saveRoll < saveDC && !resolver.IsSimulation)

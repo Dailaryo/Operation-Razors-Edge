@@ -4,7 +4,9 @@ public static class ActionDefinitionExtensions
 {
     public static bool IsMove(this ActionDefinition def)
     {
-        return def.category == ActionDefinition.ActionCategory.Move;
+        //Movement = the action carries a MoveEffect. Category alone isn't enough: TS Stabilize costs a move action
+        //but targets an ally. The move action cost itself still comes from category (ActionEconomyResolver)
+        return def.effects != null && def.effects.Exists(e => e is MoveEffect);
     }
 
     //Targets a grid tile rather than a unit (Deploy Field, Break Window).

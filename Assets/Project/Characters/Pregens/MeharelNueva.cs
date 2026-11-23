@@ -56,7 +56,7 @@ public static class MeharelNueva
         route[6].feats.Add(FeatIds.DefensiveMartialArts);         // class
         route[7].feats.Add(FeatIds.FarShot);
         route[9].feats.Add(FeatIds.Cautious);                     // class
-        route[10].feats.Add(FeatIds.DeadAim);
+        route[10].feats.Add(FeatIds.DeadlyAim);
         route[13].feats.Add(FeatIds.PreciseShot);
         route[13].feats.Add(FeatIds.Alertness);                   // class
         route[16].feats.Add(FeatIds.DoubleTap);

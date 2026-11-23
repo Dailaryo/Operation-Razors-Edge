@@ -57,8 +57,8 @@ public class PsychicCrushEffect : IActionEffect
         {
             int dc = power.GetSaveDC(ctx.attacker);
             int bonus = GetResolveBonus(fullHP, aboveHalf);
-            int total = target.RollSave(Unit.SaveType.Resolve, out int natural,
-                power.descriptors | EffectDescriptor.Psionic) + bonus;
+            var total = target.RollSave(Unit.SaveType.Resolve, out int natural,
+                power.descriptors | EffectDescriptor.Psionic, log) + bonus;
             resolveSaved = natural == 20 || (natural != 1 && total >= dc);
 
             if (log)
@@ -90,21 +90,36 @@ public class PsychicCrushEffect : IActionEffect
     private void ApplySavedResult(ActionContext ctx, CombatResolver resolver, Unit target, bool focusSaved)
     {
         int ml = PsionicPowerDefinition.GetManifesterLevel(ctx.attacker);
+        bool log = !resolver.IsSimulation;
+        string label = ctx.definition.DisplayName;
 
         int damage;
         if (focusSaved && tier <= 2) damage = 0;
-        else if (focusSaved && tier == 3) damage = ml;
-        else damage = PowerDice.Roll(ctx, 2 * tier + 1, 6) + ml;
+        else if (focusSaved && tier == 3)
+        {
+            damage = ml;
+            if (log) CombatLog.Add($"{ctx.attacker.unitName}'s {label} deals ML {ml} damage (Focus saved).");
+        }
+        else damage = PowerDice.Roll(ctx, 2 * tier + 1, 6, flatBonus: ml, flatLabel: "ML");
 
         //Thought Shield IV+: a successful save against Psychic Crush deals no damage
-        if (ThoughtShieldEffect.BlocksPsychicCrushDamage(target)) damage = 0;
+        if (damage > 0 && ThoughtShieldEffect.BlocksPsychicCrushDamage(target))
+        {
+            if (log) CombatLog.Add($"{target.unitName}'s Thought Shield blocks {label}'s damage.");
+            damage = 0;
+        }
 
         if (damage > 0)
         {
-            damage = target.ApplyMindAffectingDamageReduction(damage);
+            damage = PowerDice.ReduceMindAffecting(target, damage, log);
 
             //Never below -1 HP
-            damage = Mathf.Min(damage, Mathf.Max(0, resolver.GetCurrentHP(target) +1));
+            int cap = Mathf.Max(0, resolver.GetCurrentHP(target) + 1);
+            if (damage > cap)
+            {
+                if (log) CombatLog.Add($"{label} can't drop {target.unitName} below -1 HP: {damage} damage capped at {cap}.");
+                damage = cap;
+            }
 
             if (damage > 0)
             {

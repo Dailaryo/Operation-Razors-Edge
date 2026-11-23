@@ -19,6 +19,8 @@ public class ActionDefinition
                                                                    //round, fires on this trigger
     public bool IsReaction => reactionTrigger != ReactionTrigger.None;
     public int usesPerCombat = 0; //0 = unlimited. Counted when the action resolves; resets at combat start
+    public System.Func<Unit, int> usesPerCombatByUnit; //Per-unit use limit (Knockout Punch: 1 per 4 levels); overrides usesPerCombat
+    public int GetUsesPerCombat(Unit unit) => usesPerCombatByUnit != null ? usesPerCombatByUnit(unit) : usesPerCombat;
     public enum TargetingMode
     {
         None, //no target needed
@@ -99,8 +101,9 @@ public class ActionDefinition
         return maxRange;
     }
 
-    //Player-facing name derived from the ID: psi_charm_person -> Charm Person, MeleeAttack -> Melee Attack
-    public string DisplayName => FormatActionName(actionID);
+    //Optional player-facing name. Unset: derived from the ID (psi_charm_person -> Charm Person, MeleeAttack -> Melee Attack)
+    public string displayName;
+    public string DisplayName => string.IsNullOrEmpty(displayName) ? FormatActionName(actionID) : displayName;
 
     public static string FormatActionName(string actionId)
     {

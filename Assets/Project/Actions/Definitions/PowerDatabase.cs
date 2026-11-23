@@ -206,7 +206,8 @@ public static class PowerDatabase
                 actionId: PowerIds.FingerOfFire, targetType: TargetType.Enemy, requiresTarget: true, maxRange: 0,
                 targetingMode: ActionDefinition.TargetingMode.Tile,
                 powerLevel: 0, discipline: PsionicDiscipline.Psychokinesis, basePowerPointCost: 1, keyAbility: StatType.Cognition,
-                allowsPowerResistance: true, rangeBand: PsionicPowerDefinition.PowerRange.Close
+                allowsPowerResistance: true, rangeBand: PsionicPowerDefinition.PowerRange.Close,
+                hasVariableDice: true
             )},
 
             //Stub: Control Object — animate an object up to 100 lb.; slam +0, 1d4. Concentration, up to 1 round/level
@@ -214,7 +215,8 @@ public static class PowerDatabase
                 actionId: PowerIds.ControlObject, targetType: TargetType.None, requiresTarget: false, maxRange: 0,
                 powerLevel: 1, discipline: PsionicDiscipline.Psychokinesis, basePowerPointCost: 1, keyAbility: StatType.Endurance,
                 concentrationRequired: true, concentrationMaxRounds: ml => ml,
-                rangeBand: PsionicPowerDefinition.PowerRange.Medium
+                rangeBand: PsionicPowerDefinition.PowerRange.Medium,
+                hasVariableDice: true
             )},
 
             //Stub: Lesser Body Adjustment — heal 1d8, or +1 next Fort save vs poison/disease, or heal 1 ability damage. Full-round
@@ -224,7 +226,8 @@ public static class PowerDatabase
                     { ActionDefinition.ActionCategory.Standard, ActionDefinition.ActionCategory.Move },
                 requiresLoS: false,
                 powerLevel: 1, discipline: PsionicDiscipline.Psychometabolism, basePowerPointCost: 1, keyAbility: StatType.Power,
-                rangeBand: PsionicPowerDefinition.PowerRange.Personal
+                rangeBand: PsionicPowerDefinition.PowerRange.Personal,
+                hasVariableDice: true
             )},
 
             // ===== 2nd-level =====
@@ -243,7 +246,7 @@ public static class PowerDatabase
                         {
                             //1 round/level
                             new ApplyContextStatusEffect(ctx =>
-                                new BrainLockedEffect(PsionicPowerDefinition.GetManifesterLevel(ctx.attacker)))
+                                new BrainLockedEffect(PsionicPowerDefinition.GetManifesterLevel(ctx.attacker)), logDuration: true)
                         })
                     }, maxSize: Unit.SizeCategory.Medium)
                 },
@@ -271,8 +274,8 @@ public static class PowerDatabase
                     {
                         new PowerDamageEffect(3, 6),
                         //Repeats 3d6 (new save each time) while concentration holds, up to 5 rounds total
-                        new ApplyContextStatusEffect(ctx => new InflictPainEffect(ctx.attacker,
-                            ((PsionicPowerDefinition)ctx.definition).GetSaveDC(ctx.attacker), ctx.isMaximized))
+                        new ApplyContextStatusEffect((ctx, resolver) => new InflictPainEffect(ctx.attacker,
+                            ((PsionicPowerDefinition)ctx.definition).GetSaveDC(ctx.attacker), ctx.isMaximized, resolver.Manager))
                     })
                 },
                 powerLevel:            2,
@@ -283,7 +286,8 @@ public static class PowerDatabase
                 saveType:              Unit.SaveType.Focus,
                 allowsPowerResistance: true,
                 descriptors:           EffectDescriptor.MindAffecting,
-                rangeBand:             PsionicPowerDefinition.PowerRange.Long
+                rangeBand:             PsionicPowerDefinition.PowerRange.Long,
+                hasVariableDice: true
             )},
 
             // ===== 3rd-level =====
@@ -299,7 +303,7 @@ public static class PowerDatabase
                     new PowerSaveGateEffect(new List<IActionEffect>
                     {
                         //Stunned 3d4 rounds
-                        new ApplyContextStatusEffect(ctx => new StunnedEffect(PowerDice.Roll(ctx, 3, 4)))
+                        new ApplyContextStatusEffect(ctx => new StunnedEffect(PowerDice.Roll(ctx, 3, 4, "Mental Blast stun duration")), logDuration: true)
                     })
                 },
                 powerLevel:            3,
@@ -307,7 +311,8 @@ public static class PowerDatabase
                 basePowerPointCost:    5,
                 keyAbility:            StatType.Presence,
                 saveType:              Unit.SaveType.Focus,
-                allowsPowerResistance: false
+                allowsPowerResistance: false,
+                hasVariableDice: true
             )},
 
             // ===== 4th-level =====
@@ -584,8 +589,8 @@ public static class PowerDatabase
                         new PowerSaveGateEffect(new List<IActionEffect>
                         {
                             new PowerDamageEffect(3, 6),
-                            new ApplyContextStatusEffect(ctx => new InflictPainEffect(ctx.attacker,
-                                ((PsionicPowerDefinition)ctx.definition).GetSaveDC(ctx.attacker), ctx.isMaximized))
+                            new ApplyContextStatusEffect((ctx, resolver) => new InflictPainEffect(ctx.attacker,
+                                ((PsionicPowerDefinition)ctx.definition).GetSaveDC(ctx.attacker), ctx.isMaximized, resolver.Manager))
                         })
                     }, maxTargets: ctx => PsionicPowerDefinition.GetManifesterLevel(ctx.attacker))
                 },
@@ -597,7 +602,8 @@ public static class PowerDatabase
                 saveType:              Unit.SaveType.Focus,
                 allowsPowerResistance: true,
                 descriptors:           EffectDescriptor.MindAffecting,
-                rangeBand:             PsionicPowerDefinition.PowerRange.Close
+                rangeBand:             PsionicPowerDefinition.PowerRange.Close,
+                hasVariableDice: true
             )},
 
             { PowerIds.PrimalRegression, new PsionicPowerDefinition(
@@ -619,7 +625,7 @@ public static class PowerDatabase
                                 10 * PsionicPowerDefinition.GetManifesterLevel(ctx.attacker))),
                             //2d8 temporary HP, lost when the regression ends
                             new ApplyContextStatusEffect(ctx => new TemporaryHitPointsEffect("PrimalRegression",
-                                PowerDice.Roll(ctx, 2, 8),
+                                PowerDice.Roll(ctx, 2, 8, "Primal Regression temporary HP"),
                                 10 * PsionicPowerDefinition.GetManifesterLevel(ctx.attacker)))
                         })
                     }, maxTargets: ctx => Mathf.Max(1, PsionicPowerDefinition.GetManifesterLevel(ctx.attacker) / 2))
@@ -631,7 +637,8 @@ public static class PowerDatabase
                 saveType:              Unit.SaveType.Focus,
                 allowsPowerResistance: true,
                 descriptors:           EffectDescriptor.Compulsion | EffectDescriptor.MindAffecting,
-                rangeBand:             PsionicPowerDefinition.PowerRange.Close
+                rangeBand:             PsionicPowerDefinition.PowerRange.Close,
+                hasVariableDice: true
             )},
 
             //Stub (deferred): Withdraw Affliction (PF) — touch, one afflicted creature; no save, PR. Cures one
@@ -657,7 +664,17 @@ public static class PowerDatabase
                 powerLevel: 6, discipline: PsionicDiscipline.Telepathy, basePowerPointCost: 11, keyAbility: StatType.Presence,
                 saveType: Unit.SaveType.Focus, allowsPowerResistance: true,
                 descriptors: EffectDescriptor.MindAffecting,
-                rangeBand: PsionicPowerDefinition.PowerRange.Close
+                rangeBand: PsionicPowerDefinition.PowerRange.Close,
+                //Targeting and saves are live (one creature per ML, no two more than 30 ft apart); the effect waits on
+                //per-observer detection integration
+                effects: new List<IActionEffect>
+                {
+                    new MultiTargetEffect(new List<IActionEffect>
+                    {
+                        new PowerSaveGateEffect(new List<IActionEffect>())
+                    }, maxTargets: ctx => PsionicPowerDefinition.GetManifesterLevel(ctx.attacker)),
+                    new DeferredEffectNotice()
+                }
             )},
 
             //Stub: Co-opt Concentration (3.5) — one creature, Focus negates, PR; concentration up to 1 round/level.
@@ -771,7 +788,8 @@ public static class PowerDatabase
                 powerLevel: 7, discipline: PsionicDiscipline.Telepathy, basePowerPointCost: 13, keyAbility: StatType.Presence,
                 saveType: Unit.SaveType.Resolve, allowsPowerResistance: true,
                 descriptors: EffectDescriptor.Death | EffectDescriptor.MindAffecting,
-                rangeBand: PsionicPowerDefinition.PowerRange.Medium
+                rangeBand: PsionicPowerDefinition.PowerRange.Medium,
+                hasVariableDice: true
             )},
 
             // ===== 8th-level =====
@@ -797,7 +815,8 @@ public static class PowerDatabase
                 saveType:              Unit.SaveType.Focus,
                 allowsPowerResistance: true,
                 descriptors:           EffectDescriptor.Death | EffectDescriptor.MindAffecting,
-                rangeBand:             PsionicPowerDefinition.PowerRange.Medium
+                rangeBand:             PsionicPowerDefinition.PowerRange.Medium,
+                hasVariableDice: true
             )},
 
             //Stub: Irresistible Dance (PF) — touch, one living creature, Focus partial, PR; 1d4+1 rounds (1 round
@@ -809,7 +828,8 @@ public static class PowerDatabase
                 powerLevel: 8, discipline: PsionicDiscipline.Telepathy, basePowerPointCost: 15, keyAbility: StatType.Presence,
                 saveType: Unit.SaveType.Focus, allowsPowerResistance: true,
                 descriptors: EffectDescriptor.Compulsion | EffectDescriptor.MindAffecting,
-                rangeBand: PsionicPowerDefinition.PowerRange.Touch
+                rangeBand: PsionicPowerDefinition.PowerRange.Touch,
+                hasVariableDice: true
             )},
 
             // ===== 9th-level =====
@@ -879,7 +899,8 @@ public static class PowerDatabase
                 powerLevel: 9, discipline: PsionicDiscipline.Telepathy, basePowerPointCost: 17, keyAbility: StatType.Presence,
                 saveType: Unit.SaveType.Resolve, allowsPowerResistance: true,
                 descriptors: EffectDescriptor.MindAffecting,
-                rangeBand: PsionicPowerDefinition.PowerRange.Close
+                rangeBand: PsionicPowerDefinition.PowerRange.Close,
+                hasVariableDice: true
             )},
 
             //Stub (non-combat): Metafaculty (3.5) — personal, manifesting time 1 hour. Learn about a creature the
@@ -972,7 +993,8 @@ public static class PowerDatabase
             descriptors: EffectDescriptor.MindAffecting,
             tierGroupId: PowerIds.TierPsychicCrush,
             tier: tier,
-            rangeBand: PsionicPowerDefinition.PowerRange.Close);
+            rangeBand: PsionicPowerDefinition.PowerRange.Close,
+            hasVariableDice: true);
     }
 
     //Tower of Iron Will I–V (PF psychic 5–9): immediate. Allies within 10 ft. (self included) gain
@@ -1079,7 +1101,8 @@ public static class PowerDatabase
             descriptors: EffectDescriptor.Compulsion | EffectDescriptor.Emotion | EffectDescriptor.MindAffecting,
             tierGroupId: PowerIds.TierEgoWhip,
             tier: tier,
-            rangeBand: PsionicPowerDefinition.PowerRange.Close);
+            rangeBand: PsionicPowerDefinition.PowerRange.Close,
+            hasVariableDice: tier >= 2); //I: flat 1 round; II–V: 1d4–1d10 rounds
     }
 
     //Stub: Mind Thrust I–VI (PF psychic 1–6) — Focus half, PR; no effect on mindless creatures.
@@ -1104,7 +1127,8 @@ public static class PowerDatabase
             descriptors: EffectDescriptor.MindAffecting,
             tierGroupId: PowerIds.TierMindThrust,
             tier: tier,
-            rangeBand: PsionicPowerDefinition.PowerRange.Close);
+            rangeBand: PsionicPowerDefinition.PowerRange.Close,
+            hasVariableDice: true);
     }
 
     //Stub: Mental Barrier I–V (PF psychic 2–6) — immediate, personal, 1 round. Shield bonus to Defense

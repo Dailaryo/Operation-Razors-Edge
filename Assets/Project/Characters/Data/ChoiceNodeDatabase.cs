@@ -60,8 +60,9 @@ public static class ChoiceNodeDatabase
                     ),
                 }
             )},
-            // --- Helix Warrior Enhanced Mutation (level 3) ---
-            // Player picks one purchased mutation to upgrade to its Enhanced tier.
+            // --- Helix Warrior mutation upgrade nodes (Enhanced L3, Improved L5, Greater L8; path 2nd picks) ---
+            // Each option needs a lower tier of that mutation (purchased or upgraded) and removes every lower tier,
+            // so only owned mutations can be picked and a pick never downgrades. Skipping a tier is allowed
             { ChoiceNodeIds.HelixEnhancedMutation, new ChoiceNodeDefinition(
                 nodeId:      ChoiceNodeIds.HelixEnhancedMutation,
                 displayName: "Enhanced Mutation",
@@ -73,26 +74,27 @@ public static class ChoiceNodeDatabase
                         displayName: "Enhanced Rapid Healing",
                         description: "Rapid Healing upgrades to fast healing 2.",
                         passiveUnlockIds: new List<string> { PassiveIds.HelixRapidHealingEnhanced },
-                        passiveRemoveIds: new List<string> { PassiveIds.HelixRapidHealing }
+                        passiveRemoveIds: new List<string> { PassiveIds.HelixRapidHealing },
+                        requirement: data => data.unlockedPassiveIds.Contains(PassiveIds.HelixRapidHealing)
                     ),
                     new ChoiceNodeDefinition.ChoiceOption(
                         optionId:    ChoiceNodeIds.HelixEnhancedMutationMusculature,
                         displayName: "Enhanced Musculature",
                         description: "Enhanced Musculature bonus increases to +3 melee damage.",
-                        passiveUnlockIds: new List<string> { PassiveIds.HelixEnhancedMusculatureImproved },
-                        passiveRemoveIds: new List<string> { PassiveIds.HelixEnhancedMusculature }
+                        passiveUnlockIds: new List<string> { PassiveIds.HelixEnhancedMusculatureEnhanced },
+                        passiveRemoveIds: new List<string> { PassiveIds.HelixEnhancedMusculature },
+                        requirement: data => data.unlockedPassiveIds.Contains(PassiveIds.HelixEnhancedMusculature)
                     ),
                     new ChoiceNodeDefinition.ChoiceOption(
                         optionId:    ChoiceNodeIds.HelixEnhancedMutationAdrenaline,
                         displayName: "Enhanced Adrenaline Surge",
                         description: "Adrenaline Surge duration increases to 4 rounds.",
-                        passiveUnlockIds: new List<string> { PassiveIds.HelixAdrenalineSurge },
-                        passiveRemoveIds: new List<string>()
+                        passiveUnlockIds: new List<string> { PassiveIds.HelixAdrenalineSurgeEnhanced },
+                        passiveRemoveIds: new List<string> { PassiveIds.HelixAdrenalineSurge },
+                        requirement: data => data.unlockedPassiveIds.Contains(PassiveIds.HelixAdrenalineSurge)
                     ),
                 }
             )},
-            // --- Helix Warrior Improved Mutation (level 5) ---
-            // Player picks one purchased mutation to upgrade to its Improved tier.
             { ChoiceNodeIds.HelixImprovedMutation, new ChoiceNodeDefinition(
                 nodeId:      ChoiceNodeIds.HelixImprovedMutation,
                 displayName: "Improved Mutation",
@@ -102,35 +104,32 @@ public static class ChoiceNodeDatabase
                     new ChoiceNodeDefinition.ChoiceOption(
                         optionId:    ChoiceNodeIds.HelixImprovedMutationRapidHealing,
                         displayName: "Improved Rapid Healing",
-                        description: "Rapid Healing upgrades to fast healing 3 and stabilizes at 0 HP.",
-                        passiveUnlockIds: new List<string> { PassiveIds.HelixRapidHealingGreater },
-                        passiveRemoveIds: new List<string>
-                        {
-                            PassiveIds.HelixRapidHealing,
-                            PassiveIds.HelixRapidHealingEnhanced
-                        }
+                        description: "Rapid Healing upgrades to fast healing 3.",
+                        passiveUnlockIds: new List<string> { PassiveIds.HelixRapidHealingImproved },
+                        passiveRemoveIds: new List<string> { PassiveIds.HelixRapidHealing, PassiveIds.HelixRapidHealingEnhanced },
+                        requirement: data => data.unlockedPassiveIds.Contains(PassiveIds.HelixRapidHealing) ||
+                                             data.unlockedPassiveIds.Contains(PassiveIds.HelixRapidHealingEnhanced)
                     ),
                     new ChoiceNodeDefinition.ChoiceOption(
                         optionId:    ChoiceNodeIds.HelixImprovedMutationMusculature,
                         displayName: "Improved Musculature",
                         description: "Enhanced Musculature bonus increases to +4 melee damage.",
                         passiveUnlockIds: new List<string> { PassiveIds.HelixEnhancedMusculatureImproved },
-                        passiveRemoveIds: new List<string>
-                        {
-                            PassiveIds.HelixEnhancedMusculature
-                        }
+                        passiveRemoveIds: new List<string> { PassiveIds.HelixEnhancedMusculature, PassiveIds.HelixEnhancedMusculatureEnhanced },
+                        requirement: data => data.unlockedPassiveIds.Contains(PassiveIds.HelixEnhancedMusculature) ||
+                                             data.unlockedPassiveIds.Contains(PassiveIds.HelixEnhancedMusculatureEnhanced)
                     ),
                     new ChoiceNodeDefinition.ChoiceOption(
                         optionId:    ChoiceNodeIds.HelixImprovedMutationAdrenaline,
                         displayName: "Improved Adrenaline Surge",
                         description: "Adrenaline Surge upgrades to Adrenal Frenzy: +6 Power and +1 attack for 4 rounds.",
                         passiveUnlockIds: new List<string> { PassiveIds.HelixAdrenalFrenzy },
-                        passiveRemoveIds: new List<string> { PassiveIds.HelixAdrenalineSurge }
+                        passiveRemoveIds: new List<string> { PassiveIds.HelixAdrenalineSurge, PassiveIds.HelixAdrenalineSurgeEnhanced },
+                        requirement: data => data.unlockedPassiveIds.Contains(PassiveIds.HelixAdrenalineSurge) ||
+                                             data.unlockedPassiveIds.Contains(PassiveIds.HelixAdrenalineSurgeEnhanced)
                     ),
                 }
             )},
-            // --- Helix Warrior Greater Mutation (level 8) ---
-            // Player picks one purchased mutation to upgrade to its Greater tier.
             { ChoiceNodeIds.HelixGreaterMutation, new ChoiceNodeDefinition(
                 nodeId:      ChoiceNodeIds.HelixGreaterMutation,
                 displayName: "Greater Mutation",
@@ -140,30 +139,35 @@ public static class ChoiceNodeDatabase
                     new ChoiceNodeDefinition.ChoiceOption(
                         optionId:    ChoiceNodeIds.HelixGreaterMutationRapidHealing,
                         displayName: "Greater Rapid Healing",
-                        description: "Rapid Healing upgrades to fast healing 3 and stabilizes at 0 HP.",
+                        description: "Rapid Healing upgrades to fast healing 4.",
                         passiveUnlockIds: new List<string> { PassiveIds.HelixRapidHealingGreater },
                         passiveRemoveIds: new List<string>
-                        {
-                            PassiveIds.HelixRapidHealing,
-                            PassiveIds.HelixRapidHealingEnhanced
-                        }
+                            { PassiveIds.HelixRapidHealing, PassiveIds.HelixRapidHealingEnhanced, PassiveIds.HelixRapidHealingImproved },
+                        requirement: data => data.unlockedPassiveIds.Contains(PassiveIds.HelixRapidHealing) ||
+                                             data.unlockedPassiveIds.Contains(PassiveIds.HelixRapidHealingEnhanced) ||
+                                             data.unlockedPassiveIds.Contains(PassiveIds.HelixRapidHealingImproved)
                     ),
                     new ChoiceNodeDefinition.ChoiceOption(
                         optionId:    ChoiceNodeIds.HelixGreaterMutationMusculature,
                         displayName: "Greater Musculature",
-                        description: "Enhanced Musculature bonus increases to +4 melee damage.",
-                        passiveUnlockIds: new List<string> { PassiveIds.HelixEnhancedMusculatureImproved },
+                        description: "Enhanced Musculature bonus increases to +6 melee damage.",
+                        passiveUnlockIds: new List<string> { PassiveIds.HelixEnhancedMusculatureGreater },
                         passiveRemoveIds: new List<string>
-                        {
-                            PassiveIds.HelixEnhancedMusculature
-                        }
+                            { PassiveIds.HelixEnhancedMusculature, PassiveIds.HelixEnhancedMusculatureEnhanced, PassiveIds.HelixEnhancedMusculatureImproved },
+                        requirement: data => data.unlockedPassiveIds.Contains(PassiveIds.HelixEnhancedMusculature) ||
+                                             data.unlockedPassiveIds.Contains(PassiveIds.HelixEnhancedMusculatureEnhanced) ||
+                                             data.unlockedPassiveIds.Contains(PassiveIds.HelixEnhancedMusculatureImproved)
                     ),
                     new ChoiceNodeDefinition.ChoiceOption(
                         optionId:    ChoiceNodeIds.HelixGreaterMutationAdrenaline,
                         displayName: "Greater Adrenal Frenzy",
                         description: "Adrenal Frenzy upgrades to +8 Power and +2 attack for 5 rounds.",
-                        passiveUnlockIds: new List<string> { PassiveIds.HelixAdrenalFrenzy },
-                        passiveRemoveIds: new List<string> { PassiveIds.HelixAdrenalineSurge }
+                        passiveUnlockIds: new List<string> { PassiveIds.HelixAdrenalFrenzyGreater },
+                        passiveRemoveIds: new List<string>
+                            { PassiveIds.HelixAdrenalineSurge, PassiveIds.HelixAdrenalineSurgeEnhanced, PassiveIds.HelixAdrenalFrenzy },
+                        requirement: data => data.unlockedPassiveIds.Contains(PassiveIds.HelixAdrenalineSurge) ||
+                                             data.unlockedPassiveIds.Contains(PassiveIds.HelixAdrenalineSurgeEnhanced) ||
+                                             data.unlockedPassiveIds.Contains(PassiveIds.HelixAdrenalFrenzy)
                     ),
                 }
             )},

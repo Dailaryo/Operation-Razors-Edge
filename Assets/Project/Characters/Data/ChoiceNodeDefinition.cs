@@ -65,6 +65,18 @@ public class ChoiceNodeDefinition
             this.effectSource = effectSource;
             this.requirement = requirement;
         }
+
+        //Records this option's passive changes on the character when it is taken (pregen route now, level-up UI later).
+        //Unit.ApplyClass only reads unlockedPassiveIds, so building a unit never changes the character
+        public void ApplyPassives(CharacterData data)
+        {
+            foreach (string removeId in passiveRemoveIds)
+                data.unlockedPassiveIds.Remove(removeId);
+
+            foreach (string addId in passiveUnlockIds)
+                if (!data.unlockedPassiveIds.Contains(addId))
+                    data.unlockedPassiveIds.Add(addId);
+        }
     }
 
     public ChoiceNodeDefinition(

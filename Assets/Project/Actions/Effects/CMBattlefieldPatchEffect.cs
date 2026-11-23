@@ -1,4 +1,5 @@
 using UnityEngine;
+using static UnityEngine.GraphicsBuffer;
 
 public class CMBattlefieldPatchEffect : IActionEffect
 {
@@ -33,13 +34,15 @@ public class CMBattlefieldPatchEffect : IActionEffect
 
         if (!resolver.IsSimulation)
         {
+            bool wasDown = ctx.finalTarget.IsDying() || ctx.finalTarget.IsDisabled();
+
             ctx.finalTarget.currentHP = Mathf.Min(
                 ctx.finalTarget.currentHP + total,
                 ctx.finalTarget.GetMaxHP());
 
             ctx.finalTarget.OnHealthChanged?.Invoke(ctx.finalTarget);
 
-            if (ctx.finalTarget.IsDying() || ctx.finalTarget.IsDisabled())
+            if (wasDown)
             {
                 if (ctx.finalTarget.currentHP > 0)
                 {

@@ -8,6 +8,9 @@ public static class ConcentrationManager
     public const int DC_DefensiveManifesting = 15;
     public const int DC_DamagedWhileManifesting = 10; //+damage dealt +power level added by caller
 
+    //Marker status effect the Manifest Defensively toggle applies for the round (read in CombatResolver.ResolveProvocation)
+    public const string DefensiveManifestingEffectName = "Manifesting Defensively";
+
     public static void RequestConcentrationCheck(
         Unit manifester,
         int dc,

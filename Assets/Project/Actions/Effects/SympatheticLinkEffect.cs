@@ -41,7 +41,7 @@ public class SympatheticLinkEffect : IActionEffect
             return;
         }
 
-        int total = enemy.RollSave(Unit.SaveType.Focus, out int natural, descriptors);
+        var total = enemy.RollSave(Unit.SaveType.Focus, out int natural, descriptors);
         bool saved = natural == 20 || (natural != 1 && total >= dc);
 
         if (saved)

@@ -32,6 +32,9 @@ public class HealEffect : IActionEffect
 
         if (!resolver.IsSimulation)
         {
+            //Read before healing: IsDying/IsDisabled are HP-based and turn false once HP rises above 0
+            bool wasDown = ctx.finalTarget.IsDying() || ctx.finalTarget.IsDisabled();
+
             ctx.finalTarget.currentHP = Mathf.Min(
                 ctx.finalTarget.currentHP + total,
                 ctx.finalTarget.GetMaxHP());
@@ -40,7 +43,7 @@ public class HealEffect : IActionEffect
             CombatLog.Add($"{ctx.attacker.unitName} patches {ctx.finalTarget.unitName} for {total} HP.");
 
             // Stabilize dying units even if HP stays at or below 0
-            if (ctx.finalTarget.IsDying() || ctx.finalTarget.IsDisabled())
+            if (wasDown)
             {
                 if (ctx.finalTarget.currentHP > 0)
                 {

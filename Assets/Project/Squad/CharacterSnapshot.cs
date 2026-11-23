@@ -19,7 +19,7 @@ public class CharacterSnapshot
     public int manifesterLevel;
     public int psionicResistance;
     public int cyberneticCapacityBonus;
-
+    public int mutationPointsSpent;
     public List<string> unlockedFeatIds;
     public List<string> takenChoiceOptionIds;
     public List<string> unlockedActions;
@@ -51,7 +51,7 @@ public class CharacterSnapshot
         snap.manifesterLevel = data.manifesterLevel;
         snap.psionicResistance = data.psionicResistance;
         snap.cyberneticCapacityBonus = data.cyberneticCapacityBonus;
-
+        snap.mutationPointsSpent = data.mutationPointsSpent;
         snap.unlockedFeatIds = new List<string>(data.unlockedFeatIds);
         snap.takenChoiceOptionIds = new List<string>(data.takenChoiceOptionIds);
         snap.unlockedActions = new List<string>(data.unlockedActions);
@@ -103,7 +103,7 @@ public class CharacterSnapshot
         target.manifesterLevel = manifesterLevel;
         target.psionicResistance = psionicResistance;
         target.cyberneticCapacityBonus = cyberneticCapacityBonus;
-
+        target.mutationPointsSpent = mutationPointsSpent;
         target.unlockedFeatIds = new List<string>(unlockedFeatIds);
         target.takenChoiceOptionIds = new List<string>(takenChoiceOptionIds);
         target.unlockedActions = new List<string>(unlockedActions);

@@ -8,6 +8,7 @@ public class KineticAbsorptionEffect : StatusEffect
     public KineticAbsorptionEffect() : base("KineticAbsorption", -1)
     {
         isPersistent = true;
+        instancedPassive = true;
     }
 
     public override void OnApply(Unit unit)

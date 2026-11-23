@@ -5,7 +5,7 @@ public class GridCollapseEffect : IActionEffect
 {
     public void Execute(ActionContext ctx, CombatResolver resolver)
     {
-        if (ctx.attacker == null) return;
+        if (ctx.attacker == null || resolver.IsSimulation) return;
 
         ctx.attacker.SetCooldown(ctx.definition, Unit.CombatCooldown);
 
@@ -35,8 +35,8 @@ public class GridCollapseEffect : IActionEffect
         for (int i = 0; i < targets; i++)
         {
             Unit target = enemies[i];
-            int saveTotal = target.RollSave(Unit.SaveType.Focus);
-            int margin = dc - saveTotal;
+            var saveTotal = target.RollSave(Unit.SaveType.Focus);
+            int margin = dc - saveTotal.total;
 
             if (saveTotal < dc)
             {

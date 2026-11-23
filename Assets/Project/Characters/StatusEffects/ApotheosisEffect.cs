@@ -9,6 +9,7 @@ public class ApotheosisEffect : StatusEffect
     {
         this.sourceName = sourceName;
         isPersistent = true;
+        instancedPassive = true;
     }
 
     public override void OnApply(Unit unit)
