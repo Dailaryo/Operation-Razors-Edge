@@ -163,4 +163,14 @@ public class PersistentChromeController : MonoBehaviour
     {
         UIManager.Instance.PushOverlay(ScreenId.Settings);
     }
+
+    //Quits the game. Application.Quit does nothing in the Editor, so Play Mode is stopped instead
+    public void OnExitGamePressed()
+    {
+        #if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+        #else
+            Application.Quit();
+        #endif
+    }
 }
